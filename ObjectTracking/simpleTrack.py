@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera
 import scipy as sp
 import numpy as np
@@ -6,11 +7,11 @@ import datetime
 import socket, traceback
 
 def modNeg90To90(angle):
-    """Return a modulo between -90 and 90"""
+    """Returns a modulo between -90 and 90"""
     return (angle+90)%180-90
 
 def unwrap180(angle, previous_angle):
-    """Unwrap angle based on previous angle when jump is more than 90"""
+    """Unwraps angle based on previous angle when jump is more than 90°"""
     delta_angle = angle-previous_angle
     return previous_angle + modNeg90To90(delta_angle)
 
@@ -32,9 +33,10 @@ def decimalstr2float(decimalstrs):
 
 
 def decodeSensorUDPMessage(msg):
+    """ This function is used to decode messages coming from SensorUDP application for Android"""
     data = msg.split(', ')
     #print(data[0])
-    if data[0]=='G':
+    if data[0]=='G': # GPS data
         time = decimalstr2float(data[2])
         latitude_deg = decimalstr2float(data[3])
         longitude_deg = decimalstr2float(data[4])
@@ -42,11 +44,11 @@ def decodeSensorUDPMessage(msg):
         hdop = decimalstr2float(data[7])
         vdop = decimalstr2float(data[8])
         print time, latitude_deg, longitude_deg, altitude, hdop, vdop
-    if data[0]=='O':
+    if data[0]=='O': # Orientation (obtained from fusion of accelerometer and magnetometer sensors)
         #  'O, 146, 1366575961732, 230,1182404, -075,2031250, 001,7968750'
         [ u, u,    # data not used                                         \    
         heading_deg, # pointing direction of top of phone                    \ 
-        roll_deg,    # around horizontal axis, positive clockwise [-180:180] \   
+        roll_deg,    # around horizontal axis (cross-screen), positive clockwise [-180:180] \   
         pitch_deg] = decimalstr2float(data[1:])  # around vertical axis [_90:90]
         elevation_deg = -sp.rad2deg(sp.arctan2( 					\
 			sp.cos(sp.deg2rad(pitch_deg))*sp.cos(sp.deg2rad(roll_deg)),     \
@@ -56,12 +58,12 @@ def decodeSensorUDPMessage(msg):
 	return (heading_deg, elevation_deg, inclinaison_deg, roll_deg, pitch_deg)
 
 
-# Socket connection to reveive orientation of camera
+# Socket connection to receive orientation of camera
 host = ''
 port = 12345
 
 
-# Open reference image
+# Open reference image: this is used at initlalisation
 target_detail = Image('kite_detail.jpg')
 
 # Get RGB color palette of target (was found to work better than using hue)
@@ -70,11 +72,11 @@ pal = target_detail.getPalette(bins = 3, hue = False)
 
 
 # Open video to analyse or live stream
-#cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteTest.avi','video')
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
 #cam = VirtualCamera('output1.avi', 'video')
 #cam = Camera()
-cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+#cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
 img = cam.getImage()
 print img.width, img.height
 FPS = 25 # Number of frame per second
@@ -94,13 +96,13 @@ times = []
 wasTargetFoundInPreviousFrame = False
 
 
-# Automatically detect kite
+# Automatically detect target
 #imgModel.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2).show()
 
 # Create a pygame display
-disp = Display((480*2, 640*2))
+disp = Display((img.width*2, img.height*2))
 isPaused = False
-updateSelection = False
+selectionInProgress = False
 displayDebug = False
 
 print "Press right mouse button to pause or play"
@@ -111,17 +113,21 @@ print "Target must have width larger than height"
 # Loop while not canceled by user
 while disp.isNotDone():
 #for i_loop in range(0, 500):
+    # This socket connection is used to receive orientation of the camera
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     s.bind((host, port))
     # Receive orientation of the camera
-    try:
+    orientation = (0, 0, 0, 0, 0)
+    isUDPConnection = False # Currently switched manually in the code
+    if isUDPConnection:
+      try:
         message, address = s.recvfrom(61)#8192
         orientation = decodeSensorUDPMessage(message)
-    except (KeyboardInterrupt, SystemExit):
-       raise
-    except:
+      except (KeyboardInterrupt, SystemExit):
+        raise
+      except:
 	traceback.print_exc()
     s.close()
 # ------------------------------
@@ -129,12 +135,12 @@ while disp.isNotDone():
     if not isPaused:
       img = cam.getImage()
       # First correction to correct for intrinsic camera rotation and second for camera orientation
-      img = img.rotate(-90, fixed = False)#.rotate(-orientation[2], fixed = False)
+      img = img#.rotate(-90, fixed = False)#.rotate(-orientation[2], fixed = False)
       toDisplay = img
       #img = img.resize(800,600)
     if disp.rightButtonDown:
       isPaused = not(isPaused)
-    # Create a layer to add a selection
+    # Create a layer to enable user to make a selection of the target
     selectionLayer = DrawingLayer((img.width, img.height))
     i_frame = 0#cam.getFrameNumber()
     time = datetime.datetime.utcnow()
@@ -142,51 +148,57 @@ while disp.isNotDone():
 
 	    # Create a new layer to host information retrieved from video
 	    layer = DrawingLayer((img.width, img.height))
+            # Selection is a rectangle drawn while holding mouse left button down
 	    if disp.leftButtonDown:
 	      corner1 = (disp.mouseX, disp.mouseY)
-              updateSelection = True
-  	    if updateSelection:
+              selectionInProgress = True
+  	    if selectionInProgress:
               corner2 = (disp.mouseX, disp.mouseY)
               bb = disp.pointsToBoundingBox(corner1, corner2)
-              if disp.leftButtonUp: 
-                updateSelection = False
-		selection = img.crop(bb[0],bb[1],bb[2],bb[3])
-		if selection!=None:
-		  pal = selection.getPalette(bins = 3, hue = False)
+              if disp.leftButtonUp: # User has finished is selection
+                selectionInProgress = False
+		selection = img.crop(bb[0], bb[1], bb[2], bb[3])
+		if selection != None:
+                  # The 3 main colors in the area selected are considered. Note that the selection should be included in the target and not contain background
+		  try:
+		    pal = selection.getPalette(bins = 3, hue = False)
+		  except: #getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
+                    pal = pal
    		  wasTargetFoundInPreviousFrame = False
 		  previous_coord_px = (bb[0] + bb[2]/2, bb[1] + bb[3]/2)
-              if corner1!=corner2:
-                selectionLayer.rectangle((bb[0],bb[1]),(bb[2],bb[3]), width = 5, color = Color.YELLOW)
+              if corner1 != corner2:
+                selectionLayer.rectangle((bb[0], bb[1]), (bb[2], bb[3]), width = 5, color = Color.YELLOW)
             
 
 	    if wasTargetFoundInPreviousFrame:
-                ROITopLeftCorner = (max(0,previous_coord_px[0]-maxRelativeMotionPerFrame/2*width), max(0, previous_coord_px[1] -height*maxRelativeMotionPerFrame/2))
-		 # Reduce the Region Of Interest around predicted position to save computation time
+                ROITopLeftCorner = (max(0, previous_coord_px[0]-maxRelativeMotionPerFrame/2*width), max(0, previous_coord_px[1] -height*maxRelativeMotionPerFrame/2))
+		# Reduce the Region Of Interest around predicted position to save computation time
 		ROI = img.crop(ROITopLeftCorner[0], ROITopLeftCorner[1], maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height, centered = False)
+		# Draw the rectangle corresponding to the ROI on the complete image
 		layer.rectangle((previous_coord_px[0]-maxRelativeMotionPerFrame/2*width, previous_coord_px[1]-maxRelativeMotionPerFrame/2*height), (maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height), color = Color.GREEN, width = 2)
 
 	    else:
-		# Search on the whole image if no clue
+		# Search on the whole image if no clue of where is the target
 		ROITopLeftCorner = (0, 0)
 		ROI = img
 
 	    '''#Option 1
-	    kite_part0 = ROI.hueDistance(color=(142,50,65)).invert().threshold(150)
-	    kite_part1 = ROI.hueDistance(color=(93,16,28)).invert().threshold(150)
-	    kite_part2 = ROI.hueDistance(color=(223,135,170)).invert().threshold(150)
-	    kite_raw_img = kite_part0+kite_part1+kite_part2
-	    kite_img = kite_raw_img.erode(5).dilate(5)
+	    target_part0 = ROI.hueDistance(color=(142,50,65)).invert().threshold(150)
+	    target_part1 = ROI.hueDistance(color=(93,16,28)).invert().threshold(150)
+	    target_part2 = ROI.hueDistance(color=(223,135,170)).invert().threshold(150)
+	    target_raw_img = target_part0+target_part1+target_part2
+	    target_img = target_raw_img.erode(5).dilate(5)
 
 	    #Option 2
-	    kite_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
+	    target_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
 
-	    #Option 3
-	    ini = ROI-ROI #black image
+	    # Option 3
+	    ini = ROI-ROI # Black image
 	    		
-	    # Loop through palette of kite colors
+	    # Loop through palette of target colors
 	    for col in pal: 
 	      c = tuple([int(col[i]) for i in range(0,3)])
-	      target_img = ini + ROI.hueDistance(color = c).threshold(50).invert()
+	      target_img = ini + ROI.hueDistance(color = c).threshold(50)
             #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
 
 	    # Get a black background with with white target foreground
@@ -204,7 +216,7 @@ while disp.isNotDone():
 		      r = R*1.0/255*c[0]
 		      g = B*1.0/255*c[1]
 		      b = G*1.0/255*c[2]
-		      tmp = R.mergeChannels(r, b, g) #Order has to be changed here for unknown reason
+		      tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
 		      ini = ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
             ini = ini.adaptiveScale((int(img.width), int(img.height)))
 
@@ -232,6 +244,8 @@ while disp.isNotDone():
 		angle =  unwrap180(angle, previous_angle)
 		width = target[0].width()
 		height = target[0].height()
+		
+                # Filter the data
 		alpha = 0.1
 		dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
 	        dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
@@ -251,13 +265,20 @@ while disp.isNotDone():
 		wasTargetFoundInPreviousFrame = True
 	
 		# Add target features to layer
+ 		# Minimal rectange and its center in RED
 		layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
 		layer.circle((int(coordMinRect[0]), int(coordMinRect[1])), 10, filled = True, color = Color.RED)
+		
+                # Target contour and centroid in BLUE
 		layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
+                layer.polygon(contours, color = Color.BLUE, width = 5)
+
+		# Speed vector in BLACK
 		layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)
-		layer.polygon(contours, color = Color.BLUE, width = 5)
+		
 		# Line giving angle
 		layer.line((int(coord_px[0]+200*sp.cos(angle)), int(coord_px[1]+200*sp.sin(angle))), (int(coord_px[0]-200*sp.cos(angle)), int(coord_px[1]-200*sp.sin(angle))), color = Color.RED)
+
 		# Line giving rate of turn
 		#layer.line((int(coord_px[0]+200*sp.cos(angle+dAngle*10)), int(coord_px[1]+200*sp.sin(angle+dAngle*10))), (int(coord_px[0]-200*sp.cos(angle + dAngle*10)), int(coord_px[1]-200*sp.sin(angle+dAngle*10))))
 
@@ -268,6 +289,7 @@ while disp.isNotDone():
 		    toDisplay = img.sideBySide(ini)
 	    else:
             	toDisplay = img
+
 	    # Add the layer to the raw image 
 	    toDisplay.addDrawingLayer(layer)
 	    toDisplay.addDrawingLayer(selectionLayer)
@@ -280,8 +302,7 @@ while disp.isNotDone():
 	    for heading in range(0, 360, 30):
               layer.text(str(heading), ( img.width/2-(sp.mod(sp.deg2rad(orientation[0]-heading)+sp.pi,2*sp.pi)-sp.pi)*pixelPerRadians,int(img.height/2 + sp.deg2rad(orientation[1])*pixelPerRadians)), color = Color.RED)
 	    
-	    # Use show instead of save to display to be able to display the layer
-	    
+
 	    toDisplay.save(disp)
     toDisplay.removeDrawingLayer(1)
     toDisplay.removeDrawingLayer(0)

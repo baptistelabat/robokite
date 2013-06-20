@@ -29,11 +29,13 @@ const int HbridgeLogicPin2 = 5;
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
 
 int sensorValue = 0;        // Value read from the potentiometer
+int initialSensorValue = 0;
 
 double alphaSigned = 0;
 String inputString = "";         // A string to hold incoming data
 boolean stringComplete = false;  // Whether the string is complete
 boolean isSerialControl = false; 
+
 
 void setup()
 {
@@ -72,6 +74,7 @@ void serialEvent() {
   if (inputString == "i")
   {
     isSerialControl = true;
+    initialSensorValue = analogRead(analogInPin);
   }
   else
   {
@@ -98,6 +101,13 @@ void loop()
   double sensorValueMax = 767;//1023
   double deadBand = 0.05; // Use to ensure zero speed. Should not be zero
   sensorValue = analogRead(analogInPin);
+  
+  // If the analog value is changed, it means that the user wants to take control manually
+  // so fallback to manual control
+  if (fabs(initialSensorValue-sensorValue)>10)
+  {
+    isSerialControl = false;
+  }
   if (sensorValue < 10)
   { 
     // Motor is free to move to enable manual control

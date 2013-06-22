@@ -28,11 +28,11 @@ target_detail = Image('kite_detail.jpg')
 pal = target_detail.getPalette(bins = 3, hue = False)
 
 # Open video to analyse or live stream
-cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+#cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
 #cam = VirtualCamera('output1.avi', 'video')
 #cam = Camera()
-#cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
 img = cam.getImage()
 print img.width, img.height
 FPS = 25 # Number of frame per second
@@ -61,6 +61,7 @@ disp = Display((img.width*2, img.height*2))
 isPaused = False
 selectionInProgress = False
 displayDebug = False
+imageToRotate = True
 
 print "Press right mouse button to pause or play"
 print "Use left mouse button to select target"
@@ -83,8 +84,10 @@ while disp.isNotDone():
     # Get an image from camera
     if not isPaused:
       img = cam.getImage()
-      # Do not rotate image to save computation time
-      img = img #.rotate(-90, fixed = False)#.rotate(-orientation[2], fixed = False)
+      if imageToRotate:
+        img = img.rotate(-sp.rad2deg(mobile.roll), fixed = False)
+      # else do not rotate image to save computation time
+
       toDisplay = img
       #img = img.resize(800,600)
     if disp.rightButtonDown:
@@ -183,8 +186,8 @@ while disp.isNotDone():
 		coordMinRect = ROITopLeftCorner + np.array((target[0].minRectX(), target[0].minRectY()))
 		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
 		# Rotate the coordinates of roll angle around the middle of the screen
-		ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)],[sp.sin(mobile.roll), sp.cos(mobile.roll)]])
-                rot_coord_px = np.dot(ctm,(np.transpose([coord_px]) + np.array([[-img.width/2], [-img.height/2]]))) + np.array([[img.width/2], [img.height/2]])
+		ctm = np.array([[sp.cos(mobile.roll*(not(imageToRotate))), -sp.sin(mobile.roll*(not(imageToRotate)))],[sp.sin(mobile.roll*(not(imageToRotate))), sp.cos(mobile.roll*(not(imageToRotate)))]])
+                rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([[img.width/2], [img.height/2]])
 		m = Basemap(width=img.width, height=img.height, projection='aeqd',
 		    lat_0=sp.rad2deg(mobile.pitch),lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
 		coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
@@ -263,6 +266,7 @@ while disp.isNotDone():
 	      r = range(0, 361, 10)
 	      l = m (r, [lat]*len(r))
 	      pix = [np.array(l[0]), img.height-np.array(l[1])]
+	      #pix = np.dot(ctm, np.array([l[0], np.array(img.height)-l[1]]) - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
 
 	      for i in range(len(r)-1):
                 if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
@@ -271,7 +275,8 @@ while disp.isNotDone():
 	    for lon in range(0, 360, 30):
 	      r = range(-90, 91, 10)
 	      l = m ([lon]*len(r), r)
-	      pix = [np.array(l[0]), img.height-np.array(l[1])]
+ 	      pix = [np.array(l[0]), img.height-np.array(l[1])]
+	      #pix = np.dot(ctm,[np.array(l[0]), img.height-np.array(l[1])]- np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
 
 	      for i in range(len(r)-1):
                 if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):

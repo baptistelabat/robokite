@@ -18,6 +18,9 @@ def unwrap180(angle, previous_angle):
     delta_angle = angle-previous_angle
     return previous_angle + modNeg90To90(delta_angle)
 
+def isPixelInImage((x,y), image):
+    return (x>0 and x<image.width and y>0 and y<image.height)
+
 # Open reference image: this is used at initlalisation
 target_detail = Image('kite_detail.jpg')
 
@@ -71,7 +74,7 @@ while disp.isNotDone():
 #for i_loop in range(0, 500):
 
     # Receive orientation of the camera
-    isUDPConnection = False # Currently switched manually in the code
+    isUDPConnection = True # Currently switched manually in the code
     if isUDPConnection:
       mobile.checkUpdate()
       if mobile.isToUpdate:
@@ -254,7 +257,26 @@ while disp.isNotDone():
 	    # Add time metadata
 	    toDisplay.drawText(str(i_frame)+" "+ str(time), x=0, y=0, fontsize=20)
 	    # Line giving horizon
-            layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
+            #layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
+	    # plot parallels
+	    for lat in range(-90, 90, 30):
+	      r = range(0, 361, 10)
+	      l = m (r, [lat]*len(r))
+	      pix = [np.array(l[0]), img.height-np.array(l[1])]
+
+	      for i in range(len(r)-1):
+                if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE)
+	    # plot meridians
+	    for lon in range(0, 360, 30):
+	      r = range(-90, 91, 10)
+	      l = m ([lon]*len(r), r)
+	      pix = [np.array(l[0]), img.height-np.array(l[1])]
+
+	      for i in range(len(r)-1):
+                if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE)
+
 	    # Text giving heading
 	    for heading in range(0, 360, 30):
               layer.text(str(heading), ( img.width/2-(sp.mod(mobile.yaw-sp.deg2rad(heading)+sp.pi,2*sp.pi)-sp.pi)*pixelPerRadians,int(img.height/2 + mobile.pitch*pixelPerRadians)), color = Color.RED)

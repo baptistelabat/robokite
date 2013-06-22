@@ -2,9 +2,12 @@
 from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera
 import scipy as sp
 import numpy as np
-import matplotlib.pyplot as plt
 import datetime
-import socket, traceback
+import os
+import sys
+from mpl_toolkits.basemap import Basemap
+sys.path.append(os.getcwd())
+import mobileState
 
 def modNeg90To90(angle):
     """Returns a modulo between -90 and 90"""
@@ -15,64 +18,14 @@ def unwrap180(angle, previous_angle):
     delta_angle = angle-previous_angle
     return previous_angle + modNeg90To90(delta_angle)
 
-def decimalstr2float(decimalstrs):
-    """ This function converts a string to float (probably exist elsewhere)"""
-    decimal = []
-    if type(decimalstrs) == str: 
-        parts = decimalstrs.split(',')
-        integer_part = parts[0]
-        if len(parts)== 1:
-            decimal_part = '0'
-        else:
-            decimal_part = parts[1]
-        decimal = int(integer_part)+int(decimal_part)*1.0/10**len(decimal_part)
-    else : 
-        for dec in decimalstrs:
-            decimal.append(decimalstr2float(dec))
-    return decimal 
-
-
-def decodeSensorUDPMessage(msg):
-    """ This function is used to decode messages coming from SensorUDP application for Android"""
-    data = msg.split(', ')
-    #print(data[0])
-    if data[0]=='G': # GPS data
-        time = decimalstr2float(data[2])
-        latitude_deg = decimalstr2float(data[3])
-        longitude_deg = decimalstr2float(data[4])
-        altitude = decimalstr2float(data[5])
-        hdop = decimalstr2float(data[7])
-        vdop = decimalstr2float(data[8])
-        print time, latitude_deg, longitude_deg, altitude, hdop, vdop
-    if data[0]=='O': # Orientation (obtained from fusion of accelerometer and magnetometer sensors)
-        #  'O, 146, 1366575961732, 230,1182404, -075,2031250, 001,7968750'
-        [ u, u,    # data not used                                         \    
-        heading_deg, # pointing direction of top of phone                    \ 
-        roll_deg,    # around horizontal axis (cross-screen), positive clockwise [-180:180] \   
-        pitch_deg] = decimalstr2float(data[1:])  # around vertical axis [_90:90]
-        elevation_deg = -sp.rad2deg(sp.arctan2( 					\
-			sp.cos(sp.deg2rad(pitch_deg))*sp.cos(sp.deg2rad(roll_deg)),     \
- 			sp.sqrt(1+sp.cos(sp.deg2rad(roll_deg))**2*(sp.sin(sp.deg2rad(pitch_deg))**2-1)))) #positive up
-        inclinaison_deg = pitch_deg #positive clockwise
-        #print heading_deg, roll_deg, pitch_deg, elevation_deg, inclinaison_deg
-	return (heading_deg, elevation_deg, inclinaison_deg, roll_deg, pitch_deg)
-
-
-# Socket connection to receive orientation of camera
-host = ''
-port = 12345
-
-
 # Open reference image: this is used at initlalisation
 target_detail = Image('kite_detail.jpg')
 
 # Get RGB color palette of target (was found to work better than using hue)
 pal = target_detail.getPalette(bins = 3, hue = False)
 
-
-
 # Open video to analyse or live stream
-cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteTest.avi','video')
+cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
 #cam = VirtualCamera('output1.avi', 'video')
 #cam = Camera()
@@ -82,6 +35,7 @@ print img.width, img.height
 FPS = 25 # Number of frame per second
 maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
 pixelPerRadians = 640
+radius = pixelPerRadians
 
 # Initialize variables
 previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
@@ -110,32 +64,24 @@ print "Use left mouse button to select target"
 print "Target color must be different from background"
 print "Target must have width larger than height"
 
+
+mobile = mobileState.mobileState()
 # Loop while not canceled by user
 while disp.isNotDone():
 #for i_loop in range(0, 500):
-    # This socket connection is used to receive orientation of the camera
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.bind((host, port))
+
     # Receive orientation of the camera
-    orientation = (0, 0, 0, 0, 0)
     isUDPConnection = False # Currently switched manually in the code
     if isUDPConnection:
-      try:
-        message, address = s.recvfrom(61)#8192
-        orientation = decodeSensorUDPMessage(message)
-      except (KeyboardInterrupt, SystemExit):
-        raise
-      except:
-	traceback.print_exc()
-    s.close()
+      mobile.checkUpdate()
+      if mobile.isToUpdate:
+        mobile.computeRPY()
 # ------------------------------
     # Get an image from camera
     if not isPaused:
       img = cam.getImage()
-      # First correction to correct for intrinsic camera rotation and second for camera orientation
-      img = img#.rotate(-90, fixed = False)#.rotate(-orientation[2], fixed = False)
+      # Do not rotate image to save computation time
+      img = img #.rotate(-90, fixed = False)#.rotate(-orientation[2], fixed = False)
       toDisplay = img
       #img = img.resize(800,600)
     if disp.rightButtonDown:
@@ -198,6 +144,7 @@ while disp.isNotDone():
 	    # Loop through palette of target colors
 	    for col in pal: 
 	      c = tuple([int(col[i]) for i in range(0,3)])
+              # Search the target based on color
 	      target_img = ini + ROI.hueDistance(color = c).threshold(50)
             #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
 
@@ -206,9 +153,9 @@ while disp.isNotDone():
 
 	    # Search for binary large objects representing potential target
 	    target = target_img.findBlobs(minsize = 1000)
-
-	    ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
-            for i_col in range(len(pal)): 
+	    if displayDebug:
+	      ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
+              for i_col in range(len(pal)): 
 		      col = pal[i_col]
 		      c = tuple([int(col[i]) for i in range(3)])
 		      [R, G, B] = ROI.hueDistance(color = c).threshold(50).invert().splitChannels()
@@ -218,7 +165,7 @@ while disp.isNotDone():
 		      b = G*1.0/255*c[2]
 		      tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
 		      ini = ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
-            ini = ini.adaptiveScale((int(img.width), int(img.height)))
+              ini = ini.adaptiveScale((int(img.width), int(img.height)))
 
 	    
 	    if target: # If a target was found
@@ -226,13 +173,19 @@ while disp.isNotDone():
 		    predictedTargetPosition = (width*maxRelativeMotionPerFrame/2, height*maxRelativeMotionPerFrame/2) # Target will most likely be close to the center of the ROI   
 		else:
 		    predictedTargetPosition = previous_coord_px
+                # If there are several targets in the image, take the one which is the closest of the predicted position
 		target = target.sortDistance(predictedTargetPosition)
 
 		# Get target coordinates according to minimal bounding rectangle or centroid.
 		coordMinRect = ROITopLeftCorner + np.array((target[0].minRectX(), target[0].minRectY()))
 		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
-		target_elevation = (-coord_px[1]+img.height/2)/pixelPerRadians + sp.deg2rad(orientation[1])
-		target_bearing = (coord_px[0]-img.width/2)/pixelPerRadians/sp.cos(sp.deg2rad(orientation[1])) + sp.deg2rad(orientation[0])#This formula is wrong if high elevation. Could used basemap for projection
+		# Rotate the coordinates of roll angle around the middle of the screen
+		ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)],[sp.sin(mobile.roll), sp.cos(mobile.roll)]])
+                rot_coord_px = np.dot(ctm,(np.transpose([coord_px]) + np.array([[-img.width/2], [-img.height/2]]))) + np.array([[img.width/2], [img.height/2]])
+		m = Basemap(width=img.width, height=img.height, projection='aeqd',
+		    lat_0=sp.rad2deg(mobile.pitch),lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
+		coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
+		target_bearing_deg, target_elevation_deg = coord_deg
 		# Get minimum bounding rectangle for display purpose
 		minR = ROITopLeftCorner + np.array(target[0].minRect())
 
@@ -240,23 +193,27 @@ while disp.isNotDone():
 		contours = [ ROITopLeftCorner + np.array(contour) for contour in contours]
 	
 		# Get target features
-		angle = sp.deg2rad(target[0].angle())
+		angle = sp.deg2rad(target[0].angle()) + mobile.roll
 		angle =  unwrap180(angle, previous_angle)
 		width = target[0].width()
 		height = target[0].height()
 		
                 # Filter the data
 		alpha = 0.1
-		dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
-	        dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
-		#print coord_px, angle, width, height, dCoord
+                if not(isPaused):
+		  dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
+	          dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
+		else : 
+		  dCoord = np.array([0, 0])
+		  dAngle = np.array([0]) 
+#print coord_px, angle, width, height, dCoord
 	
 		# Save important data
 		times.append(time)
 		coords_px.append(coord_px)
 		angles.append(angle)
-  		target_elevations.append(target_elevation)
-		target_bearings.append(target_bearing)
+  		target_elevations.append(sp.deg2rad(target_elevation_deg))
+		target_bearings.append(sp.deg2rad(target_bearing_deg))
 		
 		# Save for initialisation of next step
 		previous_dCoord = dCoord
@@ -295,22 +252,15 @@ while disp.isNotDone():
 	    toDisplay.addDrawingLayer(selectionLayer)
 
 	    # Add time metadata
-	    toDisplay.drawText(str(i_frame)+" "+ str(time) +" "+ str(orientation[0]) +" "+ str(orientation[1]) +" "+ str(orientation[2]), x=0, y=0, fontsize=20)
+	    toDisplay.drawText(str(i_frame)+" "+ str(time), x=0, y=0, fontsize=20)
 	    # Line giving horizon
-            layer.line((0, int(img.height/2 + sp.deg2rad(orientation[1])*pixelPerRadians)),(img.width, int(img.height/2 + sp.deg2rad(orientation[1])*pixelPerRadians)), width = 3, color = Color.RED)
+            layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
 	    # Text giving heading
 	    for heading in range(0, 360, 30):
-              layer.text(str(heading), ( img.width/2-(sp.mod(sp.deg2rad(orientation[0]-heading)+sp.pi,2*sp.pi)-sp.pi)*pixelPerRadians,int(img.height/2 + sp.deg2rad(orientation[1])*pixelPerRadians)), color = Color.RED)
+              layer.text(str(heading), ( img.width/2-(sp.mod(mobile.yaw-sp.deg2rad(heading)+sp.pi,2*sp.pi)-sp.pi)*pixelPerRadians,int(img.height/2 + mobile.pitch*pixelPerRadians)), color = Color.RED)
 	    
 
 	    toDisplay.save(disp)
     toDisplay.removeDrawingLayer(1)
     toDisplay.removeDrawingLayer(0)
 	    
-plt.subplot(211)
-plt.plot(times, coords_px)
-plt.subplot(212)
-plt.plot(times, angles)
-plt.show()
-
-

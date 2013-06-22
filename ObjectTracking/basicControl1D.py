@@ -4,7 +4,11 @@ import serial
 cam = JpegStreamCamera('http://192.168.1.6:8080/videofeed')
 disp=Display()
 
-ser=serial.Serial('/dev/ttyACM2', 9600)
+"""This script was used for the demonstration of doing control with visual feedback
+   A android mobile phone was used with ipcam application to stream the video
+   A green fresbee was attached to a line rolled over the axis of the motor which was controlled"""
+
+ser = serial.Serial('/dev/ttyACM2', 9600)
 alpha = 0.8
 time.sleep(1)
 previous_z = 200;

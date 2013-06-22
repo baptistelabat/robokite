@@ -107,3 +107,32 @@ class mobileState:
        raise
       except:
 	traceback.print_exc()
+
+if __name__ == '__main__':
+  max_length = 0
+  timeList = []
+  rollList = []
+  pitchList = []
+  headingList = []
+  filein = open('saveOrientation.txt', 'w')
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import time
+  t0 = time.time()
+  mobile = mobileState()
+  while time.time()-t0 < 20:
+      mobile.checkUpdate()
+      if mobile.isToUpdate:
+        mobile.computeRPY()
+	timeList.append(time.time())
+        headingList.append(mobile.yaw)
+        rollList.append(mobile.roll)
+        pitchList.append(mobile.pitch)
+
+  plt.hold()
+  plt.plot(np.array(timeList)-timeList[0], np.array(headingList))
+  plt.plot(np.array(timeList)-timeList[0], np.array(rollList),'g')
+  plt.plot(np.array(timeList)-timeList[0], np.array(pitchList), 'r')
+
+  plt.show()
+

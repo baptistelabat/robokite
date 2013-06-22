@@ -54,7 +54,7 @@ while True:
 	black = (logo-logo).resize(640*2,480*2)
 	[x,y] = m2(sp.rad2deg(mobile.yaw), sp.rad2deg(mobile.pitch))
 	black = black.blit(image, (int(x), black.height-int(y)))
-	print mobile.roll, mobile.pitch, mobile.yaw
+
 	# plot parallels
 	for lat in range(-90,90,15):
 	  r = range(0,361,10)

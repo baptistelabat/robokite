@@ -266,7 +266,7 @@ while disp.isNotDone():
 
 	      for i in range(len(r)-1):
                 if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE)
+	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 	    # plot meridians
 	    for lon in range(0, 360, 30):
 	      r = range(-90, 91, 10)
@@ -275,7 +275,7 @@ while disp.isNotDone():
 
 	      for i in range(len(r)-1):
                 if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE)
+	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
 	    # Text giving heading
 	    for heading in range(0, 360, 30):

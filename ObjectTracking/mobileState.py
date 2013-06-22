@@ -5,13 +5,7 @@ def decimalstr2float(decimalstrs):
     """ This function converts a string to float (probably exists elsewhere)"""
     decimal = []
     if type(decimalstrs) == str: 
-        parts = decimalstrs.split(',')
-        integer_part = parts[0]
-        if len(parts)== 1:
-            decimal_part = '0'
-        else:
-            decimal_part = parts[1]
-        decimal = int(integer_part)+int(decimal_part)*1.0/10**len(decimal_part)
+        decimal = float(decimalstrs.replace(',', '.'))
     else : 
         for dec in decimalstrs:
             decimal.append(decimalstr2float(dec))

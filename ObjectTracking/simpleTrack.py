@@ -5,6 +5,7 @@ import numpy as np
 import datetime
 import os
 import sys
+import threading
 from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
 import mobileState
@@ -70,6 +71,8 @@ print "Target must have width larger than height"
 
 
 mobile = mobileState.mobileState()
+a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
+a.start()
 # Loop while not canceled by user
 while disp.isNotDone():
 #for i_loop in range(0, 500):
@@ -77,9 +80,7 @@ while disp.isNotDone():
     # Receive orientation of the camera
     isUDPConnection = True # Currently switched manually in the code
     if isUDPConnection:
-      mobile.checkUpdate()
-      if mobile.isToUpdate:
-        mobile.computeRPY()
+      mobile.computeRPY()
 # ------------------------------
     # Get an image from camera
     if not isPaused:

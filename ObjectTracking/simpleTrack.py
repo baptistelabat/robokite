@@ -208,7 +208,9 @@ while disp.isNotDone():
 		      tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
 		      ini = ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
               ini = ini.adaptiveScale((int(img.width), int(img.height)))
-
+	      toDisplay = img.sideBySide(ini)
+	    else:
+              toDisplay = img
 	    
 	    if target: # If a target was found
 		if wasTargetFoundInPreviousFrame:
@@ -266,8 +268,11 @@ while disp.isNotDone():
 		previous_angle = angle
 		previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
 		wasTargetFoundInPreviousFrame = True
-	        
-                if display :
+	    else:
+		wasTargetFoundInPreviousFrame = False
+
+            if display :
+              if target:
 		# Add target features to layer
  		# Minimal rectange and its center in RED
 		  layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
@@ -285,16 +290,6 @@ while disp.isNotDone():
 
 		# Line giving rate of turn
 		#layer.line((int(coord_px[0]+200*sp.cos(angle+dAngle*10)), int(coord_px[1]+200*sp.sin(angle+dAngle*10))), (int(coord_px[0]-200*sp.cos(angle + dAngle*10)), int(coord_px[1]-200*sp.sin(angle+dAngle*10))))
-
-	    else:
-		wasTargetFoundInPreviousFrame = False
-
-            if display :
-
-              if displayDebug:
-		    toDisplay = img.sideBySide(ini)
-	      else:
-            	toDisplay = img
             
 	    # Add the layer to the raw image 
 	      toDisplay.addDrawingLayer(layer)
@@ -324,6 +319,7 @@ while disp.isNotDone():
 	        for i in range(len(r)-1):
                   if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
 	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
+
 	    # Plot meridians
 	      for lon in range(0, 360, 15):
 	        r = range(-90, 91, 10)
@@ -352,8 +348,6 @@ while disp.isNotDone():
 	      for elevation_deg in range(-60, 91, 30):
                 l = localProjection(0, sp.deg2rad(elevation_deg), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
                 layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
-
-	    
 
 	      toDisplay.save(disp)
     if display : 

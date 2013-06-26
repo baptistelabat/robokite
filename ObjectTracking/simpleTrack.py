@@ -3,12 +3,26 @@ from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color,
 import scipy as sp
 import numpy as np
 import datetime
+import time
 import os
 import sys
 import threading
 from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
 import mobileState
+
+def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
+  """ This function was written to use instead of Basemap which is very slow"""
+  if inverse: 
+    x, y = lon, lat
+    lat = np.fmin( np.fmax(lat_0 + y/radius, -sp.pi/2), sp.pi/2)
+    lon = sp.mod(lon_0 + x/(radius*sp.cos(lat_0))+sp.pi, 2*sp.pi) -sp.pi
+    return (lon, lat)
+  else:
+    y = (lat-lat_0)*radius
+    x = (sp.mod(lon-lon_0+sp.pi, 2*sp.pi)-sp.pi)*radius*sp.cos(lat_0)
+  return (x, y)
+
 
 def modNeg90To90(angle):
     """Returns a modulo between -90 and 90"""
@@ -23,17 +37,17 @@ def isPixelInImage((x,y), image):
     return (x>0 and x<image.width and y>0 and y<image.height)
 
 # Open reference image: this is used at initlalisation
-target_detail = Image('kite_detail.jpg')
+target_detail = Image('kite_detail.jpg').invert()
 
 # Get RGB color palette of target (was found to work better than using hue)
 pal = target_detail.getPalette(bins = 3, hue = False)
 
 # Open video to analyse or live stream
-#cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
 #cam = VirtualCamera('output1.avi', 'video')
 #cam = Camera()
-cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+#cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
 img = cam.getImage()
 print img.width, img.height
 FPS = 25 # Number of frame per second
@@ -61,8 +75,10 @@ wasTargetFoundInPreviousFrame = False
 disp = Display((img.width*2, img.height*2))
 isPaused = False
 selectionInProgress = False
+display = False
 displayDebug = False
-imageToRotate = True
+imageToRotate = False
+useBasemap = False
 
 print "Press right mouse button to pause or play"
 print "Use left mouse button to select target"
@@ -71,16 +87,29 @@ print "Target must have width larger than height"
 
 
 mobile = mobileState.mobileState()
-a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
-a.start()
+isUDPConnection = True # Currently switched manually in the code
+if isUDPConnection:
+  a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
+  a.start()
 # Loop while not canceled by user
+t0 = time.time()
+previousTime = t0
 while disp.isNotDone():
 #for i_loop in range(0, 500):
-
+    t = time.time()
+    FPS = 1/(t-previousTime)
+    print FPS
+    previousTime = t
+    i_frame = np.floor((t-t0))*FPS#cam.getFrameNumber()
+    timestamp = datetime.datetime.utcnow()
     # Receive orientation of the camera
-    isUDPConnection = True # Currently switched manually in the code
     if isUDPConnection:
       mobile.computeRPY()
+    if useBasemap:
+    # Warning this really slows down the computation
+      m = Basemap(width=img.width, height=img.height, projection='aeqd',
+		    lat_0=sp.rad2deg(mobile.pitch),lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
+
 # ------------------------------
     # Get an image from camera
     if not isPaused:
@@ -95,12 +124,11 @@ while disp.isNotDone():
       isPaused = not(isPaused)
     # Create a layer to enable user to make a selection of the target
     selectionLayer = DrawingLayer((img.width, img.height))
-    i_frame = 0#cam.getFrameNumber()
-    time = datetime.datetime.utcnow()
-    if img:
 
+    if img:
+	    if display : 
 	    # Create a new layer to host information retrieved from video
-	    layer = DrawingLayer((img.width, img.height))
+	      layer = DrawingLayer((img.width, img.height))
             # Selection is a rectangle drawn while holding mouse left button down
 	    if disp.leftButtonDown:
 	      corner1 = (disp.mouseX, disp.mouseY)
@@ -119,16 +147,19 @@ while disp.isNotDone():
                     pal = pal
    		  wasTargetFoundInPreviousFrame = False
 		  previous_coord_px = (bb[0] + bb[2]/2, bb[1] + bb[3]/2)
-              if corner1 != corner2:
-                selectionLayer.rectangle((bb[0], bb[1]), (bb[2], bb[3]), width = 5, color = Color.YELLOW)
+              if display : 
+                if corner1 != corner2:
+                  selectionLayer.rectangle((bb[0], bb[1]), (bb[2], bb[3]), width = 5, color = Color.YELLOW)
             
 
 	    if wasTargetFoundInPreviousFrame:
                 ROITopLeftCorner = (max(0, previous_coord_px[0]-maxRelativeMotionPerFrame/2*width), max(0, previous_coord_px[1] -height*maxRelativeMotionPerFrame/2))
 		# Reduce the Region Of Interest around predicted position to save computation time
 		ROI = img.crop(ROITopLeftCorner[0], ROITopLeftCorner[1], maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height, centered = False)
+                
+                if display :
 		# Draw the rectangle corresponding to the ROI on the complete image
-		layer.rectangle((previous_coord_px[0]-maxRelativeMotionPerFrame/2*width, previous_coord_px[1]-maxRelativeMotionPerFrame/2*height), (maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height), color = Color.GREEN, width = 2)
+		  layer.rectangle((previous_coord_px[0]-maxRelativeMotionPerFrame/2*width, previous_coord_px[1]-maxRelativeMotionPerFrame/2*height), (maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height), color = Color.GREEN, width = 2)
 
 	    else:
 		# Search on the whole image if no clue of where is the target
@@ -189,9 +220,11 @@ while disp.isNotDone():
 		# Rotate the coordinates of roll angle around the middle of the screen
 		ctm = np.array([[sp.cos(mobile.roll*(not(imageToRotate))), -sp.sin(mobile.roll*(not(imageToRotate)))],[sp.sin(mobile.roll*(not(imageToRotate))), sp.cos(mobile.roll*(not(imageToRotate)))]])
                 rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([[img.width/2], [img.height/2]])
-		m = Basemap(width=img.width, height=img.height, projection='aeqd',
-		    lat_0=sp.rad2deg(mobile.pitch),lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
-		coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
+		
+                if useBasemap:
+		  coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
+		else:
+                  coord_deg = sp.rad2deg(localProjection(rot_coord_px[0], img.height-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True))
 		target_bearing_deg, target_elevation_deg = coord_deg
 		# Get minimum bounding rectangle for display purpose
 		minR = ROITopLeftCorner + np.array(target[0].minRect())
@@ -216,7 +249,7 @@ while disp.isNotDone():
 #print coord_px, angle, width, height, dCoord
 	
 		# Save important data
-		times.append(time)
+		times.append(timestamp)
 		coords_px.append(coord_px)
 		angles.append(angle)
   		target_elevations.append(sp.deg2rad(target_elevation_deg))
@@ -227,21 +260,22 @@ while disp.isNotDone():
 		previous_angle = angle
 		previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
 		wasTargetFoundInPreviousFrame = True
-	
+	        
+                if display :
 		# Add target features to layer
  		# Minimal rectange and its center in RED
-		layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
-		layer.circle((int(coordMinRect[0]), int(coordMinRect[1])), 10, filled = True, color = Color.RED)
+		  layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
+		  layer.circle((int(coordMinRect[0]), int(coordMinRect[1])), 10, filled = True, color = Color.RED)
 		
                 # Target contour and centroid in BLUE
-		layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
-                layer.polygon(contours, color = Color.BLUE, width = 5)
+		  layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
+                  layer.polygon(contours, color = Color.BLUE, width = 5)
 
 		# Speed vector in BLACK
-		layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)
+		  layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)
 		
 		# Line giving angle
-		layer.line((int(coord_px[0]+200*sp.cos(angle)), int(coord_px[1]+200*sp.sin(angle))), (int(coord_px[0]-200*sp.cos(angle)), int(coord_px[1]-200*sp.sin(angle))), color = Color.RED)
+		  layer.line((int(coord_px[0]+200*sp.cos(angle)), int(coord_px[1]+200*sp.sin(angle))), (int(coord_px[0]-200*sp.cos(angle)), int(coord_px[1]-200*sp.sin(angle))), color = Color.RED)
 
 		# Line giving rate of turn
 		#layer.line((int(coord_px[0]+200*sp.cos(angle+dAngle*10)), int(coord_px[1]+200*sp.sin(angle+dAngle*10))), (int(coord_px[0]-200*sp.cos(angle + dAngle*10)), int(coord_px[1]-200*sp.sin(angle+dAngle*10))))
@@ -249,46 +283,61 @@ while disp.isNotDone():
 	    else:
 		wasTargetFoundInPreviousFrame = False
 
-            if displayDebug:
-		    toDisplay = img.sideBySide(ini)
-	    else:
-            	toDisplay = img
+            if display :
 
+              if displayDebug:
+		    toDisplay = img.sideBySide(ini)
+	      else:
+            	toDisplay = img
+            
 	    # Add the layer to the raw image 
-	    toDisplay.addDrawingLayer(layer)
-	    toDisplay.addDrawingLayer(selectionLayer)
+	      toDisplay.addDrawingLayer(layer)
+	      toDisplay.addDrawingLayer(selectionLayer)
 
 	    # Add time metadata
-	    toDisplay.drawText(str(i_frame)+" "+ str(time), x=0, y=0, fontsize=20)
+	      toDisplay.drawText(str(i_frame)+" "+ str(timestamp), x=0, y=0, fontsize=20)
 	    # Line giving horizon
             #layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
 	    # plot parallels
-	    for lat in range(-90, 90, 30):
-	      r = range(0, 361, 10)
-	      l = m (r, [lat]*len(r))
-	      pix = [np.array(l[0]), img.height-np.array(l[1])]
-	      #pix = np.dot(ctm, np.array([l[0], np.array(img.height)-l[1]]) - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
+	      for lat in range(-90, 90, 15):
+	        r = range(0, 361, 10)
+                if useBasemap:
+		  l = m (r, [lat]*len(r))
+	          pix = [np.array(l[0]), img.height-np.array(l[1])]
+                else:
+		  l = localProjection(sp.deg2rad(r), sp.deg2rad([lat]*len(r)), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
-	      for i in range(len(r)-1):
-                if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
+	        for i in range(len(r)-1):
+                  if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 	    # plot meridians
-	    for lon in range(0, 360, 30):
-	      r = range(-90, 91, 10)
-	      l = m ([lon]*len(r), r)
- 	      pix = [np.array(l[0]), img.height-np.array(l[1])]
-	      #pix = np.dot(ctm,[np.array(l[0]), img.height-np.array(l[1])]- np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
+	      for lon in range(0, 360, 15):
+	        r = range(-90, 91, 10)
+	        if useBasemap:
+                  l = m ([lon]*len(r), r)
+ 	          pix = [np.array(l[0]), img.height-np.array(l[1])]
+                else:
+		  l = localProjection(sp.deg2rad([lon]*len(r)), sp.deg2rad(r), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+ 	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
-	      for i in range(len(r)-1):
-                if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	          layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
+	        for i in range(len(r)-1):
+                  if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
-	    # Text giving heading
-	    for heading in range(0, 360, 30):
-              layer.text(str(heading), ( img.width/2-(sp.mod(mobile.yaw-sp.deg2rad(heading)+sp.pi,2*sp.pi)-sp.pi)*pixelPerRadians,int(img.height/2 + mobile.pitch*pixelPerRadians)), color = Color.RED)
+	    # Text giving bearing
+	        for bearing in range(0, 360, 30):
+                  l = localProjection(sp.deg2rad(bearing), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                  layer.text(str(bearing), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
+	    # Text giving elevation
+	        for elevation in range(-60, 91, 30):
+                  l = localProjection(0, sp.deg2rad(elevation), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                  layer.text(str(elevation), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
+
 	    
 
-	    toDisplay.save(disp)
-    toDisplay.removeDrawingLayer(1)
-    toDisplay.removeDrawingLayer(0)
+	      toDisplay.save(disp)
+    if display : 
+      toDisplay.removeDrawingLayer(1)
+      toDisplay.removeDrawingLayer(0)
 	    

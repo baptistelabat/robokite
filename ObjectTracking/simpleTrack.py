@@ -39,14 +39,14 @@ def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
     x = (sp.mod(lon-lon_0+sp.pi, 2*sp.pi)-sp.pi)*radius*sp.cos(lat_0)
   return (x, y)
 
-def modNeg90To90(angle):
+def modNeg90To90(angle_deg):
     """Returns a modulo between -90 and 90"""
-    return (angle+90)%180-90
+    return (angle_deg + 90)%180-90
 
-def unwrap180(angle, previous_angle):
+def unwrap180(angle_deg, previous_angle_deg):
     """Unwraps angle based on previous angle when jump is more than 90°"""
-    delta_angle = angle-previous_angle
-    return previous_angle + modNeg90To90(delta_angle)
+    delta_angle_deg = angle_deg-previous_angle_deg
+    return previous_angle_deg + modNeg90To90(delta_angle_deg)
 
 def isPixelInImage((x,y), image):
     return (x>0 and x<image.width and y>0 and y<image.height)
@@ -227,10 +227,10 @@ while disp.isNotDone():
 		                [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
                 rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
                 if useBasemap:
-		  coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
+		  coord = sp.deg2rad(m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True))
 		else:
-                  coord_deg = sp.rad2deg(localProjection(rot_coord_px[0]-img.width/2, img.height/2-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True))
-		target_bearing_deg, target_elevation_deg = coord_deg
+                  coord = localProjection(rot_coord_px[0]-img.width/2, img.height/2-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True)
+		target_bearing, target_elevation = coord
 
 		# Get minimum bounding rectangle for display purpose
 		minR = ROITopLeftCorner + np.array(target[0].minRect())
@@ -258,8 +258,8 @@ while disp.isNotDone():
 		times.append(timestamp)
 		coords_px.append(coord_px)
 		angles.append(angle)
-  		target_elevations.append(sp.deg2rad(target_elevation_deg))
-		target_bearings.append(sp.deg2rad(target_bearing_deg))
+  		target_elevations.append(target_elevation)
+		target_bearings.append(target_bearing)
 		
 		# Save for initialisation of next step
 		previous_dCoord = dCoord
@@ -344,14 +344,14 @@ while disp.isNotDone():
 	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
 	    # Text giving bearing
-	      for bearing in range(0, 360, 30):
-                l = localProjection(sp.deg2rad(bearing), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-                layer.text(str(bearing), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
+	      for bearing_deg in range(0, 360, 30):
+                l = localProjection(sp.deg2rad(bearing_deg), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                layer.text(str(bearing_deg), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
 
 	    # Text giving elevation
-	      for elevation in range(-60, 91, 30):
-                l = localProjection(0, sp.deg2rad(elevation), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-                layer.text(str(elevation), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
+	      for elevation_deg in range(-60, 91, 30):
+                l = localProjection(0, sp.deg2rad(elevation_deg), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
 	    
 

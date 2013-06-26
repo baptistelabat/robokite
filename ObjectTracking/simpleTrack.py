@@ -51,7 +51,6 @@ cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-
 
 img = cam.getImage()
 print img.width, img.height
-FPS = 25 # Number of frame per second
 maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
 pixelPerRadians = 640
 radius = pixelPerRadians
@@ -67,6 +66,7 @@ target_elevations = []
 target_bearings = []
 times = []
 wasTargetFoundInPreviousFrame = False
+i_frame = 0
 
 
 # Automatically detect target
@@ -92,6 +92,7 @@ isUDPConnection = False # Currently switched manually in the code
 if isUDPConnection:
   a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
   a.start()
+
 # Loop while not canceled by user
 t0 = time.time()
 previousTime = t0
@@ -101,7 +102,7 @@ while disp.isNotDone():
     FPS = 1/(t-previousTime)
     print FPS
     previousTime = t
-    i_frame = np.floor((t-t0))*FPS#cam.getFrameNumber()
+    i_frame = i_frame + 1
     timestamp = datetime.datetime.utcnow()
     # Receive orientation of the camera
     if isUDPConnection:
@@ -109,7 +110,7 @@ while disp.isNotDone():
     if useBasemap:
     # Warning this really slows down the computation
       m = Basemap(width=img.width, height=img.height, projection='aeqd',
-		    lat_0=sp.rad2deg(mobile.pitch),lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
+		    lat_0=sp.rad2deg(mobile.pitch), lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
 
 # ------------------------------
     # Get an image from camera
@@ -119,8 +120,10 @@ while disp.isNotDone():
 
       toDisplay = img
       #img = img.resize(800,600)
-    if disp.rightButtonDown:
+    dwn = disp.rightButtonDownPosition()
+    if dwn is not None:
       isPaused = not(isPaused)
+      dwn = None
     # Create a layer to enable user to make a selection of the target
     selectionLayer = DrawingLayer((img.width, img.height))
 

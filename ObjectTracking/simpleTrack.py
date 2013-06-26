@@ -87,7 +87,7 @@ print "Target must have width larger than height"
 
 
 mobile = mobileState.mobileState()
-isUDPConnection = True # Currently switched manually in the code
+isUDPConnection = False # Currently switched manually in the code
 if isUDPConnection:
   a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
   a.start()
@@ -326,13 +326,13 @@ while disp.isNotDone():
 	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
 	    # Text giving bearing
-	        for bearing in range(0, 360, 30):
-                  l = localProjection(sp.deg2rad(bearing), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-                  layer.text(str(bearing), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
+	      for bearing in range(0, 360, 30):
+                l = localProjection(sp.deg2rad(bearing), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                layer.text(str(bearing), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
 	    # Text giving elevation
-	        for elevation in range(-60, 91, 30):
-                  l = localProjection(0, sp.deg2rad(elevation), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-                  layer.text(str(elevation), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
+	      for elevation in range(-60, 91, 30):
+                l = localProjection(0, sp.deg2rad(elevation), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+                layer.text(str(elevation), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
 	    
 

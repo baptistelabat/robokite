@@ -219,12 +219,11 @@ while disp.isNotDone():
 		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
 		# Rotate the coordinates of roll angle around the middle of the screen
 		ctm = np.array([[sp.cos(mobile.roll*(not(imageToRotate))), -sp.sin(mobile.roll*(not(imageToRotate)))],[sp.sin(mobile.roll*(not(imageToRotate))), sp.cos(mobile.roll*(not(imageToRotate)))]])
-                rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([[img.width/2], [img.height/2]])
-		
+                rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
                 if useBasemap:
 		  coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)
 		else:
-                  coord_deg = sp.rad2deg(localProjection(rot_coord_px[0], img.height-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True))
+                  coord_deg = sp.rad2deg(localProjection(rot_coord_px[0]-img.width/2, img.height/2-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True))
 		target_bearing_deg, target_elevation_deg = coord_deg
 		# Get minimum bounding rectangle for display purpose
 		minR = ROITopLeftCorner + np.array(target[0].minRect())

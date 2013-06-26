@@ -75,7 +75,7 @@ wasTargetFoundInPreviousFrame = False
 disp = Display((img.width*2, img.height*2))
 isPaused = False
 selectionInProgress = False
-display = False
+display = True
 displayDebug = False
 imageToRotate = False
 useBasemap = False
@@ -233,7 +233,7 @@ while disp.isNotDone():
 	
 		# Get target features
 		angle = sp.deg2rad(target[0].angle()) + mobile.roll
-		angle =  unwrap180(angle, previous_angle)
+		angle =  sp.deg2rad(unwrap180(sp.rad2deg(angle), sp.rad2deg(previous_angle)))
 		width = target[0].width()
 		height = target[0].height()
 		

@@ -43,11 +43,12 @@ target_detail = Image('kite_detail.jpg').invert()
 pal = target_detail.getPalette(bins = 3, hue = False)
 
 # Open video to analyse or live stream
+cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
 cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
 #cam = VirtualCamera('output1.avi', 'video')
 #cam = Camera()
-#cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+
 img = cam.getImage()
 print img.width, img.height
 FPS = 25 # Number of frame per second
@@ -77,7 +78,7 @@ isPaused = False
 selectionInProgress = False
 display = True
 displayDebug = False
-imageToRotate = False
+
 useBasemap = False
 
 print "Press right mouse button to pause or play"
@@ -114,9 +115,7 @@ while disp.isNotDone():
     # Get an image from camera
     if not isPaused:
       img = cam.getImage()
-      if imageToRotate:
-        img = img.rotate(-sp.rad2deg(mobile.roll), fixed = False)
-      # else do not rotate image to save computation time
+      # never rotate the image except for display
 
       toDisplay = img
       #img = img.resize(800,600)
@@ -218,7 +217,7 @@ while disp.isNotDone():
 		coordMinRect = ROITopLeftCorner + np.array((target[0].minRectX(), target[0].minRectY()))
 		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
 		# Rotate the coordinates of roll angle around the middle of the screen
-		ctm = np.array([[sp.cos(mobile.roll*(not(imageToRotate))), -sp.sin(mobile.roll*(not(imageToRotate)))],[sp.sin(mobile.roll*(not(imageToRotate))), sp.cos(mobile.roll*(not(imageToRotate)))]])
+		ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)],[sp.sin(mobile.roll), sp.cos(mobile.roll)]])
                 rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
                 if useBasemap:
 		  coord_deg = m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True)

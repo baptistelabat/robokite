@@ -11,30 +11,6 @@ from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
 import mobileState
 
-print "Press right mouse button to pause or play"
-print "Use left mouse button to select target"
-print "Target color must be different from background"
-print "Target must have width larger than height"
-
-#Parameters
-isUDPConnection = False # Currently switched manually in the code
-display = False
-displayDebug = False
-useBasemap = False
-maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
-pixelPerRadians = 640
-radius = pixelPerRadians
-referenceImage = 'kite_detail.jpg'
-scaleFactor = 1.0
-
-class Kite:
- def __init__(self):
-   self.elevation = 0
-   self.bearing = 0
-   self.distance = 0
-   self.speed = 0
-   self.orientation = 0
-
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
   if inverse: 
@@ -59,52 +35,77 @@ def unwrap180(angle_deg, previous_angle_deg):
 def isPixelInImage((x,y), image):
     return (x>0 and x<image.width and y>0 and y<image.height)
 
-# Open reference image: this is used at initlalisation
-target_detail = Image(referenceImage).invert()
+class Kite:
+ def __init__(self):
+   self.elevation = 0
+   self.bearing = 0
+   self.distance = 0
+   self.speed = 0
+   self.orientation = 0
 
-# Get RGB color palette of target (was found to work better than using hue)
-pal = target_detail.getPalette(bins = 3, hue = False)
+ def track(self):
 
-# Open video to analyse or live stream
-#cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
-#cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-#cam = VirtualCamera('output1.avi', 'video')
-#cam = Camera()
+  print "Press right mouse button to pause or play"
+  print "Use left mouse button to select target"
+  print "Target color must be different from background"
+  print "Target must have width larger than height"
 
-# Get a sample image to initialize the display at the same size
-img = cam.getImage().scale(scaleFactor)
-print img.width, img.height
-# Create a pygame display
-if display:
-  disp = Display((int(img.width*2/scaleFactor), int(img.height*2/scaleFactor)))
+  #Parameters
+  isUDPConnection = False # Currently switched manually in the code
+  display = True
+  displayDebug = False
+  useBasemap = False
+  maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
+  pixelPerRadians = 640
+  radius = pixelPerRadians
+  referenceImage = 'kite_detail.jpg'
+  scaleFactor = 1.0
 
-# Initialize variables
-previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
-previous_coord_px = (0, 0) # Initialized to top left corner, which always exists
-previous_dCoord = previous_coord_px
-previous_dAngle = previous_angle
-angles = []
-coords_px = []
-target_elevations = []
-target_bearings = []
-times = []
-wasTargetFoundInPreviousFrame = False
-i_frame = 0
-isPaused = False
-selectionInProgress = False
-kite = Kite()
+  # Open reference image: this is used at initlalisation
+  target_detail = Image(referenceImage).invert()
 
-# Launch a thread to get UDP message with orientation of the camera
-mobile = mobileState.mobileState()
-if isUDPConnection:
-  a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
-  a.start()
+  # Get RGB color palette of target (was found to work better than using hue)
+  pal = target_detail.getPalette(bins = 3, hue = False)
 
-# Loop while not canceled by user
-t0 = time.time()
-previousTime = t0
-while not(display) or disp.isNotDone():
+  # Open video to analyse or live stream
+  #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+  cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+  #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
+  #cam = VirtualCamera('output1.avi', 'video')
+  #cam = Camera() 
+
+  # Get a sample image to initialize the display at the same size
+  img = cam.getImage().scale(scaleFactor)
+  print img.width, img.height
+  # Create a pygame display
+  if display:
+   disp = Display((int(img.width*2/scaleFactor), int(img.height*2/scaleFactor)))
+
+  # Initialize variables
+  previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
+  previous_coord_px = (0, 0) # Initialized to top left corner, which always exists
+  previous_dCoord = previous_coord_px
+  previous_dAngle = previous_angle
+  angles = []
+  coords_px = []
+  target_elevations = []
+  target_bearings = []
+  times = []
+  wasTargetFoundInPreviousFrame = False
+  i_frame = 0
+  isPaused = False
+  selectionInProgress = False
+
+  # Launch a thread to get UDP message with orientation of the camera
+  mobile = mobileState.mobileState()
+  if isUDPConnection:
+   a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
+   a.start()
+
+  # Loop while not canceled by user
+  t0 = time.time()
+  previousTime = t0
+  while not(display) or disp.isNotDone():
     t = time.time()
     FPS = 1/(t-previousTime)
     print 'FPS =', FPS
@@ -115,6 +116,8 @@ while not(display) or disp.isNotDone():
     # Receive orientation of the camera
     if isUDPConnection:
       mobile.computeRPY()
+    ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)], \
+		    [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
 
     if useBasemap:
     # Warning this really slows down the computation
@@ -236,8 +239,6 @@ while not(display) or disp.isNotDone():
 		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
 
 		# Rotate the coordinates of roll angle around the middle of the screen
-		ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)], \
-		                [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
                 rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
                 if useBasemap:
 		  coord = sp.deg2rad(m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True))
@@ -267,12 +268,17 @@ while not(display) or disp.isNotDone():
 		  dAngle = np.array([0]) 
 #print coord_px, angle, width, height, dCoord
 	
-		# Save important data
+		# Record important data
 		times.append(timestamp)
 		coords_px.append(coord_px)
 		angles.append(angle)
   		target_elevations.append(target_elevation)
 		target_bearings.append(target_bearing)
+		
+		# Export data to controller
+		self.elevation = target_elevation
+		self.bearing = target_bearing
+		self.orientation = angle
 		
 		# Save for initialisation of next step
 		previous_dCoord = dCoord
@@ -281,6 +287,7 @@ while not(display) or disp.isNotDone():
 		wasTargetFoundInPreviousFrame = True
 	    else:
 		wasTargetFoundInPreviousFrame = False
+
 
             if display :
               if target:
@@ -316,6 +323,7 @@ while not(display) or disp.isNotDone():
 	      for lat in range(-90, 90, 15):
 	        r = range(0, 361, 10)
                 if useBasemap:
+		  # \todo improve for high roll
 		  l = m (r, [lat]*len(r))
 	          pix = [np.array(l[0]), img.height-np.array(l[1])]
                 else:
@@ -325,6 +333,7 @@ while not(display) or disp.isNotDone():
 				      lon_0 = mobile.yaw, \
 				      lat_0 = mobile.pitch, \
 				      inverse = False)
+		  l = np.dot(ctm, l)
 	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
 	        for i in range(len(r)-1):
@@ -335,6 +344,7 @@ while not(display) or disp.isNotDone():
 	      for lon in range(0, 360, 15):
 	        r = range(-90, 91, 10)
 	        if useBasemap:
+		  # \todo improve for high roll
                   l = m ([lon]*len(r), r)
  	          pix = [np.array(l[0]), img.height-np.array(l[1])]
                 else:
@@ -344,6 +354,7 @@ while not(display) or disp.isNotDone():
 				      lon_0 = mobile.yaw, \
 				      lat_0 = mobile.pitch, \
 				      inverse = False)
+		  l = np.dot(ctm, l)
  	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
 	        for i in range(len(r)-1):
@@ -351,17 +362,25 @@ while not(display) or disp.isNotDone():
 	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
 	    # Text giving bearing
+	    # \todo improve for high roll
 	      for bearing_deg in range(0, 360, 30):
                 l = localProjection(sp.deg2rad(bearing_deg), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+		l = np.dot(ctm, l)
                 layer.text(str(bearing_deg), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
 
 	    # Text giving elevation
+	    # \todo improve for high roll
 	      for elevation_deg in range(-60, 91, 30):
                 l = localProjection(0, sp.deg2rad(elevation_deg), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+		l = np.dot(ctm, l)
                 layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
 	      toDisplay.save(disp)
     if display : 
       toDisplay.removeDrawingLayer(1)
       toDisplay.removeDrawingLayer(0)
+
+if __name__ == '__main__':
+  kite = Kite()
+  kite.track()
 	    

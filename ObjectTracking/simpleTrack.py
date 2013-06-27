@@ -18,7 +18,7 @@ print "Target must have width larger than height"
 
 #Parameters
 isUDPConnection = False # Currently switched manually in the code
-display = True
+display = False
 displayDebug = False
 useBasemap = False
 maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
@@ -26,6 +26,14 @@ pixelPerRadians = 640
 radius = pixelPerRadians
 referenceImage = 'kite_detail.jpg'
 scaleFactor = 1.0
+
+class Kite:
+ def __init__(self):
+   self.elevation = 0
+   self.bearing = 0
+   self.distance = 0
+   self.speed = 0
+   self.orientation = 0
 
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
@@ -68,7 +76,8 @@ cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-
 img = cam.getImage().scale(scaleFactor)
 print img.width, img.height
 # Create a pygame display
-disp = Display((int(img.width*2/scaleFactor), int(img.height*2/scaleFactor)))
+if display:
+  disp = Display((int(img.width*2/scaleFactor), int(img.height*2/scaleFactor)))
 
 # Initialize variables
 previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
@@ -84,6 +93,7 @@ wasTargetFoundInPreviousFrame = False
 i_frame = 0
 isPaused = False
 selectionInProgress = False
+kite = Kite()
 
 # Launch a thread to get UDP message with orientation of the camera
 mobile = mobileState.mobileState()
@@ -94,7 +104,7 @@ if isUDPConnection:
 # Loop while not canceled by user
 t0 = time.time()
 previousTime = t0
-while disp.isNotDone():
+while not(display) or disp.isNotDone():
     t = time.time()
     FPS = 1/(t-previousTime)
     print 'FPS =', FPS
@@ -115,11 +125,12 @@ while disp.isNotDone():
     if not isPaused:
       img = cam.getImage().scale(scaleFactor)# never rotate the image except for display
     
-    # Pause image when right button is pressed
-    dwn = disp.rightButtonDownPosition()
-    if dwn is not None:
-      isPaused = not(isPaused)
-      dwn = None
+    if display:
+      # Pause image when right button is pressed
+      dwn = disp.rightButtonDownPosition()
+      if dwn is not None:
+        isPaused = not(isPaused)
+        dwn = None
 
     if display:
     # Create a layer to enable user to make a selection of the target
@@ -195,7 +206,7 @@ while disp.isNotDone():
 
 	    # Search for binary large objects representing potential target
 	    target = target_img.findBlobs(minsize = 1000)
-	    if displayDebug:
+	    if display and displayDebug:
 	      ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
               for i_col in range(len(pal)): 
 		      col = pal[i_col]

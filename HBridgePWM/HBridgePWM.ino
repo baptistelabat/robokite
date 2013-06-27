@@ -40,6 +40,8 @@ boolean isManualControl = false;
 double sensorValueMin = 255;//0
 double sensorValueMax = 767;//1023
 double deadBand = 0.05; // Use to ensure zero speed. Should not be zero
+long initialTime = 0;
+boolean isCycleStarting = false;
 
 void setup()
 {
@@ -92,7 +94,6 @@ void serialEvent() {
    }
   }
   Serial.println(inputString);
-  Serial.println(alphaSigned);
   inputString="";
 }
 
@@ -102,22 +103,30 @@ void loop()
   digitalWrite(HbridgeEnablePin, HIGH);
   
   alpha = computeLogicState();
-  delay(minTime_ms);
-
-  alpha = computeLogicState();
-  double initialTime = millis();
-  double elapsedTime_ms = millis() - initialTime;
-  while (elapsedTime_ms < minTime_ms/alpha*(1-alpha)-minTime_ms)
+  if (isCycleStarting)
   {
-    digitalWrite(HbridgeEnablePin, LOW);
-    delay(minTime_ms);
-
-    alpha = computeLogicState();
-    elapsedTime_ms = millis() - initialTime;
-   
+    if ((millis()-initialTime) > minTime_ms)
+    { 
+      isCycleStarting = false;
+    } 
+     Serial.println("isStarting");
   }
-  digitalWrite(HbridgeEnablePin, LOW);
-  delay(fabs(minTime_ms/alpha*(1-alpha)- elapsedTime_ms));
+  else
+  {
+    if ((millis() - initialTime) < minTime_ms/alpha*(1-alpha)+minTime_ms)
+    {
+          digitalWrite(HbridgeEnablePin, LOW);
+          Serial.println("isNotStarting");
+    }
+    else
+    {
+      initialTime = millis();
+      isCycleStarting = true;
+    } 
+  }
+  alpha = computeLogicState();
+  delay(1);
+
 
 //  // print the results to the serial monitor:
 //  Serial.print("alphaManual = " );                       

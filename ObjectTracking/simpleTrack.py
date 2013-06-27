@@ -9,7 +9,9 @@ import sys
 import threading
 from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
+sys.path.append('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/Control')
 import mobileState
+import PID
 
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
@@ -41,10 +43,12 @@ class Kite:
    self.bearing = 0
    self.distance = 0
    self.speed = 0
+   self.ROT = 0
    self.orientation = 0
+   self.lastUpdateTime = 0
+   self.filterTimeConstant = 0.5
 
  def track(self):
-
   print "Press right mouse button to pause or play"
   print "Use left mouse button to select target"
   print "Target color must be different from background"
@@ -60,6 +64,7 @@ class Kite:
   radius = pixelPerRadians
   referenceImage = 'kite_detail.jpg'
   scaleFactor = 1.0
+  isVirtualCamera = True
 
   # Open reference image: this is used at initlalisation
   target_detail = Image(referenceImage).invert()
@@ -69,10 +74,14 @@ class Kite:
 
   # Open video to analyse or live stream
   #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-  cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
-  #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-  #cam = VirtualCamera('output1.avi', 'video')
-  #cam = Camera() 
+  if isVirtualCamera:
+    cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+    #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
+    #cam = VirtualCamera('output1.avi', 'video')
+    virtualCameraFPS = 25
+  else:
+    cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+    #cam = Camera() 
 
   # Get a sample image to initialize the display at the same size
   img = cam.getImage().scale(scaleFactor)
@@ -107,8 +116,11 @@ class Kite:
   previousTime = t0
   while not(display) or disp.isNotDone():
     t = time.time()
-    FPS = 1/(t-previousTime)
-    print 'FPS =', FPS
+    deltaT = (t-previousTime)
+    FPS = 1.0/deltaT
+    #print 'FPS =', FPS
+    if isVirtualCamera:
+      deltaT = 1.0/virtualCameraFPS
     previousTime = t
     i_frame = i_frame + 1
     timestamp = datetime.datetime.utcnow()
@@ -259,7 +271,7 @@ class Kite:
 		height = target[0].height()
 		
                 # Filter the data
-		alpha = 0.1
+		alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
                 if not(isPaused):
 		  dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
 	          dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
@@ -279,6 +291,8 @@ class Kite:
 		self.elevation = target_elevation
 		self.bearing = target_bearing
 		self.orientation = angle
+		self.ROT = dAngle
+                self.lastUpdateTime = t
 		
 		# Save for initialisation of next step
 		previous_dCoord = dCoord
@@ -381,6 +395,26 @@ class Kite:
       toDisplay.removeDrawingLayer(0)
 
 if __name__ == '__main__':
+  import serial
   kite = Kite()
-  kite.track()
+  a = threading.Thread(None, Kite.track, None, (kite,))
+  print 'here'
+  a.start()
+  print 'haaa'
+  pid = PID.PID(0.1, 0, 100)
+  offset = sp.pi/3*0
+  ser = serial.Serial('/dev/ttyACM1', 9600)
+  ser.write('i')
+  dt = 0.1
+  while True:
+    setpoint = 0*sp.pi/1.7*sp.sin(2*sp.pi/7*time.time())+offset
+    error = kite.orientation -setpoint
+    print kite.orientation, kite.ROT, error
+    pid.incrementTime(error, dt)
+    order = pid.computeCorrection(error, kite.ROT)
+    print str(order)
+    ser.write('i')
+    time.sleep(dt)
+    ser.write(str(np.floor(100*order)/100.0))
+    time.sleep(dt)
 	    

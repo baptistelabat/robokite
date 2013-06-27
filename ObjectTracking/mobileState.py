@@ -25,6 +25,7 @@ class mobileState:
     self.filterTimeConstant = 0.3
     self.time_acceleration = 0
     self.time_magnetic = 0
+    self.isTerminated = False
 
   def computeRPY(self):
     """Computes roll, pitch and yaw. See "Implementing a Tilt-Compensated
@@ -97,7 +98,7 @@ class mobileState:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     s.bind((host, port))
-    while True:
+    while not(self.isTerminated):
         try:
           message, address = s.recvfrom(9000)
           self.decodeMessageSensorUDP(message)

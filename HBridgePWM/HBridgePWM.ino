@@ -99,32 +99,12 @@ void serialEvent() {
 
 void loop()
 {
-  double alpha = 0;
-  digitalWrite(HbridgeEnablePin, HIGH);
+  sensorValue = analogRead(analogInPin);
+  setMode();
+  computeAlphaSigned();
+  computeEnableState();
+  computeLogicState();
   
-  alpha = computeLogicState();
-  if (isCycleStarting)
-  {
-    if ((millis()-initialTime) > minTime_ms)
-    { 
-      isCycleStarting = false;
-    } 
-     Serial.println("isStarting");
-  }
-  else
-  {
-    if ((millis() - initialTime) < minTime_ms/alpha*(1-alpha)+minTime_ms)
-    {
-          digitalWrite(HbridgeEnablePin, LOW);
-          Serial.println("isNotStarting");
-    }
-    else
-    {
-      initialTime = millis();
-      isCycleStarting = true;
-    } 
-  }
-  alpha = computeLogicState();
   delay(1);
 
 
@@ -132,12 +112,10 @@ void loop()
 //  Serial.print("alphaManual = " );                       
 //  Serial.print(alphaSigned);      
 //  Serial.print("\t alphaUsed = ");      
-//  Serial.println(alphaSigned);   
+ Serial.println(alphaSigned);   
 }
-
-double computeLogicState()
-{
-  sensorValue = analogRead(analogInPin);
+void setMode()
+{  
   // If the analog value is changed, it means that the user wants to take control with the joystick
   // so fallback to joystick control
   if (fabs(initialSensorValue-sensorValue) > 10)
@@ -146,24 +124,85 @@ double computeLogicState()
   }
 	
   // Fallback to manual control if the analog voltage is close to zero (probably unplugged)
-  isManualControl = (sensorValue < 10);
+  // Place after hardware limit if possible
+  // This avoids to go to full speed if one cable in the potentiometer is unplugged
+  // Warning: if the midle cable of the potentiometer is unplugged, the signal is free, and the fault can not be detected
+  isManualControl = (sensorValue < 5)|(sensorValue >1023-5);
+}
 
+void computeAlphaSigned()
+{
+    // If not in Serial control overwrite the value 
+  if (false == isSerialControl)
+  {
+    // Compute the value corresponding to the deadband
+    double sensorDeadBandMax = sensorValueMin + (deadBand/2+0.5)*(sensorValueMax - sensorValueMin);
+    double sensorDeadBandMin = sensorValueMin + (deadBand/2+0.5)*(sensorValueMax - sensorValueMin);
+    if (sensorValue < sensorDeadBandMin) //strictly to avoid alphaSigned equals zero
+    {
+      alphaSigned = (sensorValue-sensorValueMin)/(sensorDeadBandMax - sensorValueMin)-1;
+    } 
+    else
+    {
+      if (sensorValue > sensorDeadBandMax)
+      {
+        alphaSigned = (sensorValue-sensorDeadBandMax)/(sensorValueMax - sensorDeadBandMax);
+      }
+      else
+      {
+        alphaSigned = 0;
+      }
+    }
+  }
+  alphaSigned = min(1, max(-1, alphaSigned));
+}
+
+void computeEnableState()
+{
   if (isManualControl)  
   {
     // Motor is free to move to enable manual control
     digitalWrite(HbridgeEnablePin, LOW);
   }
-  
-  // If not in Serial control overwrite the value 
-  if (false == isSerialControl)
+  else
   {
-    alphaSigned = 2*((sensorValue-sensorValueMin)/(sensorValueMax - sensorValueMin)-0.5);  
+    if (alphaSigned == 0) //if alpha is exactly zero, brake dynamically
+    {
+      digitalWrite(HbridgeEnablePin, HIGH);
+    }
+    else
+    {
+      if (isCycleStarting)
+      {
+        if ((millis()-initialTime) > minTime_ms)
+        { 
+          digitalWrite(HbridgeEnablePin, HIGH);
+          isCycleStarting = false;
+        } 
+      }
+      else
+      { 
+        // note that alpha can't be zero
+        double alpha = fabs(alphaSigned);
+        if ((millis() - initialTime) < minTime_ms/alpha*(1-alpha)+minTime_ms)
+        {
+              digitalWrite(HbridgeEnablePin, LOW);
+        }
+        else
+        {
+          digitalWrite(HbridgeEnablePin, HIGH); // or low?
+          initialTime = millis();
+          isCycleStarting = true;
+        } 
+      }
+    }
   }
-  // The saturation ensures the motor can be stopped and avoids division by zero
-  double alpha = max(fabs(alphaSigned), deadBand);
-  alpha = min(alpha, 1);
 
-  if (alphaSigned > fabs(deadBand))
+}
+
+void computeLogicState()
+{
+  if (alphaSigned > 0)
   {
     // Forward rotation
     digitalWrite(HbridgeLogicPin1, HIGH);
@@ -171,7 +210,7 @@ double computeLogicState()
   }
   else 
   {
-    if (alphaSigned<-fabs(deadBand))
+    if (alphaSigned < 0)
     {
 	  // Backward rotation
       digitalWrite(HbridgeLogicPin1, LOW);
@@ -180,12 +219,11 @@ double computeLogicState()
     else
     {
       // Brake ?
-      digitalWrite(HbridgeLogicPin1, LOW);
-      digitalWrite(HbridgeLogicPin2, LOW);
+      digitalWrite(HbridgeLogicPin1, HIGH); // According to a website i don't remember
+      digitalWrite(HbridgeLogicPin2, HIGH); // but hard to check with the motor I have
     }
 	// \todo: add an input to enable manual rotation of the motor
   }
-  return alpha;
 }
 
 

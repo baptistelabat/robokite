@@ -4,8 +4,11 @@ class PID:
         self.Ki = Ki # Integral gain
         self.Kd = Kd # Derivative gain
         self.integral = 0
+	self.maxOutput = 1
+	self.minOutput = -1
     def incrementTime(self, error, dt):
         self.integral = self.integral + error*self.Ki*dt
     def computeCorrection(self, error, derror):
         correction = self.Kp*(error) + self.Kd*derror + self.integral
+        correction = min(max(correction, self.minOutput), self.maxOutput)
         return correction

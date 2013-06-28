@@ -57,17 +57,17 @@ class Kite:
   #Parameters
   isUDPConnection = False # Currently switched manually in the code
   display = True
-  displayDebug = False
+  displayDebug = True
   useBasemap = False
   maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
   pixelPerRadians = 640
   radius = pixelPerRadians
   referenceImage = 'kite_detail.jpg'
-  scaleFactor = 1.0
-  isVirtualCamera = True
+  scaleFactor = 0.5
+  isVirtualCamera = False
 
   # Open reference image: this is used at initlalisation
-  target_detail = Image(referenceImage).invert()
+  target_detail = Image(referenceImage)
 
   # Get RGB color palette of target (was found to work better than using hue)
   pal = target_detail.getPalette(bins = 3, hue = False)
@@ -77,18 +77,18 @@ class Kite:
   if isVirtualCamera:
     cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-    #cam = VirtualCamera('output1.avi', 'video')
+    cam = VirtualCamera('output.avi', 'video')
     virtualCameraFPS = 25
   else:
-    cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-    #cam = Camera() 
+    #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+    cam = Camera() 
 
   # Get a sample image to initialize the display at the same size
   img = cam.getImage().scale(scaleFactor)
   print img.width, img.height
   # Create a pygame display
   if display:
-   disp = Display((int(img.width*2/scaleFactor), int(img.height*2/scaleFactor)))
+   disp = Display((int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
 
   # Initialize variables
   previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
@@ -207,36 +207,44 @@ class Kite:
 	    target_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
 
 	    # Option 3
-	    ini = ROI-ROI # Black image
+	    target_img = ROI-ROI # Black image
 	    		
 	    # Loop through palette of target colors
+	    if display and displayDebug:
+              decomposition = []
 	    for col in pal: 
 	      c = tuple([int(col[i]) for i in range(0,3)])
               # Search the target based on color
-	      target_img = ini + ROI.hueDistance(color = c).threshold(50)
-            #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
+	      filter_img = ROI.colorDistance(color = c)
+              cs = np.cumsum(filter_img.histogram(numbins=256))
+	      th = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
+	      filter_img = filter_img.threshold(th*0.5).invert()
+              target_img = target_img + filter_img
+              print th
+	      if display and displayDebug:
+	        [R, G, B] = filter_img.splitChannels()
+	        white = (R-R).invert()
+		r = R*1.0/255*c[0]
+		g = B*1.0/255*c[1]
+		b = G*1.0/255*c[2]
+		tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
+		decomposition.append(tmp)
 
 	    # Get a black background with with white target foreground
-	    target_img = target_img.threshold(150)#.erode(2).dilate(2)
+	    target_img = target_img.threshold(150)
 
-	    # Search for binary large objects representing potential target
-	    target = target_img.findBlobs(minsize = 1000)
 	    if display and displayDebug:
-	      ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
-              for i_col in range(len(pal)): 
-		      col = pal[i_col]
-		      c = tuple([int(col[i]) for i in range(3)])
-		      [R, G, B] = ROI.hueDistance(color = c).threshold(50).invert().splitChannels()
-		      white = (R-R).invert()
-		      r = R*1.0/255*c[0]
-		      g = B*1.0/255*c[1]
-		      b = G*1.0/255*c[2]
-		      tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
-		      ini = ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
-              ini = ini.adaptiveScale((int(img.width), int(img.height)))
-	      toDisplay = img.sideBySide(ini)
+	      small_ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
+              for tmp in decomposition:
+              	small_ini = small_ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
+              small_ini = small_ini.adaptiveScale((int(img.width), int(img.height)))
+	      toDisplay = img.sideBySide(small_ini)
 	    else:
               toDisplay = img
+            #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
+
+	    # Search for binary large objects representing potential target
+	    target = target_img.findBlobs(minsize = 500)
 	    
 	    if target: # If a target was found
 		if wasTargetFoundInPreviousFrame:

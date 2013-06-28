@@ -10,7 +10,7 @@ The motor is controlled through a parameter alpha which is signed and vary from 
 This parameter can be set thanks to a an analog voltage (set through a potentiometer used as joystick for example) or sent over serial connection
 The analog voltage is taken by default.
 If the analog voltage is not zero, the motor is left free of moving
-To start the serial control send "i" in a serial monitor
+To start the serial control send "i" in a serial monitor. Optionnaly follow by the frequency of the message (fallbacks to zero if no message)
 Then send the value with a dot (ex "0.5")
 To stop the serial control send "o".
 There is not guarantee that there is a linear relationship between alpha and the rotation speed
@@ -39,9 +39,11 @@ boolean isManualControl = false;
 // The range was reduced 
 double sensorValueMin = 255;//0
 double sensorValueMax = 767;//1023
-double deadBand = 0.05; // Use to ensure zero speed. Should not be zero
+double deadBand = 0.2; // Use to ensure zero speed. Should not be zero
 long initialTime = 0;
+long lastSerialInputTime = 0;
 boolean isCycleStarting = false;
+double serialFrequency = 0;
 
 void setup()
 {
@@ -77,10 +79,18 @@ void serialEvent() {
       stringComplete = true;
     }
   }
-  if (inputString == "i")
+  if (inputString[0] == 'i')
   {
     isSerialControl = true;
     initialSensorValue = analogRead(analogInPin);
+    if (inputString.substring(1)=="")
+    {
+      serialFrequency = 0;
+    }
+    else
+    { 
+      serialFrequency = StrToFloat(inputString.substring(1));
+    } 
   }
   else
   {
@@ -90,7 +100,13 @@ void serialEvent() {
    }
    else
    {
-     alphaSigned = StrToFloat(inputString);
+     // To reject incorrect value due to 0. badly read
+     if ((StrToFloat(inputString)>=-1) & (StrToFloat(inputString)<=1))
+     {
+       alphaSigned = StrToFloat(inputString);
+       lastSerialInputTime = millis();
+       Serial.println(alphaSigned);
+     }
    }
   }
   Serial.println(inputString);
@@ -105,14 +121,14 @@ void loop()
   computeEnableState();
   computeLogicState();
   
-  delay(1);
+  delay(30);
 
 
 //  // print the results to the serial monitor:
 //  Serial.print("alphaManual = " );                       
 //  Serial.print(alphaSigned);      
 //  Serial.print("\t alphaUsed = ");      
- Serial.println(alphaSigned);   
+ //Serial.println(alphaSigned);   
 }
 void setMode()
 {  
@@ -132,12 +148,19 @@ void setMode()
 
 void computeAlphaSigned()
 {
+  if (serialFrequency != 0)
+  { // Fallbacks to zero as we received no message in the expected time (twice the time)
+    if ((millis()-lastSerialInputTime) > 2*1/serialFrequency*1000)
+    {
+      alphaSigned = 0;
+    }
+  }
     // If not in Serial control overwrite the value 
   if (false == isSerialControl)
   {
     // Compute the value corresponding to the deadband
-    double sensorDeadBandMax = sensorValueMin + (deadBand/2+0.5)*(sensorValueMax - sensorValueMin);
-    double sensorDeadBandMin = sensorValueMin + (deadBand/2+0.5)*(sensorValueMax - sensorValueMin);
+    double sensorDeadBandMax = sensorValueMin + (deadBand/2.0+0.5)*(sensorValueMax - sensorValueMin);
+    double sensorDeadBandMin = sensorValueMin + (-deadBand/2.0+0.5)*(sensorValueMax - sensorValueMin);
     if (sensorValue < sensorDeadBandMin) //strictly to avoid alphaSigned equals zero
     {
       alphaSigned = (sensorValue-sensorValueMin)/(sensorDeadBandMax - sensorValueMin)-1;

@@ -404,17 +404,14 @@ if __name__ == '__main__':
   pid = PID.PID(0.1, 0, 100)
   offset = sp.pi/3*0
   ser = serial.Serial('/dev/ttyACM1', 9600)
-  ser.write('i')
   dt = 0.1
+  time.sleep(dt)
+  ser.write('i1')
   while True:
     setpoint = 0*sp.pi/1.7*sp.sin(2*sp.pi/7*time.time())+offset
     error = kite.orientation -setpoint
-    print kite.orientation, kite.ROT, error
     pid.incrementTime(error, dt)
     order = pid.computeCorrection(error, kite.ROT)
-    print str(order)
-    ser.write('i')
-    time.sleep(dt)
     ser.write(str(np.floor(100*order)/100.0))
     time.sleep(dt)
 	    

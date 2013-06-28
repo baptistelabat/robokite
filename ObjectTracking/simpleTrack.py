@@ -64,20 +64,20 @@ class Kite:
   radius = pixelPerRadians
   referenceImage = 'kite_detail.jpg'
   scaleFactor = 0.5
-  isVirtualCamera = False
+  isVirtualCamera = True
 
   # Open reference image: this is used at initlalisation
   target_detail = Image(referenceImage)
 
   # Get RGB color palette of target (was found to work better than using hue)
-  pal = target_detail.getPalette(bins = 3, hue = False)
+  pal = target_detail.getPalette(bins = 2, hue = False)
 
   # Open video to analyse or live stream
   #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
   if isVirtualCamera:
     cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-    cam = VirtualCamera('output.avi', 'video')
+    #cam = VirtualCamera('output.avi', 'video')
     virtualCameraFPS = 25
   else:
     #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
@@ -88,7 +88,11 @@ class Kite:
   print img.width, img.height
   # Create a pygame display
   if display:
-   disp = Display((int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
+   if img.width>img.height:
+     disp = Display((1080,810))#(int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
+   else:
+     disp = Display((810,1080))
+
 
   # Initialize variables
   previous_angle = 0 # target has to be upright when starting. Target width has to be larger than target heigth.
@@ -104,6 +108,9 @@ class Kite:
   i_frame = 0
   isPaused = False
   selectionInProgress = False
+  th = [100, 100, 100]
+  skycolor = Color.BLUE
+  timeLastTarget = 0
 
   # Launch a thread to get UDP message with orientation of the camera
   mobile = mobileState.mobileState()
@@ -169,7 +176,7 @@ class Kite:
                   # The 3 main colors in the area selected are considered.
 		  # Note that the selection should be included in the target and not contain background
 		    try:
-		      pal = selection.getPalette(bins = 3, hue = False)
+		      pal = selection.getPalette(bins = 2, hue = False)
 		    except: # getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
                       pal = pal
    		    wasTargetFoundInPreviousFrame = False
@@ -205,33 +212,49 @@ class Kite:
 
 	    #Option 2
 	    target_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
-
+	
+            # Find sky color
+	    sky = (img-img.binarize()).findBlobs(minsize=10000)
+	    if sky:
+	     skycolor = sky[0].meanColor()
 	    # Option 3
 	    target_img = ROI-ROI # Black image
 	    		
 	    # Loop through palette of target colors
 	    if display and displayDebug:
               decomposition = []
+	    i_col = 0
 	    for col in pal: 
 	      c = tuple([int(col[i]) for i in range(0,3)])
               # Search the target based on color
 	      filter_img = ROI.colorDistance(color = c)
-              cs = np.cumsum(filter_img.histogram(numbins=256))
-	      th = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
-	      filter_img = filter_img.threshold(th*0.5).invert()
+              h = filter_img.histogram(numbins=256)
+              cs = np.cumsum(h)
+	      thmax = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
+	      thmin = np.argmin(abs(cs- 0.005*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
+	      if thmin==thmax:
+		newth = thmin
+	      else:
+                newth = np.argmin(h[thmin:thmax]) + thmin
+	      alpha = 0.5
+	      th[i_col] = alpha*th[i_col]+(1-alpha)*newth
+	      filter_img = filter_img.threshold(max(40,min(200,th[i_col]))).invert()
               target_img = target_img + filter_img
               print th
+	      i_col = i_col + 1
 	      if display and displayDebug:
 	        [R, G, B] = filter_img.splitChannels()
 	        white = (R-R).invert()
 		r = R*1.0/255*c[0]
 		g = B*1.0/255*c[1]
 		b = G*1.0/255*c[2]
-		tmp = R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
+		tmp = filter_img#R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
 		decomposition.append(tmp)
 
 	    # Get a black background with with white target foreground
 	    target_img = target_img.threshold(150)
+	
+	    target_img = target_img - ROI.colorDistance(color = skycolor).threshold(80).invert()
 
 	    if display and displayDebug:
 	      small_ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
@@ -247,6 +270,7 @@ class Kite:
 	    target = target_img.findBlobs(minsize = 500)
 	    
 	    if target: # If a target was found
+		
 		if wasTargetFoundInPreviousFrame:
 		    predictedTargetPosition = (width*maxRelativeMotionPerFrame/2, height*maxRelativeMotionPerFrame/2) # Target will most likely be close to the center of the ROI   
 		else:
@@ -299,7 +323,8 @@ class Kite:
 		self.elevation = target_elevation
 		self.bearing = target_bearing
 		self.orientation = angle
-		self.ROT = dAngle
+                dt = time.time()-timeLastTarget
+		self.ROT = dAngle/dt
                 self.lastUpdateTime = t
 		
 		# Save for initialisation of next step
@@ -307,6 +332,7 @@ class Kite:
 		previous_angle = angle
 		previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
 		wasTargetFoundInPreviousFrame = True
+		timeLastTarget = time.time()
 	    else:
 		wasTargetFoundInPreviousFrame = False
 

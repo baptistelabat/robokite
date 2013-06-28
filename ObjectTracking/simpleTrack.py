@@ -53,6 +53,7 @@ class Kite:
   print "Use left mouse button to select target"
   print "Target color must be different from background"
   print "Target must have width larger than height"
+  print "Target can be upside down"
 
   #Parameters
   isUDPConnection = False # Currently switched manually in the code
@@ -75,9 +76,9 @@ class Kite:
   # Open video to analyse or live stream
   #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
   if isVirtualCamera:
-    cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+    #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-    #cam = VirtualCamera('output.avi', 'video')
+    cam = VirtualCamera('output.avi', 'video')
     virtualCameraFPS = 25
   else:
     #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
@@ -240,7 +241,7 @@ class Kite:
 	      th[i_col] = alpha*th[i_col]+(1-alpha)*newth
 	      filter_img = filter_img.threshold(max(40,min(200,th[i_col]))).invert()
               target_img = target_img + filter_img
-              print th
+              #print th
 	      i_col = i_col + 1
 	      if display and displayDebug:
 	        [R, G, B] = filter_img.splitChannels()
@@ -294,13 +295,36 @@ class Kite:
 		minR = ROITopLeftCorner + np.array(target[0].minRect())
 
 		contours = target[0].contour()
+
 		contours = [ ROITopLeftCorner + np.array(contour) for contour in contours]
+
+
 	
 		# Get target features
 		angle = sp.deg2rad(target[0].angle()) + mobile.roll
 		angle =  sp.deg2rad(unwrap180(sp.rad2deg(angle), sp.rad2deg(previous_angle)))
 		width = target[0].width()
 		height = target[0].height()
+
+		# Check if the kite is upside down
+		# First rotate the kite
+    		ctm2 = np.array([[sp.cos(-angle+mobile.roll), -sp.sin(-angle+mobile.roll)], \
+		    [sp.sin(-angle+mobile.roll), sp.cos(-angle+mobile.roll)]]) # Coordinate transform matrix
+		rotated_contours = [np.dot(ctm2, contour-coordMinRect) for contour in contours]  
+  		y = [-tmp[1] for tmp in rotated_contours]
+		itop = np.argmax(y) # Then looks at the points at the top
+		ibottom = np.argmin(y) # and the point at the bottom
+		# The point the most excentered is at the bottom
+		if abs(rotated_contours[itop][0])>abs(rotated_contours[ibottom][0]):
+		  isInverted = True
+		else:
+		  isInverted = False	
+		print isInverted
+		print angle
+		
+		if isInverted:
+			angle = angle + sp.pi	 
+
 		
                 # Filter the data
 		alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
@@ -346,7 +370,7 @@ class Kite:
 		
                 # Target contour and centroid in BLUE
 		  layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
-                  layer.polygon(contours, color = Color.BLUE, width = 5)
+                  layer.polygon(rotated_contours, color = Color.BLUE, width = 5)
 
 		# Speed vector in BLACK
 		  layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)

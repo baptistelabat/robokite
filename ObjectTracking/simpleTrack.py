@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera
+from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera, JpegStreamer
 import scipy as sp
 import numpy as np
 import datetime
@@ -12,6 +12,7 @@ sys.path.append(os.getcwd())
 sys.path.append('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/Control')
 import mobileState
 import PID
+import csv
 
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
@@ -58,7 +59,7 @@ class Kite:
   #Parameters
   isUDPConnection = False # Currently switched manually in the code
   display = True
-  displayDebug = True
+  displayDebug = False
   useBasemap = False
   maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
   pixelPerRadians = 640
@@ -76,13 +77,13 @@ class Kite:
   # Open video to analyse or live stream
   #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
   if isVirtualCamera:
-    #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+    cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
-    cam = VirtualCamera('output.avi', 'video')
+    #cam = VirtualCamera('output.avi', 'video')
     virtualCameraFPS = 25
   else:
-    #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-    cam = Camera() 
+    cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+    #cam = Camera() 
 
   # Get a sample image to initialize the display at the same size
   img = cam.getImage().scale(scaleFactor)
@@ -93,6 +94,8 @@ class Kite:
      disp = Display((1080,810))#(int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
    else:
      disp = Display((810,1080))
+  js = JpegStreamer()
+
 
 
   # Initialize variables
@@ -112,6 +115,16 @@ class Kite:
   th = [100, 100, 100]
   skycolor = Color.BLUE
   timeLastTarget = 0
+
+  # Prepare recording
+  recordFilename = datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%M_")+ 'simpleTrack'+'.csv'
+  try:
+    os.remove(recordFilename)   
+  except:
+    print('Creating file ' + recordFilename) 
+  recordFile = file(recordFilename, 'a')
+  csv_writer = csv.writer(recordFile)
+  csv_writer.writerow(['Time (s)', 'x (px)', 'y (px)', 'Orientation (rad)', 'Elevation (rad)', 'Bearing (rad)', 'ROT (rad/s)'])
 
   # Launch a thread to get UDP message with orientation of the camera
   mobile = mobileState.mobileState()
@@ -319,8 +332,6 @@ class Kite:
 		  isInverted = True
 		else:
 		  isInverted = False	
-		print isInverted
-		print angle
 		
 		if isInverted:
 			angle = angle + sp.pi	 
@@ -357,6 +368,9 @@ class Kite:
 		previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
 		wasTargetFoundInPreviousFrame = True
 		timeLastTarget = time.time()
+		
+		csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
+
 	    else:
 		wasTargetFoundInPreviousFrame = False
 
@@ -447,10 +461,13 @@ class Kite:
 		l = np.dot(ctm, l)
                 layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
-	      toDisplay.save(disp)
+	      toDisplay.save(js)
+              toDisplay.save(disp)
     if display : 
       toDisplay.removeDrawingLayer(1)
       toDisplay.removeDrawingLayer(0)
+
+
 
 if __name__ == '__main__':
   import serial

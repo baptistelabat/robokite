@@ -13,6 +13,7 @@ sys.path.append('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/Control
 import mobileState
 import PID
 import csv
+import h5py
 
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
@@ -67,6 +68,7 @@ class Kite:
   referenceImage = 'kite_detail.jpg'
   scaleFactor = 0.5
   isVirtualCamera = True
+  useHDF5 = True
 
   # Open reference image: this is used at initlalisation
   target_detail = Image(referenceImage)
@@ -117,14 +119,23 @@ class Kite:
   timeLastTarget = 0
 
   # Prepare recording
-  recordFilename = datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%M_")+ 'simpleTrack'+'.csv'
-  try:
-    os.remove(recordFilename)   
-  except:
-    print('Creating file ' + recordFilename) 
-  recordFile = file(recordFilename, 'a')
-  csv_writer = csv.writer(recordFile)
-  csv_writer.writerow(['Time (s)', 'x (px)', 'y (px)', 'Orientation (rad)', 'Elevation (rad)', 'Bearing (rad)', 'ROT (rad/s)'])
+  recordFilename = datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%M_")+ 'simpleTrack'
+  if useHDF5:
+    try:
+      os.remove(recordFilename + '.hdf5') 
+    except:
+      print('Creating file ' + recordFilename + '.hdf5')
+    recordFile = h5py.File(recordFilename + '.hdf5', 'a') 
+    hdfSize = 0    
+    dset = recordFile.create_dataset('kite', (2,2), maxshape=(None,7))
+  else:
+    try:
+      os.remove(recordFilename + '.csv')   
+    except:
+      print('Creating file ' + recordFilename + '.csv') 
+    recordFile = file(recordFilename + '.csv', 'a')
+    csv_writer = csv.writer(recordFile)
+    csv_writer.writerow(['Time (s)', 'x (px)', 'y (px)', 'Orientation (rad)', 'Elevation (rad)', 'Bearing (rad)', 'ROT (rad/s)'])
 
   # Launch a thread to get UDP message with orientation of the camera
   mobile = mobileState.mobileState()
@@ -369,7 +380,12 @@ class Kite:
 		wasTargetFoundInPreviousFrame = True
 		timeLastTarget = time.time()
 		
-		csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
+                if useHDF5:
+		  hdfSize = hdfSize+1
+		  dset.resize((hdfSize,7))
+  		  dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
+		else:
+		  csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
 
 	    else:
 		wasTargetFoundInPreviousFrame = False
@@ -466,7 +482,7 @@ class Kite:
     if display : 
       toDisplay.removeDrawingLayer(1)
       toDisplay.removeDrawingLayer(0)
-
+  recordFile.close()
 
 
 if __name__ == '__main__':

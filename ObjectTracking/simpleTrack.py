@@ -107,6 +107,8 @@ class Kite:
   previous_dAngle = previous_angle
   angles = []
   coords_px = []
+  coord_px = [0, 0]
+  angle = 0
   target_elevations = []
   target_bearings = []
   times = []
@@ -128,6 +130,7 @@ class Kite:
     recordFile = h5py.File(recordFilename + '.hdf5', 'a') 
     hdfSize = 0    
     dset = recordFile.create_dataset('kite', (2,2), maxshape=(None,7))
+    imset = recordFile.create_dataset('image', (2,img.width,img.height,3 ), maxshape=(None, img.width, img.height, 3))
   else:
     try:
       os.remove(recordFilename + '.csv')   
@@ -380,15 +383,17 @@ class Kite:
 		wasTargetFoundInPreviousFrame = True
 		timeLastTarget = time.time()
 		
-                if useHDF5:
-		  hdfSize = hdfSize+1
-		  dset.resize((hdfSize,7))
-  		  dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
-		else:
-		  csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
-
 	    else:
 		wasTargetFoundInPreviousFrame = False
+            if useHDF5:
+  	      hdfSize = hdfSize+1
+	      dset.resize((hdfSize, 7))
+              imset.resize((hdfSize, img.width, img.height, 3))
+  	      dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
+	      imset[hdfSize-1,:,:,:] = img.getNumpy()
+	    else:
+	      csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
+
 
 
             if display :

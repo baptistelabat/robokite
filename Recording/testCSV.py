@@ -13,8 +13,8 @@ fileobj = file(filename, 'a')
 csv_writer = csv.writer(fileobj)
 csv_writer.writerow(['Time (s)', 'x (px)', 'y (px)', 'Orientation (rad)', 'Elevation (rad)', 'Bearing (rad)', 'ROT (rad/s)'])
 t0 = time.time()
-while time.time() -t0 <  10:
+while time.time() -t0 <  100:
   t = time.time()
-  csv_writer.writerow([t, math.sin(t), math.cos(t)])
+  csv_writer.writerow([t, math.sin(t), math.cos(t), t, t, t, t])
   time.sleep(0.1)
 fileobj.close()

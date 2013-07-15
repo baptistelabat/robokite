@@ -1,13 +1,68 @@
-
-<html>
+<!DOCTYPE HTML>
+<html style="direction: ltr;" lang="fr">
 <head>
+<meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
 <style type=text/css>
     body { background-image: url(http://localhost:8080/stream); background-repeat:no-repeat; background-position:center top; background-attachment:fixed; height:100% }
 </style>
+<script type = "text/javascript" language="javascript"
+src = "script.js" charset="utf-8"></script>
 </head>
 <body>
 This is a prototype of Man Machine Interface in browser
 &nbsp;
+<p>
+Active mode: 
+<output id = "controlMode">
+Manual control
+</output>
+</p>
+<p>
+<button onclick = "setManualControl()">
+Manual control
+</button>
+<button onclick = "setAutomaticControl()">
+Automatic control
+</button>
+<button onclick = "setJoystickControl()">
+Joystick control
+</button>
+</p>
+<p>
+Orientation: 
+<output id = "orientation">
+0°
+</output>
+</p>
+<p>
+Elevation: 
+<output id = "elevation">
+45°
+</output>
+</p>
+<p>
+Absolute bearing: 
+<output id = "absoluteBearing">
+271°
+</output>
+</p>
+<p>
+Wind relative bearing: 
+<output id = "relativeBearing">
+15°
+</output>
+</p>
+<form action = "">
+<fieldset>
+<input id = "myRange"
+type = "range"
+min = "0"
+max = "255"
+value = "128"
+onchange = "updateOutput()" />
+<output id = "myOutput2">128</output>
+</fieldset>
+</form>
 </body>
 </html>
             

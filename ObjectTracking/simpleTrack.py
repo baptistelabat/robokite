@@ -391,6 +391,7 @@ class Kite:
               imset.resize((hdfSize, img.width, img.height, 3))
   	      dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
 	      imset[hdfSize-1,:,:,:] = img.getNumpy()
+	      recordFile.flush()
 	    else:
 	      csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
 
@@ -405,7 +406,7 @@ class Kite:
 		
                 # Target contour and centroid in BLUE
 		  layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
-                  layer.polygon(rotated_contours, color = Color.BLUE, width = 5)
+                  layer.polygon(contours, color = Color.BLUE, width = 5)
 
 		# Speed vector in BLACK
 		  layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)

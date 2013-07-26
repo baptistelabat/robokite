@@ -29,6 +29,12 @@ Joystick control
 </button>
 </p>
 <p>
+Time: 
+<output id = "time">
+0°
+</output>
+</p>
+<p>
 Orientation: 
 <output id = "orientation">
 0°
@@ -54,15 +60,48 @@ Wind relative bearing:
 </p>
 <form action = "">
 <fieldset>
-<input id = "myRange"
+<input id = "setOrientationRange"
 type = "range"
 min = "0"
 max = "255"
 value = "128"
-onchange = "updateOutput()" />
-<output id = "myOutput2">128</output>
+onchange = "updateSetOrientation()" />
+<output id = "setOrientation">128</output>
 </fieldset>
-</form>
+<fieldset>
+<input id = "KpRange"
+type = "range"
+min = "0"
+max = "255"
+value = "128"
+onchange = "updateKp()" />
+<output id = "Kp">128</output>
+</fieldset>
+<fieldset>
+<input id = "KdRange"
+type = "range"
+min = "0"
+max = "255"
+value = "128"
+onchange = "updateKd()" />
+<output id = "Kd">128</output>
+</fieldset>
+<fieldset>
+<input id = "KiRange"
+type = "range"
+min = "0"
+max = "255"
+value = "128"
+onchange = "updateKi()" />
+<output id = "Ki">128</output>
+</fieldset>
+        <script type="text/javascript">
+            var ws = new WebSocket("ws://localhost:8888/websocket");
+            ws.onmessage = function(evt){
+		var myOutput = document.getElementById("time");
+                myOutput.value = evt.data;
+            }
+        </script>
 </body>
 </html>
             

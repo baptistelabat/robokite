@@ -6,7 +6,7 @@
     body { background-image: url(http://localhost:8080/stream); background-repeat:no-repeat; background-position:center top; background-attachment:fixed; height:100% }
 </style>
 <script type = "text/javascript" language="javascript"
-src = "script.js" charset="utf-8"></script>
+src = "static/script.js" charset="utf-8"></script>
 </head>
 <body>
 This is a prototype of Man Machine Interface in browser
@@ -31,7 +31,7 @@ Joystick control
 <p>
 Time: 
 <output id = "time">
-0°
+Not connected to time server
 </output>
 </p>
 <p>
@@ -96,7 +96,7 @@ onchange = "updateKi()" />
 <output id = "Ki">128</output>
 </fieldset>
         <script type="text/javascript">
-            var ws = new WebSocket("ws://localhost:8888/websocket");
+            var ws = new WebSocket("ws://localhost:8080/websocket");
             ws.onmessage = function(evt){
 		var myOutput = document.getElementById("time");
                 myOutput.value = evt.data;

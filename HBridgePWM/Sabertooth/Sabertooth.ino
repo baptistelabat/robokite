@@ -149,7 +149,12 @@ void computeAlphaSigned()
         alphaSigned = 0;
       }
     }
+    if (isManualControl)
+    {
+      alphaSigned = 0;
+    }
   }
   Serial.println(sensorValue);
   alphaSigned = min(1, max(-1, alphaSigned));
+
 }

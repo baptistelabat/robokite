@@ -10,7 +10,7 @@
 #include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
 
-SoftwareSerial SWSerial(NOT_A_PIN, 11); // RX on no pin (unused), TX on pin 11 (to S1).
+SoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
@@ -39,6 +39,7 @@ void setup()
 }
 
 void serialEvent() {
+  Serial.flush();
   while (Serial.available()) {
     // Get the new byte:
     char inChar = (char)Serial.read();
@@ -76,11 +77,11 @@ void serialEvent() {
      {
        alphaSigned = StrToFloat(inputString);
        lastSerialInputTime = millis();
-       Serial.println(alphaSigned);
+       //Serial.println(alphaSigned);
      }
    }
   }
-  Serial.println(inputString);
+  //Serial.println(inputString);
   inputString="";
 }
 
@@ -154,7 +155,7 @@ void computeAlphaSigned()
       alphaSigned = 0;
     }
   }
-  Serial.println(sensorValue);
+  //Serial.println(sensorValue);
   alphaSigned = min(1, max(-1, alphaSigned));
 
 }

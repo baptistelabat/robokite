@@ -1,5 +1,5 @@
 function DispatchText(){
-                var userInput = document.getElementById("setOrientationRange").value;
+                var userInput = document.getElementById("setOrientationNumber").value;
                 ws.send(userInput);
 }
 function setManualControl(){
@@ -17,13 +17,26 @@ var myOutput = document.getElementById("controlMode");
 myOutput.value = "Automatic control";
 } // end change
 
-function updateSetOrientation(){
+function updateSetOrientationRange(){
 //get elements
 var myRange = document.getElementById("setOrientationRange");
+var myNumber = document.getElementById("setOrientationNumber");
 var myOutput = document.getElementById("setOrientation");
 //copy the value over
 myOutput.value = myRange.value;
-DispatchText()
+myNumber.value = myRange.value;
+DispatchText();
+} // end function
+
+function updateSetOrientationNumber(){
+//get elements
+var myRange = document.getElementById("setOrientationRange");
+var myNumber = document.getElementById("setOrientationNumber");
+var myOutput = document.getElementById("setOrientation");
+//copy the value over
+myOutput.value = myNumber.value;
+myRange.value = myNumber.value;
+DispatchText();
 } // end function
 
 function updateKp(){

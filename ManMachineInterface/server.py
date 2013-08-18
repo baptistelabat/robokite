@@ -28,6 +28,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.write_message(u"Status OK " + message)
         global ser
 	try:
+          ser.flushInput()
 	  ser.write(str(np.floor((float(message)-128)/128.*100)/100.0))
         except serial.SerialTimeoutException:
           print "time out exception"

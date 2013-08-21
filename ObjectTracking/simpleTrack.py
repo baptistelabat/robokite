@@ -1,4 +1,13 @@
+#!/usr/bin/env python
 # -*- coding: utf8 -*-
+#
+# Copyright (c) 2013 Nautilabs
+#
+# Licensed under the MIT License,
+# http://code.google.com/p/robokite/source/checkout
+# Authors: Baptiste LABAT
+
+
 from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera, JpegStreamer
 import scipy as sp
 import numpy as np
@@ -82,10 +91,11 @@ class Kite:
     cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
     #cam = VirtualCamera('output.avi', 'video')
+    #cam = VirtualCamera('/home/bat/Flying kite images (for kite steering unit development)-YTMgX1bvrTo.flv','video')
     virtualCameraFPS = 25
   else:
-    cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-    #cam = Camera() 
+    #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+    cam = Camera() 
 
   # Get a sample image to initialize the display at the same size
   img = cam.getImage().scale(scaleFactor)
@@ -127,6 +137,11 @@ class Kite:
       os.remove(recordFilename + '.hdf5') 
     except:
       print('Creating file ' + recordFilename + '.hdf5')
+    """ The following line is used to silence the following error (according to http://stackoverflow.com/questions/15117128/h5py-in-memory-file-and-multiprocessing-error)
+    #000: ../../../src/H5F.c line 1526 in H5Fopen(): unable to open file
+    major: File accessability
+    minor: Unable to open file"""
+    h5py._errors.silence_errors()
     recordFile = h5py.File(recordFilename + '.hdf5', 'a') 
     hdfSize = 0    
     dset = recordFile.create_dataset('kite', (2,2), maxshape=(None,7))
@@ -498,7 +513,7 @@ if __name__ == '__main__':
   print 'here'
   a.start()
   print 'haaa'
-  pid = PID.PID(0.1, 0, 100)
+  pid = PID.PID(0.01, 0, 10)
   offset = sp.pi/3*0
   ser = serial.Serial('/dev/ttyACM1', 9600)
   dt = 0.1

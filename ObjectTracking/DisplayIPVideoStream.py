@@ -7,14 +7,14 @@ import datetime
 cv2.namedWindow("preview")
 
 # Video feed created with android ip webcam program
-vc = cv2.VideoCapture("http://192.168.1.2:8080/videofeed?something.mjpeg")
+vc = cv2.VideoCapture("http://192.168.1.25:8080/videofeed?something.mjpeg")
 
 # Save output video
 width, height = 640, 480
 writer = cv2.VideoWriter(filename="outputVideo.avi",
-fourcc=cv.CV_FOURCC('M','J', 'P', 'G'),
-fps=15,
-frameSize=(width, height))
+fourcc = cv.CV_FOURCC('M','J', 'P', 'G'),
+fps = 15,
+frameSize = (width, height))
 
 if vc.isOpened(): # try to get the first frame
     rval, frame = vc.read()

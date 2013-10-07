@@ -14,10 +14,102 @@ import tornado.websocket
 import tornado.ioloop
 import datetime
 import os
+import sys
 import serial
 import numpy as np
 import time
+sys.path.append('..')
+
+import arduinoserial
+
+def computeXORChecksum(chksumdata):
+	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Initializing XOR counter
+    csum = 0
+    
+    # For each char in chksumdata, XOR against the previous 
+    # XOR char.  The final XOR of the last char will be the
+    # checksum  
+    for c in chksumdata:
+        # Makes XOR value of counter with the next char in line
+        # and stores the new XOR value in csum
+        csum ^= ord(c)
+    h = hex(csum)    
+    return h[2:]#get hex data without 0x prefix
+    
 clients = []
+global alpha
+alpha = 0
+
+# gets serial input in a non-blocking way
+
+def updateSerial():
+	global alpha
+	try:
+		msg = "ORPWM"+","+str(alpha)
+		msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "send " + msg
+		ser.write(msg)
+		checkSerial();
+
+	except:
+		print "Serial exception"
+		#ser = 0
+		openSerial()
+global serialPending
+serialPending = ''
+def checkSerial():
+    global serialPending
+    try:
+        s = ser.read_until('\n')
+    except:
+        print("Error reading from serial port")
+        return
+    
+    if len(s):
+        serialPending += s
+        parseSerial()
+    
+
+#called whenever there is new input to check
+global serialHistory
+serialHistory = ''
+mostRecentLine = ''
+def parseSerial():
+    global serialHistory
+    split = serialPending.split("\r\n")
+    if len( split ) > 1:
+        for line in split[0:-1]:
+            #print( line )
+            
+            #do some stuff with the line, if necessary
+            #example:
+            mostRecentLine = line
+            #print "Received " + mostRecentLine
+            # in this example, status will show the most recent line
+
+            serialHistory += line
+
+        pending = split[-1]
+       
+def openSerial():
+	global ser
+	# Open the serial port
+	try:
+	  ser.Serial
+	except:
+	  locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
+	  for device in locations:
+  	    try:
+    	      print "Trying...",device
+              ser = arduinoserial.SerialPort(device, 9600)
+              print "Connected on ", device
+              break
+  	    except:
+    	      print "Failed to connect on ", device
+	time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
+	# An alternative would be to listen to a message from the arduino saying it is ready
+	ser.write('i1') # i to start serial control
  
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -27,40 +119,27 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         self.write_message(u"Status OK " + message)
         global ser
-	try:
-          ser.flushInput()
-	  ser.write(str(np.floor((float(message)-128)/128.*100)/100.0))
-        except serial.SerialTimeoutException:
+        global alpha
+        try:
+          alpha = np.floor((float(message)-128)/128.*100)/100.0
+          msg = "ORPWM"+","+str(alpha)
+          msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+          ser.write(msg)
+          print "send " + msg
+        except:
           print "time out exception"
-        print str(np.floor((float(message)-128)/128.*100)/100.0)
+        
 
     def open(self):
- 	global ser
-	# Open the serial port
-	locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
-	for device in locations:
-  	  try:
-    	    print "Trying...",device
-            ser = serial.Serial(
-	port = device,
-	baudrate = 9600,
-        timeout = 0,
-        writeTimeout = 0.1
-	)
- 	    print "Connected on ", device
-            break
-  	  except:
-    	    print "Failed to connect on ", device
-        time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
-        ser.flush()
-	ser.write('i') # i to start serial control
-        clients.append(self)
-	self.write_message(u"Connected")
-        print "open"
+      openSerial()
+      clients.append(self)
+      self.write_message(u"Connected")
+      print "open"
+      
     def close(self):
-	self.write_message(u"Connection closed")
- 	clients.remove(self)
-        print "close"
+      self.write_message(u"Connection closed")
+      clients.remove(self)
+      print "close"
 
     def test(self):
         self.write_message(u"2")
@@ -81,10 +160,13 @@ def timer():
 
  
 if __name__ == "__main__":
+    openSerial()
     application.listen(8080)
     mainLoop = tornado.ioloop.IOLoop.instance()
-    #scheduler = tornado.ioloop.PeriodicCallback(timer, 1000, io_loop = mainLoop)
+    scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 50, io_loop = mainLoop)
+    scheduler2 = tornado.ioloop.PeriodicCallback(updateSerial, 100, io_loop = mainLoop)
     #scheduler.start()
+    scheduler2.start()
     mainLoop.start()
     
 

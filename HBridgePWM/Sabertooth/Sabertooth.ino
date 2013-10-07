@@ -61,6 +61,7 @@ void SerialEvent() {
   }
   if (inputString[0] == 'i')
   {
+    Serial.flush();
     isSerialControl = true;
     initialSensorValue = analogRead(analogInPin);// Read the joystick position to overide if joystick is moved
     if (inputString.substring(1)=="")

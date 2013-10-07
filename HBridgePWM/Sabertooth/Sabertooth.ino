@@ -9,6 +9,7 @@
 
 #include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
+#include <TinyGPS++.h>
 
 SoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
@@ -29,16 +30,23 @@ double sensorValueMax = 800;//1023
 double deadBand = 0.1; // Use to ensure zero speed. Should not be zero
 double serialFrequency = 0;
 long lastSerialInputTime = 0;
+long lastWriteTime = 0;
+
+TinyGPSPlus nmea;
+TinyGPSCustom pwm(nmea, "ORPWM", 1); // $GPGSA sentence, 15th element
+
 
 void setup()
 {
   // Initialize software serial communication with Sabertooth 
   SWSerial.begin(9600);
   // Initialize serial communications at 9600 bps:
-  Serial.begin(9600); 
+  Serial.begin(19200);
 }
 
-void serialEvent() {
+void SerialEvent() {
+
+  inputString="";
   Serial.flush();
   while (Serial.available()) {
     // Get the new byte:
@@ -54,7 +62,7 @@ void serialEvent() {
   if (inputString[0] == 'i')
   {
     isSerialControl = true;
-    initialSensorValue = analogRead(analogInPin);
+    initialSensorValue = analogRead(analogInPin);// Read the joystick position to overide if joystick is moved
     if (inputString.substring(1)=="")
     {
       serialFrequency = 0;
@@ -66,35 +74,54 @@ void serialEvent() {
   }
   else
   {
-   if (inputString == "o")
-   {
-     isSerialControl = false;
-   }
-   else
-   {
-     // To reject incorrect value due to 0. badly read
-     if ((StrToFloat(inputString)>=-1) & (StrToFloat(inputString)<=1))
-     {
-       alphaSigned = StrToFloat(inputString);
-       lastSerialInputTime = millis();
-       //Serial.println(alphaSigned);
-     }
-   }
-  }
-  //Serial.println(inputString);
-  inputString="";
+    if (inputString == "o")
+    {
+      isSerialControl = false;
+    }
+    else
+    {
+      char c[50];
+      inputString.toCharArray(c, 50);
+      char *gpsStream = c;
+      while (*gpsStream)
+        if (nmea.encode(*gpsStream++));
+      { 
+        alphaSigned = StrToFloat(pwm.value()); 
+        lastSerialInputTime = millis();
+      }
+    }
+  }  
 }
+
 
 void loop()
 {
+  SerialEvent();
   int power;
   sensorValue = analogRead(analogInPin);
   setMode();
   computeAlphaSigned();
-  
   power = alphaSigned*127;
   ST.motor(1, power);
-  delay(20);
+  delay(10);
+  if (millis()-lastWriteTime>100)
+  {
+    lastWriteTime = millis();
+    Serial.println(alphaSigned);
+    if (isSerialControl)
+    {
+      Serial.println("S");
+    }
+    else
+    {
+      if (isManualControl)
+      {
+        Serial.println("M");
+      }
+    }
+
+  }
+  Serial.flush();
 }
 
 void setMode()
@@ -105,7 +132,7 @@ void setMode()
   {
     isSerialControl = false;
   }
-	
+
   // Fallback to manual control if the analog voltage is close to zero (probably unplugged)
   // Place after hardware limit if possible
   // This avoids to go to full speed if one cable in the potentiometer is unplugged
@@ -129,7 +156,7 @@ void computeAlphaSigned()
       alphaSigned = 0;
     }
   }
-    // If not in Serial control overwrite the value 
+  // If not in Serial control overwrite the value 
   if (false == isSerialControl)
   {
     // Compute the value corresponding to the deadband
@@ -155,7 +182,8 @@ void computeAlphaSigned()
       alphaSigned = 0;
     }
   }
-  //Serial.println(sensorValue);
   alphaSigned = min(1, max(-1, alphaSigned));
-
 }
+
+
+

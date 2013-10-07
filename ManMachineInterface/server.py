@@ -54,8 +54,7 @@ def updateSerial():
 
 	except:
 		print "Serial exception"
-		#ser = 0
-		openSerial()
+
 global serialPending
 serialPending = ''
 def checkSerial():
@@ -85,10 +84,9 @@ def parseSerial():
             #do some stuff with the line, if necessary
             #example:
             mostRecentLine = line
-            #print "Received " + mostRecentLine
+            print "Received " + mostRecentLine
             # in this example, status will show the most recent line
-
-            serialHistory += line
+            #serialHistory += line
 
         pending = split[-1]
        
@@ -102,7 +100,7 @@ def openSerial():
 	  for device in locations:
   	    try:
     	      print "Trying...",device
-              ser = arduinoserial.SerialPort(device, 9600)
+              ser = arduinoserial.SerialPort(device, 19200)
               print "Connected on ", device
               break
   	    except:
@@ -163,7 +161,7 @@ if __name__ == "__main__":
     openSerial()
     application.listen(8080)
     mainLoop = tornado.ioloop.IOLoop.instance()
-    scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 50, io_loop = mainLoop)
+    scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 100, io_loop = mainLoop)
     scheduler2 = tornado.ioloop.PeriodicCallback(updateSerial, 100, io_loop = mainLoop)
     #scheduler.start()
     scheduler2.start()

@@ -110,13 +110,13 @@ void loop()
     Serial.println(alphaSigned);
     if (isSerialControl)
     {
-      Serial.println("S");
+      //Serial.println("S");
     }
     else
     {
       if (isManualControl)
       {
-        Serial.println("M");
+        //Serial.println("M");
       }
     }
 

@@ -85,7 +85,7 @@ void SerialEvent() {
       inputString.toCharArray(c, 50);
       char *gpsStream = c;
       while (*gpsStream)
-        if (nmea.encode(*gpsStream++));
+        if (nmea.encode(*gpsStream++))
       { 
         alphaSigned = StrToFloat(pwm.value()); 
         lastSerialInputTime = millis();
@@ -157,6 +157,7 @@ void computeAlphaSigned()
       alphaSigned = 0;
     }
   }
+
   // If not in Serial control overwrite the value 
   if (false == isSerialControl)
   {

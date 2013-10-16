@@ -10,6 +10,7 @@
 #include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
 #include <TinyGPS++.h>
+#include <PID_v1.h>
 
 SoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
@@ -33,8 +34,16 @@ long lastSerialInputTime = 0;
 long lastWriteTime = 0;
 
 TinyGPSPlus nmea;
-TinyGPSCustom pwm(nmea, "ORPWM", 1); // $GPGSA sentence, 15th element
+TinyGPSCustom pwm(nmea, "ORPWM", 1);
+TinyGPSCustom roll(nmea, "ORPOS", 1);
+TinyGPSCustom elevation(nmea, "ORPOS", 2);
+TinyGPSCustom bearing(nmea, "ORPOS", 3);
 
+//Define Variables we'll be connecting to
+double Setpoint, Input, Output;
+
+//Specify the links and initial tuning parameters
+PID myPID(&Input, &Output, &Setpoint,10,0,50, DIRECT);
 
 void setup()
 {
@@ -42,6 +51,11 @@ void setup()
   SWSerial.begin(9600);
   // Initialize serial communications at 9600 bps:
   Serial.begin(19200);
+  Input = 0;
+  Setpoint = 0;
+  //turn the PID on
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(-128, 128);
 }
 
 void SerialEvent() {
@@ -87,7 +101,8 @@ void SerialEvent() {
       while (*gpsStream)
         if (nmea.encode(*gpsStream++))
       { 
-        alphaSigned = StrToFloat(pwm.value()); 
+        alphaSigned = StrToFloat(pwm.value());
+        Input = StrToFloat(pwm.value()); 
         lastSerialInputTime = millis();
       }
     }
@@ -98,9 +113,11 @@ void SerialEvent() {
 void loop()
 {
   SerialEvent();
+  myPID.Compute();
   int power;
   sensorValue = analogRead(analogInPin);
   setMode();
+  //alphaSigned=Output/127.0;
   computeAlphaSigned();
   power = alphaSigned*127;
   ST.motor(1, power);
@@ -108,7 +125,8 @@ void loop()
   if (millis()-lastWriteTime>100)
   {
     lastWriteTime = millis();
-    Serial.println(alphaSigned);
+    //Serial.println(alphaSigned);
+    Serial.println(Output);
     if (isSerialControl)
     {
       //Serial.println("S");

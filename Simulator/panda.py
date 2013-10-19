@@ -23,8 +23,9 @@ class MyApp(ShowBase):
         
         # Load the kite model
         self.model=self.loader.loadModel("/media/bat/DATA/Nautilabs/kite_project/robokite/Simulator/skpfile.egg")
+        self.model.setScale(0.005, 0.005, 0.005)
         # Reparent the model to render.
-        #self.model.reparentTo(self.render)
+        self.model.reparentTo(self.render)
         
         # Add the spinCameraTask procedure to the task manager.
         self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")

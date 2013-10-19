@@ -129,7 +129,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         
 
     def open(self):
+      global alpha
       openSerial()
+      alpha = 0
       clients.append(self)
       self.write_message(u"Connected")
       print "open"
@@ -163,7 +165,7 @@ if __name__ == "__main__":
     mainLoop = tornado.ioloop.IOLoop.instance()
     scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 100, io_loop = mainLoop)
     scheduler2 = tornado.ioloop.PeriodicCallback(updateSerial, 100, io_loop = mainLoop)
-    #scheduler.start()
+    scheduler.start()
     scheduler2.start()
     mainLoop.start()
     

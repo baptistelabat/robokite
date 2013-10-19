@@ -44,7 +44,7 @@
                      <color>1 1 1 1</color>
                   </transparent>
                   <transparency>
-                     <float>0.000000</float>
+                     <float>1.000000</float>
                   </transparency>
                </phong>
             </technique>
@@ -76,7 +76,7 @@
                      <color>1 1 1 1</color>
                   </transparent>
                   <transparency>
-                     <float>0.000000</float>
+                     <float>1.000000</float>
                   </transparency>
                </phong>
             </technique>

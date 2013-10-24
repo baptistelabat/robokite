@@ -18,7 +18,7 @@ There is not guarantee that there is a linear relationship between alpha and the
 
 // Minimal time to have motor starting at maximum voltage. This will depend on the motor used
 // Try to reduce to get a smooth motion
-double minTime_ms = 30;
+long minTime_us = 10;
 
 // These constants will not change. Used here to 
 // give names to set pin numbers:
@@ -39,7 +39,7 @@ boolean isManualControl = false;
 // The range was reduced 
 double sensorValueMin = 255;//0
 double sensorValueMax = 767;//1023
-double deadBand = 0.2; // Use to ensure zero speed. Should not be zero
+double deadBand = 0.01; // Use to ensure zero speed. Should not be zero
 long initialTime = 0;
 long lastSerialInputTime = 0;
 boolean isCycleStarting = false;
@@ -110,25 +110,26 @@ void serialEvent() {
    }
   }
   Serial.println(inputString);
-  inputString="";
+  inputString="";*/
 }
 
 void loop()
 {
   sensorValue = analogRead(analogInPin);
+  //Serial.println(sensorValue); 
   setMode();
   computeAlphaSigned();
   computeEnableState();
   computeLogicState();
   
-  delay(30);
+  delayMicroseconds(minTime_us*random(100,300));
 
 
 //  // print the results to the serial monitor:
 //  Serial.print("alphaManual = " );                       
 //  Serial.print(alphaSigned);      
 //  Serial.print("\t alphaUsed = ");      
- //Serial.println(alphaSigned);   
+//  Serial.println(alphaSigned);   
 }
 void setMode()
 {  
@@ -150,7 +151,7 @@ void computeAlphaSigned()
 {
   if (serialFrequency != 0)
   { // Fallbacks to zero as we received no message in the expected time (twice the time)
-    if ((millis()-lastSerialInputTime) > 2*1/serialFrequency*1000)
+    if ((millis()-lastSerialInputTime) > 2*1/serialFrequency*300)
     {
       alphaSigned = 0;
     }
@@ -158,24 +159,7 @@ void computeAlphaSigned()
     // If not in Serial control overwrite the value 
   if (false == isSerialControl)
   {
-    // Compute the value corresponding to the deadband
-    double sensorDeadBandMax = sensorValueMin + (deadBand/2.0+0.5)*(sensorValueMax - sensorValueMin);
-    double sensorDeadBandMin = sensorValueMin + (-deadBand/2.0+0.5)*(sensorValueMax - sensorValueMin);
-    if (sensorValue < sensorDeadBandMin) //strictly to avoid alphaSigned equals zero
-    {
-      alphaSigned = (sensorValue-sensorValueMin)/(sensorDeadBandMax - sensorValueMin)-1;
-    } 
-    else
-    {
-      if (sensorValue > sensorDeadBandMax)
-      {
-        alphaSigned = (sensorValue-sensorDeadBandMax)/(sensorValueMax - sensorDeadBandMax);
-      }
-      else
-      {
-        alphaSigned = 0;
-      }
-    }
+  alphaSigned = (sensorValue-sensorValueMin)/(sensorValueMax - sensorValueMin);
   }
   alphaSigned = min(1, max(-1, alphaSigned));
 }
@@ -197,9 +181,9 @@ void computeEnableState()
     {
       if (isCycleStarting)
       {
-        if ((millis()-initialTime) > minTime_ms)
-        { 
-          digitalWrite(HbridgeEnablePin, HIGH);
+        if ((micros()-initialTime) > minTime_us*random(100,300))
+        {
+          digitalWrite(HbridgeEnablePin, LOW);
           isCycleStarting = false;
         } 
       }
@@ -207,14 +191,14 @@ void computeEnableState()
       { 
         // note that alpha can't be zero
         double alpha = fabs(alphaSigned);
-        if ((millis() - initialTime) < minTime_ms/alpha*(1-alpha)+minTime_ms)
+        if ((micros() - initialTime) < minTime_us*random(100,200)/alpha*(1-alpha)+minTime_us*random(100,200))
         {
-              digitalWrite(HbridgeEnablePin, LOW);
+              digitalWrite(HbridgeEnablePin, HIGH);
         }
         else
         {
-          digitalWrite(HbridgeEnablePin, HIGH); // or low?
-          initialTime = millis();
+          digitalWrite(HbridgeEnablePin, LOW); // or low?
+          initialTime = micros();
           isCycleStarting = true;
         } 
       }

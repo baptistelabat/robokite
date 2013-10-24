@@ -18,7 +18,7 @@ import sys
 import threading
 from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
-sys.path.append('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/Control')
+sys.path.append('../Control')
 import mobileState
 import PID
 import csv
@@ -47,6 +47,22 @@ def unwrap180(angle_deg, previous_angle_deg):
 
 def isPixelInImage((x,y), image):
     return (x>0 and x<image.width and y>0 and y<image.height)
+    
+def computeXORChecksum(chksumdata):
+	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Initializing XOR counter
+    csum = 0
+    
+    # For each char in chksumdata, XOR against the previous 
+    # XOR char.  The final XOR of the last char will be the
+    # checksum  
+    for c in chksumdata:
+        # Makes XOR value of counter with the next char in line
+        # and stores the new XOR value in csum
+        csum ^= ord(c)
+    h = hex(csum)    
+    return h[2:]#get hex data without 0x prefix
+    
 
 class Kite:
  def __init__(self):
@@ -76,8 +92,8 @@ class Kite:
   radius = pixelPerRadians
   referenceImage = 'kite_detail.jpg'
   scaleFactor = 0.5
-  isVirtualCamera = True
-  useHDF5 = True
+  isVirtualCamera = False
+  useHDF5 = False
 
   # Open reference image: this is used at initlalisation
   target_detail = Image(referenceImage)
@@ -86,16 +102,16 @@ class Kite:
   pal = target_detail.getPalette(bins = 2, hue = False)
 
   # Open video to analyse or live stream
-  #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+  #cam = JpegStreamCamera('http://192.168.1.29:8080/videofeed')#640 * 480
   if isVirtualCamera:
-    cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+    #cam = VirtualCamera('../../zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
     #cam = VirtualCamera('output.avi', 'video')
-    #cam = VirtualCamera('/home/bat/Flying kite images (for kite steering unit development)-YTMgX1bvrTo.flv','video')
+    cam = VirtualCamera('../Recording/Videos/Flying kite images (for kite steering unit development)-YTMgX1bvrTo.flv','video')
     virtualCameraFPS = 25
   else:
-    #cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
-    cam = Camera() 
+    cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
+    #cam = Camera() 
 
   # Get a sample image to initialize the display at the same size
   img = cam.getImage().scale(scaleFactor)
@@ -103,10 +119,10 @@ class Kite:
   # Create a pygame display
   if display:
    if img.width>img.height:
-     disp = Display((1080,810))#(int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
+     disp = Display((27*640/10,25*400/10))#(int(2*img.width/scaleFactor), int(2*img.height/scaleFactor)))
    else:
      disp = Display((810,1080))
-  js = JpegStreamer()
+  #js = JpegStreamer()
 
 
 
@@ -498,7 +514,7 @@ class Kite:
 		l = np.dot(ctm, l)
                 layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
-	      toDisplay.save(js)
+	      #toDisplay.save(js)
               toDisplay.save(disp)
     if display : 
       toDisplay.removeDrawingLayer(1)
@@ -515,15 +531,24 @@ if __name__ == '__main__':
   print 'haaa'
   pid = PID.PID(0.01, 0, 10)
   offset = sp.pi/3*0
-  ser = serial.Serial('/dev/ttyACM1', 9600)
+  ser = serial.Serial('/dev/ttyACM0', 19200)
   dt = 0.1
-  time.sleep(dt)
+  time.sleep(1.5)
   ser.write('i1')
+  print "hue"
   while True:
     setpoint = 0*sp.pi/1.7*sp.sin(2*sp.pi/7*time.time())+offset
     error = kite.orientation -setpoint
     pid.incrementTime(error, dt)
     order = pid.computeCorrection(error, kite.ROT)
-    ser.write(str(np.floor(100*order)/100.0))
+    alpha = np.round(100*order)/100.0
+    msg = "ORPWM"+","+str(alpha)
+    msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+    print msg
+    ser.write(msg)
+    msg = "ORPOS"+","+str(np.round(sp.rad2deg(kite.orientation),1))+","+str(np.round(sp.rad2deg(kite.elevation),1))+","+str(np.round(sp.rad2deg(kite.bearing),1))
+    msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+    print msg
+    ser.write(msg)
     time.sleep(dt)
 	    

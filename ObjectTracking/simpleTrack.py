@@ -4,7 +4,7 @@
 # Copyright (c) 2013 Nautilabs
 #
 # Licensed under the MIT License,
-# http://code.google.com/p/robokite/source/checkout
+# https://github.com/baptistelabat/robokite
 # Authors: Baptiste LABAT
 
 
@@ -90,7 +90,7 @@ class Kite:
   maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
   pixelPerRadians = 640
   radius = pixelPerRadians
-  referenceImage = 'kite_detail.jpg'
+  referenceImage = '../ObjectTracking/kite_detail.jpg'
   scaleFactor = 0.5
   isVirtualCamera = False
   useHDF5 = False
@@ -235,9 +235,10 @@ class Kite:
                   # The 3 main colors in the area selected are considered.
 		  # Note that the selection should be included in the target and not contain background
 		    try:
-		      pal = selection.getPalette(bins = 2, hue = False)
+			  selection.save('../ObjectTracking/'+ 'kite_detail_tmp.jpg')
+			  pal = selection.getPalette(bins = 2, hue = False)
 		    except: # getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
-                      pal = pal
+			  pal = pal
    		    wasTargetFoundInPreviousFrame = False
 		    previous_coord_px = (bb[0] + bb[2]/2, bb[1] + bb[3]/2)
                 if corner1 != corner2:
@@ -535,7 +536,6 @@ if __name__ == '__main__':
   dt = 0.1
   time.sleep(1.5)
   ser.write('i1')
-  print "hue"
   while True:
     setpoint = 0*sp.pi/1.7*sp.sin(2*sp.pi/7*time.time())+offset
     error = kite.orientation -setpoint

@@ -43,7 +43,7 @@ TinyGPSCustom bearing(nmea, "ORPOS", 3);
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-PID myPID(&Input, &Output, &Setpoint,10,0,50, DIRECT);
+PID myPID(&Input, &Output, &Setpoint,10,0,1, DIRECT);
 
 void setup()
 {
@@ -55,7 +55,7 @@ void setup()
   Setpoint = 0;
   //turn the PID on
   myPID.SetMode(AUTOMATIC);
-  myPID.SetOutputLimits(-128, 128);
+  myPID.SetOutputLimits(-50, 50);
 }
 
 void SerialEvent() {
@@ -102,7 +102,7 @@ void SerialEvent() {
         if (nmea.encode(*gpsStream++))
       { 
         alphaSigned = StrToFloat(pwm.value());
-        Input = StrToFloat(pwm.value()); 
+        Input = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
       }
     }
@@ -117,7 +117,7 @@ void loop()
   int power;
   sensorValue = analogRead(analogInPin);
   setMode();
-  //alphaSigned=Output/127.0;
+  alphaSigned=Output/127.0;
   computeAlphaSigned();
   power = alphaSigned*127;
   ST.motor(1, power);

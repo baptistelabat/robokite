@@ -4,9 +4,26 @@ import threading
 import time
 import numpy as np
 sys.path.append(os.getcwd())
-sys.path.append('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking')
+sys.path.append('../ObjectTracking')
 import mobileState
 import serial
+
+def computeXORChecksum(chksumdata):
+	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Initializing XOR counter
+    csum = 0
+    
+    # For each char in chksumdata, XOR against the previous 
+    # XOR char.  The final XOR of the last char will be the
+    # checksum  
+    for c in chksumdata:
+        # Makes XOR value of counter with the next char in line
+        # and stores the new XOR value in csum
+        csum ^= ord(c)
+    h = hex(csum)    
+    return h[2:]#get hex data without 0x prefix
+    
+    
 try:
   # Get the mobile orientation
   mobile = mobileState.mobileState()
@@ -32,13 +49,13 @@ try:
   while True:
       mobile.computeRPY()
       ser.flush()
-      ser.write(
-	      str(	
-                   np.max([-0.99, np.min([0.99, np.floor(100*mobile.roll/2.0)/100.0])]
+      alpha = np.max([-0.99, np.min([0.99, np.floor(100*mobile.pitch/2.0)/100.0])]
                           )
-	          )
+      msg = "ORPWM"+","+str(alpha)
+      msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+      ser.write(msg
         )
-      print mobile.roll
+      print msg
       time.sleep(dt)
 except KeyboardInterrupt:
  mobile.stop_requested = True

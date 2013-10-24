@@ -61,8 +61,9 @@ def checkSerial():
     global serialPending
     try:
         s = ser.read_until('\n')
-    except:
-        print("Error reading from serial port")
+        print "Received from arduino: " + s
+    except Exception, e:
+        print("Error reading from serial port" + str(e))
         return
     
     if len(s):
@@ -84,7 +85,7 @@ def parseSerial():
             #do some stuff with the line, if necessary
             #example:
             mostRecentLine = line
-            print "Received " + mostRecentLine
+            #print "Received " + mostRecentLine
             # in this example, status will show the most recent line
             #serialHistory += line
 
@@ -116,12 +117,13 @@ class MainHandler(tornado.web.RequestHandler):
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         self.write_message(u"Status OK " + message)
+        print "received message from MMI: " + message
         global ser
         global alpha
         try:
           alpha = np.floor((float(message)-128)/128.*100)/100.0
-          msg = "ORPWM"+","+str(alpha)
-          msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+          msg = "ORPWM" + "," + str(alpha)
+          msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
           ser.write(msg)
           print "send " + msg
         except:
@@ -136,8 +138,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
       self.write_message(u"Connected")
       print "open"
       
-    def close(self):
-      self.write_message(u"Connection closed")
+    def on_close(self):
       clients.remove(self)
       print "close"
 

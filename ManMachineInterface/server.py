@@ -4,7 +4,7 @@
 # Copyright (c) 2013 Nautilabs
 #
 # Licensed under the MIT License,
-# http://code.google.com/p/robokite/source/checkout
+# https://github.com/baptistelabat/robokite
 # Authors: Baptiste LABAT
 #
 # Used http://www.linuxforu.com/2012/04/getting-started-with-html5-websockets/
@@ -20,7 +20,8 @@ import numpy as np
 import time
 sys.path.append('..')
 
-import arduinoserial
+global ser
+
 
 def computeXORChecksum(chksumdata):
 	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -45,22 +46,23 @@ alpha = 0
 
 def updateSerial():
 	global alpha
+	global ser
 	try:
 		msg = "ORPWM"+","+str(alpha)
 		msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
 		print "send " + msg
 		ser.write(msg)
-		checkSerial();
 
-	except:
-		print "Serial exception"
+	except Exception, e:
+		print("Serial exception" + str(e))
 
 global serialPending
 serialPending = ''
 def checkSerial():
+    global ser
     global serialPending
     try:
-        s = ser.read_until('\n')
+        s = ser.readline()
         print "Received from arduino: " + s
     except Exception, e:
         print("Error reading from serial port" + str(e))
@@ -92,23 +94,20 @@ def parseSerial():
         pending = split[-1]
        
 def openSerial():
-	global ser
-	# Open the serial port
-	try:
-	  ser.Serial
-	except:
-	  locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
-	  for device in locations:
-  	    try:
-    	      print "Trying...",device
-              ser = arduinoserial.SerialPort(device, 19200)
-              print "Connected on ", device
-              break
-  	    except:
-    	      print "Failed to connect on ", device
-	time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
-	# An alternative would be to listen to a message from the arduino saying it is ready
-	ser.write('i1') # i to start serial control
+  global ser
+  locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
+  for device in locations:
+    try:
+      print "Trying...",device
+      ser = serial.Serial(device, baudrate=19200, timeout=1)
+      print "Connected on ", device
+      break
+    except:
+      print "Failed to connect on ", device
+  time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
+  # An alternative would be to listen to a message from the arduino saying it is ready
+  ser.write('i1') # i to start serial control
+
  
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -164,7 +163,7 @@ if __name__ == "__main__":
     openSerial()
     application.listen(8080)
     mainLoop = tornado.ioloop.IOLoop.instance()
-    scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 100, io_loop = mainLoop)
+    scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 10, io_loop = mainLoop)
     scheduler2 = tornado.ioloop.PeriodicCallback(updateSerial, 100, io_loop = mainLoop)
     scheduler.start()
     scheduler2.start()

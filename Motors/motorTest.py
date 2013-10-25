@@ -58,5 +58,4 @@ while True:
     print("Error reading from serial port" + str(e))
 	  
   time.sleep(dt)
-3
 ser.close()

@@ -27,14 +27,22 @@
 		</style>
 	</head>
 	<body>
-		<script src="js/three.js"></script>
+		<output id = "serverFeedback">
+		Not connected to server
+		</output>
+		<script src="static/three.js"></script>
 
-		<script src="js/loaders/ColladaLoader.js"></script>
+		<script src="static/loaders/ColladaLoader.js"></script>
 
-		<script src="js/Detector.js"></script>
-		<script src="js/libs/stats.min.js"></script>
+		<script src="static/Detector.js"></script>
+		<script src="static/libs/stats.min.js"></script>
 
 		<script>
+			var ws = new WebSocket("ws://localhost:8080/websocket");
+            ws.onmessage = function(evt){
+		    var myOutput = document.getElementById("serverData");
+                myOutput.value = evt.data;
+            }
 
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -46,7 +54,7 @@
 
 			var loader = new THREE.ColladaLoader();
 			loader.options.convertUpAxis = true;
-			loader.load( './kite.dae', function ( collada ) {
+			loader.load( './static/kite.dae', function ( collada ) {
 
 				dae = collada.scene;
 				skin = collada.skins[ 0 ];
@@ -168,10 +176,14 @@
 
 					skin.morphTargetInfluences[ Math.floor( t * 30 ) ] = 1;
 
-					t += delta;
+					
 
 				}*/
-
+				t += delta;
+				dae.rotation.x = 10*t/180*3;
+				dae.rotation.y = 30/180*3;
+				dae.rotation.z = 30/180*3;
+				dae.updateMatrix();
 				render();
 				stats.update();
 

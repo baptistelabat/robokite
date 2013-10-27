@@ -27,9 +27,9 @@
 		</style>
 	</head>
 	<body>
-		<output id = "serverFeedback">
-		Not connected to server
-		</output>
+			<div id="info">
+black
+</div>
 		<script src="static/three.js"></script>
 
 		<script src="static/loaders/ColladaLoader.js"></script>
@@ -40,8 +40,8 @@
 		<script>
 			var ws = new WebSocket("ws://localhost:8080/websocket");
             ws.onmessage = function(evt){
-		    var myOutput = document.getElementById("serverData");
-                myOutput.value = evt.data;
+		    var myOutput = document.getElementById("info");
+                myOutput.innerHTML = evt.data;
             }
 
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
@@ -180,9 +180,15 @@
 
 				}*/
 				t += delta;
-				dae.rotation.x = 10*t/180*3;
-				dae.rotation.y = 30/180*3;
-				dae.rotation.z = 30/180*3;
+				var myOutput = document.getElementById("info");
+				obj = JSON.parse(myOutput.innerHTML);
+				t=myOutput.innerHTML
+				dae.rotation.x = obj.xrotation;
+				dae.rotation.y = obj.yrotation;
+				dae.rotation.z = obj.zrotation;
+				dae.position.x = obj.x;
+				dae.position.y = obj.y;
+				dae.position.z = obj.z;
 				dae.updateMatrix();
 				render();
 				stats.update();

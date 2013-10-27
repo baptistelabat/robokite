@@ -13,7 +13,10 @@ import tornado.web
 import tornado.websocket
 import tornado.ioloop
 import os
-    
+import datetime
+import time
+import json
+import math
 clients = []
 
 class MainHandler(tornado.web.RequestHandler):
@@ -42,10 +45,19 @@ settings = dict(
             static_path=os.path.join(os.path.dirname(__file__), "static"),
 )
 application = tornado.web.Application(handlers, **settings)
+
+def timer():
+    for c in clients:
+        #c.write_message(datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%Mm_%Ss"))
+        t = time.time()
+        c.write_message( json.dumps({'x':0, 'y':0, 'z':0, 'xrotation':math.sin(t), 'yrotation':math.cos(t), 'zrotation':0})
+)
  
 if __name__ == "__main__":
     application.listen(8080)
     mainLoop = tornado.ioloop.IOLoop.instance()
+    scheduler = tornado.ioloop.PeriodicCallback(timer, 100, io_loop = mainLoop)
+    scheduler.start()
     mainLoop.start()
     
 

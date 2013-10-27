@@ -9,104 +9,204 @@
 src = "static/script.js" charset="utf-8"></script>
 </head>
 <body>
-This is a prototype of Man Machine Interface in browser
-&nbsp;
-<p>
-Active mode: 
-<output id = "controlMode">
-Manual control
-</output>
-</p>
-<p>
-<button onclick = "setManualControl()">
-Manual control
-</button>
-<button onclick = "setAutomaticControl()">
-Automatic control
-</button>
-<button onclick = "setJoystickControl()">
-Joystick control
-</button>
-</p>
-<p>
-Time: 
-<output id = "time">
-Not connected to time server
-</output>
-</p>
-<p>
-Orientation: 
-<output id = "orientation">
-0°
-</output>
-</p>
-<p>
-Elevation: 
-<output id = "elevation">
-45°
-</output>
-</p>
-<p>
-Absolute bearing: 
-<output id = "absoluteBearing">
-271°
-</output>
-</p>
-<p>
-Wind relative bearing: 
-<output id = "relativeBearing">
-15°
-</output>
-</p>
+<h1>Robokite: kite automatic pilot user interface</h1>
 <form action = "">
 <fieldset>
-<input id = "setOrientationRange"
-type = "range"
-min = "0"
-max = "256"
-value = "128"
-step = "8"
-onchange = "updateSetOrientationRange()" />
-<input id = "setOrientationNumber"
-type = "number"
-min = "0"
-max = "256"
-value = "128"
-step = "1"
-onchange = "updateSetOrientationNumber()" />
-<output id = "setOrientation">128</output>
+	<legend>Control mode selection</legend>
+<p>
+<label>Control mode:
+</label>
+<output id="controlMode">joystick</output>
+<br/>
+          <input type = "radio"
+                 name = "controlModeRequest"
+                 value = "manual"
+                 onclick = "setControlMode()" />
+          <label>Manual</label>
+          
+          <input type = "radio"
+                 name = "controlModeRequest"
+                 value = "powerSteering"
+                 disabled="disabled"
+                 onclick = "setControlMode()"  />      
+          <label>Power Steering (not implemented)</label>
+ 
+          <input type = "radio"
+                 name = "controlModeRequest"
+                 value = "joystick"
+                 checked = "checked"
+                 onclick = "setControlMode()"/>
+          <label>Joystick</label>
+          
+          <input type = "radio"
+                 name = "controlModeRequest"
+                 value = "automatic"
+                 onclick = "setControlMode()"  />
+          <label>Automatic</label>
+</p>
+<p>
+<label>Setpoint origin:
+</label>
+<output id="setpointOrigin">browser</output>
+<br/>
+          <input type = "radio"
+                 name = "setpointOriginRequest"
+                 value = "analog"
+                 checked = "checked"
+                 onclick = "setSetpointOrigin()"  />
+          <label>Analog signal</label>
+          
+          <input type = "radio"
+                 name = "setpointOriginRequest"
+                 value = "browser" 
+                 onclick = "setSetpointOrigin()"/>
+          <label>Browser</label>
+ 
+</p>
+<p>
+<label>Control variable:
+</label>
+<output id="controlVariable">motorVoltage</output>
+<br/>
+          <input type = "radio"
+                 name = "controlVariableRequest"
+                 value = "motorVoltage"
+                 checked = "checked"
+                 onclick = "setControlVariable()" />
+          <label>motorVoltage</label>
+          
+          <input type = "radio"
+                 name = "controlVariableRequest"
+                 value = "motorSpeed"
+                 onclick = "setControlVariable()" />
+          <label>Motor speed</label>
+          
+          <input type = "radio"
+                 name = "controlVariableRequest"
+                 value = "motorPosition"
+                 onclick = "setControlVariable()" />
+          <label>Motor position</label>
+          
+          <input type = "radio"
+                 name = "controlVariableRequest"
+                 value = "kiteState"
+                 onclick = "setControlVariable()" />
+          <label>Kite state</label>
+ 
+</p>
 </fieldset>
 <fieldset>
+<legend>Setpoints</legend>
+<p>
+<label>Setpoint 1:   </label>
+<input id = "setpoint1Number"
+type = "number"
+min = "-100"
+max = "100"
+value = "0"
+step = "1"
+onchange = "updateSetpoint1Number()" />
+<br/>
+-100
+<input id = "setpoint1Range"
+type = "range"
+min = "-100"
+max = "100"
+value = "0"
+step = "1"
+onchange = "updateSetpoint1Range()" />
+100
+</p>
+<label>Setpoint 2:   </label>
+<input id = "setpoint2Number"
+type = "number"
+min = "-100"
+max = "100"
+value = "0"
+step = "1"
+onchange = "updateSetpoint2Number()" />
+<br/>
+-100
+<input id = "setpoint2Range"
+type = "range"
+min = "-100"
+max = "100"
+value = "0"
+step = "1"
+onchange = "updateSetpoint2Range()" />
+100
+</p>
+</fieldset>
+<fieldset>
+	<legend>Gain tuning</legend>
+<p>
+<label>Kp:  </label>
+<input id = "KpNumber"
+type = "number"
+min = "0"
+max = "100"
+value = "50"
+step = "1"
+onchange = "updateKpNumber()" />
+<br/>
+0
 <input id = "KpRange"
 type = "range"
 min = "0"
-max = "256"
-value = "128"
-onchange = "updateKp()" />
-<output id = "Kp">128</output>
-</fieldset>
-<fieldset>
+max = "100"
+value = "50"
+onchange = "updateKpRange()" />
+100
+</p>
+<p>
+<label>Kd:  </label>
+<input id = "KdNumber"
+type = "number"
+min = "0"
+max = "100"
+value = "50"
+step = "1"
+onchange = "updateKdNumber()" />
+<br/>
+0
 <input id = "KdRange"
 type = "range"
 min = "0"
-max = "256"
-value = "128"
-onchange = "updateKd()" />
-<output id = "Kd">128</output>
-</fieldset>
-<fieldset>
+max = "100"
+value = "50"
+onchange = "updateKdRange()" />
+100
+</p>
+<p>
+<label>Ki:  </label>
+<input id = "KiNumber"
+type = "number"
+min = "0"
+max = "100"
+value = "50"
+step = "1"
+onchange = "updateKiNumber()" />
+<br/>
+0
 <input id = "KiRange"
 type = "range"
 min = "0"
-max = "256"
-value = "128"
-onchange = "updateKi()" />
-<output id = "Ki">128</output>
+max = "100"
+value = "50"
+onchange = "updateKiRange()" />
+100
+</p>
 </fieldset>
+<p>Server feedback: 
+<output id = "serverFeedback">
+Not connected to server
+</output>
+</p>
+</form>
         <script type="text/javascript">
             var ws = new WebSocket("ws://localhost:8080/websocket");
             ws.onmessage = function(evt){
-		var myOutput = document.getElementById("time");
+		var myOutput = document.getElementById("serverFeedback");
                 myOutput.value = evt.data;
             }
         </script>

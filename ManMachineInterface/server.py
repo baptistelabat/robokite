@@ -18,7 +18,11 @@ import sys
 import serial
 import numpy as np
 import time
+import threading
+import json
 sys.path.append('..')
+sys.path.append('../ObjectTracking')
+import simpleTrack
 
 global ser # Serial communication
 global alpha # Pulse Width Modulation between -1 and 1
@@ -29,8 +33,15 @@ global serialHistory
 serialHistory = ''
 mostRecentLine = ''
 clients = [] # Stores the web client which are connected.
+global kite
 
-
+kite = simpleTrack.Kite()
+cv_thread = threading.Thread(None, simpleTrack.Kite.track, None, (kite,))
+try:
+  cv_thread.start()
+  print "Kite sensors properly initialised"
+except:
+  print "No kite sensors"
 
 def computeXORChecksum(chksumdata):
 	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -80,6 +91,24 @@ def updateSerial():
 		ser.write(msg)
     except Exception, e:
         print("Serial exception: " + str(e))
+        
+def updateFeedback():
+    global alpha
+    global ser
+    global kite
+	
+    try:
+		# Send an in house proprietary message
+		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
+		# R: stands for robokite, the name of the project
+		# POS: stands for POSition
+		msg = "ORPOS"+","+str(np.round(np.rad2deg(kite.orientation), 1))+","+str(np.round(np.rad2deg(kite.elevation), 1))+","+str(np.round(np.rad2deg(kite.bearing),1))
+		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "Send " + msg
+		ser.write(msg)
+    except Exception, e:
+        print("Serial exception: " + str(e))
+        
 
 def checkSerial():
     global ser
@@ -126,15 +155,16 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         
         self.write_message(u"Status OK " + message)
         print "received message from MMI: " + message
-
-        try:
-          alpha = np.floor((float(message)-128)/128.*100)/100.0
+        msg = json.loads(message)
+        if msg.get('id')=='pwm1':       
+          alpha = float(msg.get('value'))/100.0
           msg = "ORPWM" + "," + str(alpha)
           msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
-          ser.write(msg)
-          print "send " + msg
-        except:
-          print "time out exception"
+          try:
+            ser.write(msg)
+            print "send " + msg
+          except:
+            print "time out exception"
         
     def open(self):
       global alpha
@@ -168,8 +198,10 @@ if __name__ == "__main__":
     mainLoop = tornado.ioloop.IOLoop.instance()
     scheduler = tornado.ioloop.PeriodicCallback(checkSerial, 10, io_loop = mainLoop)
     scheduler2 = tornado.ioloop.PeriodicCallback(updateSerial, 100, io_loop = mainLoop)
+    schedulerFeedback = tornado.ioloop.PeriodicCallback(updateFeedback, 100, io_loop = mainLoop)
     scheduler.start()
     scheduler2.start()
+    #schedulerFeedback.start()
     mainLoop.start()
     
 

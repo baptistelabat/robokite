@@ -46,7 +46,11 @@ while True:
   print "n= ", n, ", t= ", t
   order = 0.2*np.sin(t)
   alpha = np.round(order, 2)
-  msg = "ORPWM"+","+str(alpha)
+  msg = "ORPW1"+","+str(alpha)
+  msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+  print msg
+  ser.write(msg)
+  msg = "ORPW2"+","+str(alpha)
   msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
   print msg
   ser.write(msg)

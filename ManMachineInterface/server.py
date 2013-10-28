@@ -25,8 +25,10 @@ sys.path.append('../ObjectTracking')
 import simpleTrack
 
 global ser # Serial communication
-global alpha # Pulse Width Modulation between -1 and 1
-alpha = 0
+global alpha1 # Pulse Width Modulation between -1 and 1
+global alpha2 # Pulse Width Modulation between -1 and 1
+alpha1 = 0
+alpha2 = 0
 global serialPending
 serialPending = ''
 global serialHistory
@@ -77,7 +79,8 @@ def openSerial():
   ser.write('i1') # i to start serial control, 1 is the minimum expecting message frequency (in house protocol)
 
 def updateSerial():
-    global alpha
+    global alpha1
+    global alpha2
     global ser
 	
     try:
@@ -85,7 +88,12 @@ def updateSerial():
 		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
 		# R: stands for robokite, the name of the project
 		# PWM: stands for Pulse Width Modulation, the way the motor is controlled.
-		msg = "ORPWM" + "," + str(alpha)
+		msg = "ORPW1" + "," + str(alpha1)
+		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "Send " + msg
+		ser.write(msg)
+		
+		msg = "ORPW2" + "," + str(alpha2)
 		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
 		print "Send " + msg
 		ser.write(msg)
@@ -93,7 +101,6 @@ def updateSerial():
         print("Serial exception: " + str(e))
         
 def updateFeedback():
-    global alpha
     global ser
     global kite
 	
@@ -102,7 +109,7 @@ def updateFeedback():
 		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
 		# R: stands for robokite, the name of the project
 		# POS: stands for POSition
-		msg = "ORPOS"+","+str(np.round(np.rad2deg(kite.orientation), 1))+","+str(np.round(np.rad2deg(kite.elevation), 1))+","+str(np.round(np.rad2deg(kite.bearing),1))
+		msg = "ORKST"+","+str(np.round(np.rad2deg(kite.orientation), 1))+","+str(np.round(np.rad2deg(kite.elevation), 1))+","+str(np.round(np.rad2deg(kite.bearing),1))
 		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
 		print "Send " + msg
 		ser.write(msg)
@@ -151,26 +158,32 @@ class MainHandler(tornado.web.RequestHandler):
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         global ser
-        global alpha
+        global alpha1
+        global alpha2
         
         self.write_message(u"Status OK " + message)
         print "received message from MMI: " + message
         msg = json.loads(message)
         if msg.get('id')=='pwm1':       
-          alpha = float(msg.get('value'))/100.0
-          msg = "ORPWM" + "," + str(alpha)
-          msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
-          try:
-            ser.write(msg)
-            print "send " + msg
-          except:
-            print "time out exception"
+          alpha1 = float(msg.get('value'))/100.0
+          msge = "ORPW1" + "," + str(alpha1)
+        if msg.get('id')=='pwm2':
+          alpha2 = float(msg.get('value'))/100.0
+          msge = "ORPW2" + "," + str(alpha2)
+        msg = "$" + msge + "*" + computeXORChecksum(msge) + chr(13).encode('ascii')
+        try:
+          ser.write(msg)
+          print "send " + msg
+        except:
+          print "time out exception"
         
     def open(self):
-      global alpha
+      global alpha1
+      global alpha2
       
       openSerial()
-      alpha = 0
+      alpha1 = 0
+      alpha2 = 0
       clients.append(self)
       self.write_message(u"Connected")
       print "Open web client connection"

@@ -1,12 +1,12 @@
 
-// Copyright (c) 2013 Nautilabs. All rights reserved.
-// http://code.google.com/p/robokite/source/checkout
+// Copyright (c) 2013 Nautilabs
+// https://github.com/baptistelabat/robokite
 
 // This file used SoftwareSerial example (Copyright (c) 2012 Dimension Engineering LLC) for Sabertooth http://www.dimensionengineering.com/software/SabertoothSimplifiedArduinoLibrary/html/index.html
 // See license.txt in the Sabertooth arduino library for license details.
 // It is as well derived from HBridgePWM.ino from robokite project
 // http://code.google.com/p/robokite/source/browse/HBridgePWM/HBridgePWM.ino
-
+// The selector 1 3 5 6 have to be on on.
 #include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
 #include <TinyGPS++.h>
@@ -19,31 +19,38 @@ const int analogInPin = A0;  // Analog input pin that the potentiometer is attac
 
 int sensorValue = 0;        // Value read from the potentiometer
 int initialSensorValue = 0;
-double alphaSigned = 0;
+double alphaSigned1 = 0;
+double alphaSigned2 = 0;
 String inputString = "";         // A string to hold incoming data
 boolean stringComplete = false;  // Whether the string is complete
-boolean isSerialControl = false; 
+boolean isSerialControl = true; 
 boolean isManualControl = false;
 // Read the analog in value
 // The range was reduced 
 double sensorValueMin = 200;//0
 double sensorValueMax = 800;//1023
 double deadBand = 0.1; // Use to ensure zero speed. Should not be zero
-double serialFrequency = 0;
+double serialFrequency = 1;
 long lastSerialInputTime = 0;
 long lastWriteTime = 0;
 
 TinyGPSPlus nmea;
-TinyGPSCustom pwm(nmea, "ORPWM", 1);
-TinyGPSCustom roll(nmea, "ORPOS", 1);
-TinyGPSCustom elevation(nmea, "ORPOS", 2);
-TinyGPSCustom bearing(nmea, "ORPOS", 3);
+// O stands for Opensource, R for Robokite
+TinyGPSCustom pwm1     (nmea, "ORPW1", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 1
+TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 2
+TinyGPSCustom setss1   (nmea, "ORSS1", 1);  // Set speed for Sabertooth output 1
+TinyGPSCustom setss2   (nmea, "ORSS2", 1);  // Set speed for Sabertooth output 2
+TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth output 1
+TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth output 2
+TinyGPSCustom roll     (nmea, "ORKST", 1);  // Kite STate roll (rotation in camera frame)
+TinyGPSCustom elevation(nmea, "ORKST", 2);  // Kite STate elevation
+TinyGPSCustom bearing  (nmea, "ORKST", 3);  // Kite STate bearing 
 
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
 
-//Specify the links and initial tuning parameters
-PID myPID(&Input, &Output, &Setpoint,10,0,1, DIRECT);
+//Specify the links and initial tuning parameters (Kp, Ki, Kd)
+PID myPID(&Input, &Output, &Setpoint, 10, 0, 1, DIRECT);
 
 void setup()
 {
@@ -58,7 +65,7 @@ void setup()
   myPID.SetOutputLimits(-50, 50);
 }
 
-void SerialEvent() {
+void serialEvent() {
 
   inputString="";
   Serial.flush();
@@ -101,7 +108,8 @@ void SerialEvent() {
       while (*gpsStream)
         if (nmea.encode(*gpsStream++))
       { 
-        alphaSigned = StrToFloat(pwm.value());
+        alphaSigned1 = StrToFloat(pwm1.value());
+        alphaSigned2 = StrToFloat(pwm2.value());
         Input = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
       }
@@ -112,21 +120,24 @@ void SerialEvent() {
 
 void loop()
 {
-  SerialEvent();
   myPID.Compute();
-  int power;
+  int power1, power2;
   sensorValue = analogRead(analogInPin);
   setMode();
-  alphaSigned=Output/127.0;
+  //alphaSigned=Output/127.0;
   computeAlphaSigned();
-  power = alphaSigned*127;
-  ST.motor(1, power);
+  power1 = alphaSigned1*127;
+  power2 = alphaSigned2*127;
+  ST.motor(1, power1);
+  ST.motor(2, power2);
   delay(10);
   if (millis()-lastWriteTime>100)
   {
     lastWriteTime = millis();
-    //Serial.println(alphaSigned);
-    Serial.println(Output);
+    
+    Serial.print(power1);
+    Serial.print(" ");
+    Serial.println(power2);
     if (isSerialControl)
     {
       //Serial.println("S");
@@ -157,7 +168,7 @@ void setMode()
   // This avoids to go to full speed if one cable in the potentiometer is unplugged
   // Warning: if the midle cable of the potentiometer is unplugged, the signal is free, and the fault can not be detected
   // \todo invert polarity to be able to detect floating pin.
-  isManualControl = (sensorValue < 5)|(sensorValue >1023-5);
+  isManualControl = false;//(sensorValue < 5)|(sensorValue >1023-5);
 }
 
 float StrToFloat(String str){
@@ -172,7 +183,8 @@ void computeAlphaSigned()
   { // Fallbacks to zero as we received no message in the expected time (twice the time)
     if ((millis()-lastSerialInputTime) > 2*1/serialFrequency*1000)
     {
-      alphaSigned = 0;
+      alphaSigned1 = 0;
+      alphaSigned2 = 0;
     }
   }
 
@@ -184,25 +196,30 @@ void computeAlphaSigned()
     double sensorDeadBandMin = sensorValueMin + (-deadBand/2.0+0.5)*(sensorValueMax - sensorValueMin);
     if (sensorValue < sensorDeadBandMin) //strictly to avoid alphaSigned equals zero
     {
-      alphaSigned = (sensorValue-sensorValueMin)/(sensorDeadBandMax - sensorValueMin)-1;
+      alphaSigned1 = (sensorValue-sensorValueMin)/(sensorDeadBandMax - sensorValueMin)-1;
+      alphaSigned2 = 0;
     } 
     else
     {
       if (sensorValue > sensorDeadBandMax)
       {
-        alphaSigned = (sensorValue-sensorDeadBandMax)/(sensorValueMax - sensorDeadBandMax);
+        alphaSigned1 = (sensorValue-sensorDeadBandMax)/(sensorValueMax - sensorDeadBandMax);
+        alphaSigned2 = 0;
       }
       else
       {
-        alphaSigned = 0;
+        alphaSigned1 = 0;
+        alphaSigned2 = 0;
       }
     }
     if (isManualControl)
     {
-      alphaSigned = 0;
+      alphaSigned1 = 0;
+      alphaSigned2 = 0;
     }
   }
-  alphaSigned = min(1, max(-1, alphaSigned));
+  alphaSigned1 = min(1, max(-1, alphaSigned1));
+  alphaSigned2 = min(1, max(-1, alphaSigned2));
 }
 
 

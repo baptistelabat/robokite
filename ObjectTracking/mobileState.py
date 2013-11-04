@@ -16,8 +16,10 @@ def decimalstr2float(decimalstrs):
 class mobileState:
   """This class stores and process information about mobile phone"""
   def __init__(self):
-    self.acceleration = [0, 0, 0]
-    self.magnetic = [0, 0, 0]
+    self.acceleration_raw = [0, 0, 0]
+    self.acceleration_filtered = sp.array([0.0, 0.0, 0.0])
+    self.magnetic_raw = [0, 0, 0]
+    self.magnetic_filtered = sp.array([0.0, 0.0, 0.0])
     self.isToUpdate = False
     self.roll = 0
     self.pitch = 0
@@ -32,12 +34,12 @@ class mobileState:
     eCompass using Accelerometer and
     Magnetometer Sensors" reference AN4248 from Freescale""" 
 
-    Gpx = self.acceleration[0]
-    Gpy = self.acceleration[1]
-    Gpz = self.acceleration[2]
-    Bpx = self.magnetic[0]
-    Bpy = self.magnetic[1]
-    Bpz = self.magnetic[2]
+    Gpx = self.acceleration_filtered[0]
+    Gpy = self.acceleration_filtered[2]
+    Gpz = self.acceleration_filtered[1]
+    Bpx = self.magnetic_filtered[0]
+    Bpy = self.magnetic_filtered[2]
+    Bpz = self.magnetic_filtered[1]
     # These parameters could be used to compensate for hard iron effect, if not already compensated
     Vx = 0
     Vy = 0
@@ -55,14 +57,16 @@ class mobileState:
     So now acceleration and magnetic vectors should be used"""
     data = msg.split(', ')
     if data[0]=='G':
+		# This is GPS message
         time = decimalstr2float(data[2])
         latitude_deg = decimalstr2float(data[3])
         longitude_deg = decimalstr2float(data[4])
         altitude = decimalstr2float(data[5])
-        hdop = decimalstr2float(data[7])
-        vdop = decimalstr2float(data[8])
+        hdop = decimalstr2float(data[7]) # Horizontal dilution of precision
+        vdop = decimalstr2float(data[8]) # Vertical dilution of precision
         print time, latitude_deg, longitude_deg, altitude, hdop, vdop
     if data[0]=='O':
+		# \note This is no more used as orientation convention were unclear
         #  'O, 146, 1366575961732, 230,1182404, -075,2031250, 001,7968750'
         [ u, u,    # data not used                                         \    
         heading_deg, # pointing direction of top of phone                    \ 
@@ -74,21 +78,27 @@ class mobileState:
         inclinaison_deg = pitch_deg #positive clockwise
         print heading_deg, roll_deg, pitch_deg, elevation_deg, inclinaison_deg
     if data[0] == 'A':
+	# Accelerometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
-	deltaT = decimalstr2float(data[2])/1000 - self.time_acceleration
-	alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+        deltaT = decimalstr2float(data[2])/1000 - self.time_acceleration
+        alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
         self.time_acceleration = decimalstr2float(data[2])/1000
-        self.acceleration[0] += alpha*(-decimalstr2float(data[5])-self.acceleration[0])
-        self.acceleration[1] += alpha*(decimalstr2float(data[3])-self.acceleration[1])
-        self.acceleration[2] += alpha*(-decimalstr2float(data[4])-self.acceleration[2])
+        self.acceleration_raw[0] = decimalstr2float(data[3])
+        self.acceleration_raw[1] = decimalstr2float(data[4])
+        self.acceleration_raw[2] = decimalstr2float(data[5])
+        # Filter the data
+        self.acceleration_filtered +=alpha*(sp.array(self.acceleration_raw)-self.acceleration_filtered)
     if data[0] == 'M':
+	# Magnetometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
-	deltaT =  decimalstr2float(data[2])/1000-self.time_magnetic
-	alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+        deltaT =  decimalstr2float(data[2])/1000-self.time_magnetic
+        alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
         self.time_magnetic = decimalstr2float(data[2])/1000
-        self.magnetic[0] += alpha*(-decimalstr2float(data[5])-self.magnetic[0])
-        self.magnetic[1] += alpha*(decimalstr2float(data[3])-self.magnetic[1])
-        self.magnetic[2] += alpha*(-decimalstr2float(data[4])-self.magnetic[2])
+        self.magnetic_raw[0] = decimalstr2float(data[3])
+        self.magnetic_raw[1] = decimalstr2float(data[4])
+        self.magnetic_raw[2] = decimalstr2float(data[5])
+		# Filter the data
+        self.magnetic_filtered += alpha*(sp.array(self.magnetic_raw)-self.magnetic_filtered)
 
   def checkUpdate(self):
     host = ''
@@ -113,28 +123,39 @@ if __name__ == '__main__':
   rollList = []
   pitchList = []
   headingList = []
-  filein = open('saveOrientation.txt', 'w')
+  fileout = open('acc.txt', 'w')
+  filemag = open('mag.txt', 'w')
   import matplotlib.pyplot as plt
   import numpy as np
   import time
   t0 = time.time()
   mobile = mobileState()
-  a = threading.Thread(None, mobileState.checkUpdate, None, (mobile,))
-  a.start()
-  while time.time()-t0 < 20:
+  try:
+    a = threading.Thread(None, mobileState.checkUpdate, None, (mobile,))
+    a.start()
+    while time.time()-t0 < 60:
         mobile.computeRPY()
-        print mobile.acceleration
-	print mobile.roll
-	timeList.append(time.time())
+        print mobile.acceleration_raw
+        print mobile.roll
+        timeList.append(time.time())
         headingList.append(mobile.yaw)
         rollList.append(mobile.roll)
         pitchList.append(mobile.pitch)
         time.sleep(0.1)
-
+        fileout.write('%f %f %f\n' % (mobile.acceleration_raw[0], mobile.acceleration_raw[1], mobile.acceleration_raw[2]))
+        filemag.write('%f %f %f\n' % (mobile.magnetic_raw[0], mobile.magnetic_raw[1], mobile.magnetic_raw[2]))
+  except KeyboardInterrupt:
+    mobile.stop_requested = True
+    fileout.close()
+    filemag.close()
+    
+  mobile.stop_requested = True
   plt.hold()
   plt.plot(np.array(timeList)-timeList[0], np.array(headingList))
-  plt.plot(np.array(timeList)-timeList[0], np.array(rollList),'g')
+  plt.plot(np.array(timeList)-timeList[0], np.array(rollList), 'g')
   plt.plot(np.array(timeList)-timeList[0], np.array(pitchList), 'r')
 
   plt.show()
+  fileout.close()
+  filemag.close()
 

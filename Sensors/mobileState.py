@@ -3,6 +3,7 @@ import scipy as sp
 import socket, traceback
 import threading
 import time
+import esoq2p1
 def decimalstr2float(decimalstrs):
     """ This function converts a string to float (probably exists elsewhere)"""
     decimal = []
@@ -29,17 +30,17 @@ class mobileState:
     self.time_magnetic = 0
     self.stop_requested = False
 
-  def computeRPY(self):
+  def computeRPY(self, order=[0, 2, 1], sign=[1, 1, 1]):
     """Computes roll, pitch and yaw. See "Implementing a Tilt-Compensated
     eCompass using Accelerometer and
     Magnetometer Sensors" reference AN4248 from Freescale""" 
-
-    Gpx = self.acceleration_filtered[0]
-    Gpy = self.acceleration_filtered[2]
-    Gpz = self.acceleration_filtered[1]
-    Bpx = self.magnetic_filtered[0]
-    Bpy = self.magnetic_filtered[2]
-    Bpz = self.magnetic_filtered[1]
+    # 0 2 1
+    Gpx = -self.acceleration_filtered[order[0]]*sign[0]
+    Gpy = -self.acceleration_filtered[order[1]]*sign[1]
+    Gpz = self.acceleration_filtered[order[2]]*sign[2]
+    Bpx = -self.magnetic_filtered[order[0]]*sign[0]
+    Bpy = -self.magnetic_filtered[order[1]]*sign[1]
+    Bpz = self.magnetic_filtered[order[2]]*sign[2]
     # These parameters could be used to compensate for hard iron effect, if not already compensated
     Vx = 0
     Vy = 0
@@ -49,7 +50,10 @@ class mobileState:
     psi = atan2((Bpz-Vz)*sin(phi)-(Bpy-Vy)*cos(phi), (Bpx-Vx)*cos(theta)+(Bpy-Vy)*sin(theta)*sin(phi)+(Bpz-Vz)*sin(theta)*cos(phi))   #According to Eqn 22
     self.roll = phi
     self.pitch = theta
-    self.yaw = -psi # Sign changed to get correct output \todo find the first bug
+    self.yaw = psi # Sign changed to get correct output \todo find the first bug
+    [q, loss] = esoq2p1.esoq2p1( sp.array([[Gpx, Bpx], [Gpy, Bpy], [Gpz, Bpz]]), sp.array([[0, -17], [0, 0], [-9.8, -42]]), sp.array([1,1]))
+    print q
+    self.q = q
 
   def decodeMessageSensorUDP(self, msg):
     """ This is used to decode message from sensorUDP application from the android market.
@@ -81,7 +85,11 @@ class mobileState:
 	# Accelerometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
         deltaT = decimalstr2float(data[2])/1000 - self.time_acceleration
-        alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+        if self.filterTimeConstant == 0.0:
+		  alpha = 1
+        else:
+		  alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+		  
         self.time_acceleration = decimalstr2float(data[2])/1000
         self.acceleration_raw[0] = decimalstr2float(data[3])
         self.acceleration_raw[1] = decimalstr2float(data[4])
@@ -92,11 +100,15 @@ class mobileState:
 	# Magnetometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
         deltaT =  decimalstr2float(data[2])/1000-self.time_magnetic
-        alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+        if self.filterTimeConstant == 0.0:
+		  alpha = 1
+        else:
+		  alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+		  
         self.time_magnetic = decimalstr2float(data[2])/1000
         self.magnetic_raw[0] = decimalstr2float(data[3])
         self.magnetic_raw[1] = decimalstr2float(data[4])
-        self.magnetic_raw[2] = decimalstr2float(data[5])
+        self.magnetic_raw[2] = -decimalstr2float(data[5])# Adapt to a bug in sensorUDP?
 		# Filter the data
         self.magnetic_filtered += alpha*(sp.array(self.magnetic_raw)-self.magnetic_filtered)
 

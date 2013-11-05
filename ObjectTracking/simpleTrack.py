@@ -19,6 +19,7 @@ import threading
 from mpl_toolkits.basemap import Basemap
 sys.path.append(os.getcwd())
 sys.path.append('../Control')
+sys.path.append('../Sensors')
 import mobileState
 import PID
 import csv
@@ -83,16 +84,16 @@ class Kite:
   print "Target can be upside down"
 
   #Parameters
-  isUDPConnection = False # Currently switched manually in the code
+  isUDPConnection = True # Currently switched manually in the code
   display = True
   displayDebug = False
   useBasemap = False
   maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
-  pixelPerRadians = 640
+  pixelPerRadians = 320
   radius = pixelPerRadians
   referenceImage = '../ObjectTracking/kite_detail.jpg'
   scaleFactor = 0.5
-  isVirtualCamera = False
+  isVirtualCamera = True
   useHDF5 = False
 
   # Open reference image: this is used at initlalisation
@@ -193,7 +194,7 @@ class Kite:
 
     # Receive orientation of the camera
     if isUDPConnection:
-      mobile.computeRPY()
+      mobile.computeRPY([2, 0, 1], [-1, 1, 1])
     ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)], \
 		    [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
 

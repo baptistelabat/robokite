@@ -50,7 +50,7 @@ black
 
 			var camera, scene, renderer, objects;
 			var particleLight, pointLight;
-			var dae, skin;
+			var dae, skin, vectorAcc, vectorMag;
 
 			var loader = new THREE.ColladaLoader();
 			loader.options.convertUpAxis = true;
@@ -64,6 +64,21 @@ black
 				dae.rotation.y = 30/180*3;
 				dae.rotation.z = 30/180*3;
 				dae.updateMatrix();
+				
+				// Add the vector
+				var matAcc = new THREE.LineBasicMaterial( { color:0xFF0000, linewidth: 3 } );
+				// Add the vectors
+				var matMag = new THREE.LineBasicMaterial( { color:0x0000FF, linewidth: 3 } );
+				var geometryVectorAcc = new THREE.Geometry();
+				
+					geometryVectorAcc.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+					geometryVectorAcc.vertices.push( new THREE.Vector3( 0,0,0 ) );
+				var geometryVectorMag = new THREE.Geometry();
+				
+					geometryVectorMag.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+					geometryVectorMag.vertices.push( new THREE.Vector3( 0,0,0 ) );
+				vectorAcc = new THREE.Line( geometryVectorAcc, matAcc, THREE.LinePieces );
+				vectorMag = new THREE.Line( geometryVectorMag, matMag, THREE.LinePieces );
 
 				init();
 				animate();
@@ -76,6 +91,7 @@ black
 				document.body.appendChild( container );
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.up = new THREE.Vector3( 0, 0, 1 );
 				camera.position.set( 2, 2, 3 );
 
 				scene = new THREE.Scene();
@@ -98,7 +114,10 @@ black
 
 				var line = new THREE.Line( geometry, material, THREE.LinePieces );
 				scene.add( line );
-
+				
+				scene.add(vectorMag);
+				scene.add(vectorAcc);
+				
 				// Add the COLLADA
 
 				scene.add( dae );
@@ -179,17 +198,33 @@ black
 					
 
 				}*/
-				t += delta;
+				//t += delta;
 				var myOutput = document.getElementById("info");
 				obj = JSON.parse(myOutput.innerHTML);
-				t=myOutput.innerHTML
+				t=myOutput.innerHTML;
+				dae.rotation.order = 'ZYX';
 				dae.rotation.x = obj.xrotation;
 				dae.rotation.y = obj.yrotation;
 				dae.rotation.z = obj.zrotation;
 				dae.position.x = obj.x;
 				dae.position.y = obj.y;
 				dae.position.z = obj.z;
+				//dae.quaternion.x = obj.q0
+				//dae.quaternion.y = obj.q1
+				//dae.quaternion.z = obj.q2
+				//dae.quaternion.w = obj.q3
 				dae.updateMatrix();
+				
+				vectorAcc.geometry.vertices[1].x= obj.accx
+				vectorAcc.geometry.vertices[1].y= obj.accy
+				vectorAcc.geometry.vertices[1].z= obj.accz
+				vectorAcc.geometry.verticesNeedUpdate = true;
+				
+				vectorMag.geometry.vertices[1].x= obj.magx
+				vectorMag.geometry.vertices[1].y= obj.magy
+				vectorMag.geometry.vertices[1].z= obj.magz
+				vectorMag.geometry.verticesNeedUpdate = true;
+				
 				render();
 				stats.update();
 

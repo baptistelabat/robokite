@@ -102,13 +102,12 @@ black
 				var geometry = new THREE.Geometry();
 				var material = new THREE.LineBasicMaterial( { color: 0x303030 } );
 
-				for ( var i = - size; i <= size; i += step ) {
+				for ( var i = - size; i <= size; i += step ) {	
+					geometry.vertices.push( new THREE.Vector3( i, - size, - 0.04) );
+					geometry.vertices.push( new THREE.Vector3( i,   size, - 0.04) );
 
-					geometry.vertices.push( new THREE.Vector3( - size, - 0.04, i ) );
-					geometry.vertices.push( new THREE.Vector3(   size, - 0.04, i ) );
-
-					geometry.vertices.push( new THREE.Vector3( i, - 0.04, - size ) );
-					geometry.vertices.push( new THREE.Vector3( i, - 0.04,   size ) );
+					geometry.vertices.push( new THREE.Vector3( - size, i, - 0.04) );
+					geometry.vertices.push( new THREE.Vector3(   size, i, - 0.04 ) );
 
 				}
 
@@ -215,14 +214,14 @@ black
 				//dae.quaternion.w = obj.q3
 				dae.updateMatrix();
 				
-				vectorAcc.geometry.vertices[1].x= obj.accx
-				vectorAcc.geometry.vertices[1].y= obj.accy
-				vectorAcc.geometry.vertices[1].z= obj.accz
+				vectorAcc.geometry.vertices[1].x= obj.accx;
+				vectorAcc.geometry.vertices[1].y= obj.accy;
+				vectorAcc.geometry.vertices[1].z= obj.accz;
 				vectorAcc.geometry.verticesNeedUpdate = true;
 				
-				vectorMag.geometry.vertices[1].x= obj.magx
-				vectorMag.geometry.vertices[1].y= obj.magy
-				vectorMag.geometry.vertices[1].z= obj.magz
+				vectorMag.geometry.vertices[1].x= obj.magx;
+				vectorMag.geometry.vertices[1].y= obj.magy;
+				vectorMag.geometry.vertices[1].z= obj.magz;
 				vectorMag.geometry.verticesNeedUpdate = true;
 				
 				render();
@@ -234,9 +233,9 @@ black
 
 				var timer = Date.now() * 0.0005;
 
-				camera.position.x = Math.cos( timer*0 ) * 10;
-				camera.position.y = 2;
-				camera.position.z = Math.sin( timer*0 ) * 10;
+				camera.position.x = -10;
+				camera.position.y = 0;
+				camera.position.z = 2;
 
 				camera.lookAt( scene.position );
 

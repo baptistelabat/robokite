@@ -38,7 +38,7 @@ black
 		<script src="static/libs/stats.min.js"></script>
 
 		<script>
-			var ws = new WebSocket("ws://localhost:8080/websocket");
+			var ws = new WebSocket("ws://"+window.location.host + "/websocket");
             ws.onmessage = function(evt){
 		    var myOutput = document.getElementById("info");
                 myOutput.innerHTML = evt.data;
@@ -233,9 +233,9 @@ black
 
 				var timer = Date.now() * 0.0005;
 
-				camera.position.x = -10;
-				camera.position.y = 0;
-				camera.position.z = 2;
+				camera.position.x = 0;
+				camera.position.y = -3;
+				camera.position.z = 1;
 
 				camera.lookAt( scene.position );
 

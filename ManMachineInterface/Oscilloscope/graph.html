@@ -9,7 +9,7 @@
 			d4 = [];
 			d5 = [];
 			MAX_OCL = 200;
-			ws = new WebSocket("ws://localhost:8080/websocket");
+			ws = new WebSocket("ws://"+window.location.host + "/websocket");
 			ws.onmessage = function(evt) {
 				var msg = evt.data;
 				obj = JSON.parse(msg);

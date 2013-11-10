@@ -2,15 +2,40 @@
 	<head>
 		<meta charset="UTF-8" />
 		<script type="text/javascript">
-			oscillo = [];
+			d0 = [];
+			d1 = [];
+			d2 = [];
+			d3 = [];
+			d4 = [];
+			d5 = [];
 			MAX_OCL = 200;
 			ws = new WebSocket("ws://localhost:8080/websocket");
 			ws.onmessage = function(evt) {
 				var msg = evt.data;
 				obj = JSON.parse(msg);
-				oscillo.push([obj.x, obj.y]);
-				if(oscillo.length > MAX_OCL){
-					oscillo.shift();
+				d0.push([obj.x, obj.d0/1024]);
+				d1.push([obj.x, obj.d1/1024]);
+				d2.push([obj.x, obj.d2/1024]);
+				d3.push([obj.x, obj.d3/1024]);
+				d4.push([obj.x, obj.d4/1024]);
+				d5.push([obj.x, obj.d5/1024]);
+				if(d0.length > MAX_OCL){
+					d0.shift();
+				}
+				if(d1.length > MAX_OCL){
+					d1.shift();
+				}
+				if(d2.length > MAX_OCL){
+					d2.shift();
+				}
+				if(d3.length > MAX_OCL){
+					d3.shift();
+				}
+				if(d4.length > MAX_OCL){
+					d4.shift();
+				}
+				if(d5.length > MAX_OCL){
+					d5.shift();
 				}
 			}
 		</script>
@@ -25,7 +50,7 @@
 
 				// Draw Graph
 				function drawGraph(){
-					graph = Flotr.draw(container, [ oscillo ], {
+					graph = Flotr.draw(container, [ d0, d1, d2, d3, d4, d5], {
 						xaxis: {
 							minorTickFreq: 4
 						}, 

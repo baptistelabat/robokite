@@ -20,33 +20,46 @@ import math
 from pyfirmata import Arduino, util
 clients = []
 global t0
-global board
+global ser
 t0 = time.time()
+import serial
 
 def openSerial():
-  global board
+  global ser
   
   # Loop over varying serial port till you find one (assume you have only one device connected)
   locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
   for device in locations:
-    if True:
+    try:
       print "Trying...",device
-      board = Arduino(device)
+      ser = serial.Serial(device, baudrate=19200, timeout=1)
       print "Connected on ", device
-      it= util.Iterator(board)
-      it.start()
-      board.analog[0].enable_reporting()
       break
-    #except:
-    #  print "Failed to connect on ", device
-  
+    except:
+      print "Failed to connect on ", device
+      
+  time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
+  # An alternative would be to listen to a message from the arduino saying it is ready
+  ser.write('i1') # i to start serial control, 1 is the minimum expecting message frequency (in house protocol)
+
 def checkSerial():
-    global board
-    value = board.analog[0].read()
+    global ser
+    global serialPending
     global t0
-    for c in clients:
+    
+    try:
+        s = ser.readline()
+        print "Received from arduino: " + s
+    except Exception, e:
+        print("Error reading from serial port" + str(e))
+        return
+    
+    if len(s):
+      a = s.split(',')      
+      for c in clients:
         t = time.time()-t0
-        c.write_message( json.dumps({'x':t, 'y':value}))
+        c.write_message( json.dumps({'x':t, 'd0':a[0], 'd1':a[1], 'd2':a[2], 'd3':a[3], 'd4':a[4], 'd5':a[5]}))
+
         
 class MainHandler(tornado.web.RequestHandler):
     def get(self):

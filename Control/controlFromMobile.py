@@ -4,7 +4,7 @@ import threading
 import time
 import numpy as np
 sys.path.append(os.getcwd())
-sys.path.append('../ObjectTracking')
+sys.path.append('../Sensors')
 import mobileState
 import serial
 

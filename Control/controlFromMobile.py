@@ -1,12 +1,26 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+# Copyright (c) 2013 Nautilabs
+#
+# Licensed under the MIT License,
+# https://github.com/baptistelabat/robokite
+# Authors: Baptiste LABAT, 
+#
+# This script is used as a gateway between a mobile phone and an arduino commanding a motor
+# The mobile phone sensors can then be used to control the motor
+#
+# The sensors data are streamed over wifi by sensorUDP application on android mobile phone.
+# The UDP packet are read by the python script then forwarded
 import os
 import sys
 import threading
 import time
 import numpy as np
+import serial
 sys.path.append(os.getcwd())
 sys.path.append('../Sensors')
 import mobileState
-import serial
 
 def computeXORChecksum(chksumdata):
 	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html

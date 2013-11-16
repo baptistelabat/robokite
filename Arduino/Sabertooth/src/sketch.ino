@@ -36,6 +36,7 @@ long lastWriteTime = 0;
 
 TinyGPSPlus nmea;
 // O stands for Opensource, R for Robokite
+// The index is the place of the field in the NMEA message
 TinyGPSCustom pwm1     (nmea, "ORPW1", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 1
 TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 2
 TinyGPSCustom setss1   (nmea, "ORSS1", 1);  // Set speed for Sabertooth output 1
@@ -44,13 +45,16 @@ TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth 
 TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth output 2
 TinyGPSCustom roll     (nmea, "ORKST", 1);  // Kite STate roll (rotation in camera frame)
 TinyGPSCustom elevation(nmea, "ORKST", 2);  // Kite STate elevation
-TinyGPSCustom bearing  (nmea, "ORKST", 3);  // Kite STate bearing 
+TinyGPSCustom bearing  (nmea, "ORKST", 3);  // Kite STate bearing
+TinyGPSCustom kpm      (nmea, "ORKPM", 1);  // Proportional coefficient multiplicator
+TinyGPSCustom kim	   (nmea, "ORKIM", 1);  // Integral coefficient multiplicator
+TinyGPSCustom kdm      (nmea, "ORKDM", 1);  // Derivative coefficient multiplicator
 
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters (Kp, Ki, Kd)
-PID myPID(&Input, &Output, &Setpoint, 10, 0, 1, DIRECT);
+PID myPID(&Input, &Output, &Setpoint, 1, 1, 1, DIRECT);
 
 void setup()
 {
@@ -112,6 +116,7 @@ void serialEvent() {
         alphaSigned2 = StrToFloat(pwm2.value());
         Input = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
+        myPID.SetTunings(kpm, kim, kdm);
       }
     }
   }  

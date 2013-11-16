@@ -170,6 +170,15 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         if msg.get('id')=='pwm2':
           alpha2 = float(msg.get('value'))/100.0
           msge = "ORPW2" + "," + str(alpha2)
+        if msg.get('id')=='kp':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKP" + "," + str(data)
+        if msg.get('id')=='ki':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKI" + "," + str(data)
+        if msg.get('id')=='kd':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKD" + "," + str(data)
         msg = "$" + msge + "*" + computeXORChecksum(msge) + chr(13).encode('ascii')
         try:
           ser.write(msg)

@@ -8,8 +8,8 @@
 			d3 = [];
 			d4 = [];
 			d5 = [];
-			var data;
 			MAX_OCL = 200;
+			var data = new Array();
 			ws = new WebSocket("ws://"+window.location.host + "/websocket");
 			ws.onmessage = function(evt) {
 				var msg = evt.data;
@@ -38,29 +38,63 @@
 				if(d5.length > MAX_OCL){
 					d5.shift();
 				}
-				data = [{
-		data: d0,
-        label: 'A0'
-    }, {
-        data: d1,
-        label: 'A1'
-    }, {
-        data: d2,
-        label: 'A2'
-    }, {
-		data: d3,
-        label: 'A3'
-    }, {
-		data: d4,
-        label: 'A4'
-    }, {
-        data: d5,
-        label: 'A5'
-    }];
+				var n;
+				n = 0
+				data = new Array();
+				if (document.chk.pin[0].checked){
+					data[n] = {
+						data: d0,
+						label: 'A0'
+					};
+					n=n+1;
+				}
+				if (document.chk.pin[1].checked){
+					data[n] = {
+						data: d1,
+						label: 'A1'
+					};
+					n=n+1;
+				}
+				if (document.chk.pin[2].checked){
+					data[n] = {
+						data: d2,
+						label: 'A2'
+					};
+					n=n+1;
+				}
+				if (document.chk.pin[3].checked){
+					data[n] = {
+						data: d3,
+						label: 'A3'
+					};
+					n=n+1;
+				}
+				if (document.chk.pin[4].checked){
+					data[n] = {
+						data: d4,
+						label: 'A4'
+					};
+					n=n+1;
+				}
+				if (document.chk.pin[5].checked){
+					data[n] = {
+						data: d5,
+						label: 'A5'
+					};
+					n=n+1;
+				}
 			}
 		</script>
 	</head>
 	<body>
+		<form name = "chk">
+			<input type="checkbox" name="pin" value="A0">A0<br>
+			<input type="checkbox" name="pin" value="A1">A1<br>
+			<input type="checkbox" name="pin" value="A2">A2<br>
+			<input type="checkbox" name="pin" value="A3">A3<br>
+			<input type="checkbox" name="pin" value="A4">A4<br>
+			<input type="checkbox" name="pin" value="A5">A5
+		</form> 
 		<div id="graphDiv" style="width:960px; height:600px;"></div>
 		<script type="text/javascript" src="static/flotr2.js"></script>
 		<script type="text/javascript">
@@ -75,8 +109,8 @@
 							minorTickFreq: 4
 						}, 
 						yaxis: {
-							max: null,
-							min: null
+							max: 1,
+							min: 0
 						},
 						grid: {
 							minorVerticalLines: true

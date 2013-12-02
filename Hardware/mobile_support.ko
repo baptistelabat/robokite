@@ -1,0 +1,58 @@
+from koko.lib.shapes import *
+
+cad.shape = rectangle(0,5,0,10)
+cad.shape -= circle(0,0,0.5)
+
+# Dimension of mobile phone pocket
+
+width = 97 # External width (except clipping mechanism)
+height = 142 # External height (except clipping mechanism)
+corner_radius = 14 # Round corner at the bottom corners
+top_width = 114 # Clipping mechanism width
+top_height = 20 # Clipping mechanism height
+thickness = 2*0.7 # Thickness of clipping mechanism
+
+
+# The pocket is the plastic watertight pocket
+pocket = rectangle(-width/2.0, width/2.0, -height/2.0, height/2.0)
+
+# The clip is the existing clip closing the pocket
+clip = rectangle(-top_width/2.0, top_width/2.0, height/2.0, height/2.0+top_height)
+
+# Now we define the new parts to be laser cut
+minimum_wood_thickness = 3
+screw_diameter = 5
+frame_width = width - 2*10
+frame_height= height -2*10
+
+
+clip_width = width + 2*10
+down_clip = rectangle(-clip_width/2.0, clip_width/2.0, -height/2.0, -frame_height/2.0)
+top_clip = rectangle(-clip_width/2.0, clip_width/2.0, frame_height/2.0, height/2.0 )
+
+
+hole_plate_left = rectangle(-clip_width/2.0-2, -frame_width/2.0, -7, 7)
+hole_plate_right = rectangle(frame_width/2.0, clip_width/2.0, -7, 7)
+hole_left = rectangle(-clip_width/2.0+2, -frame_width/2.0, -2, 2)
+hole_right = rectangle(frame_width/2.0, clip_width/2.0-2, -2, 2)
+hole_plate_left=hole_plate_left - hole_left
+hole_plate_right = hole_plate_right - hole_right
+
+# Define the holes
+
+bottom_left_hole = circle(-clip_width/2.0 + 5,-frame_height/2.0-5, 5/2)
+bottom_right_hole = circle(clip_width/2.0 - 5,-frame_height/2.0-5, 5/2)
+top_left_hole = circle(-clip_width/2.0 + 5,frame_height/2.0+5, 5/2)
+top_right_hole = circle(clip_width/2.0 - 5,frame_height/2.0+5, 5/2)
+down_clip = down_clip -bottom_left_hole -bottom_right_hole
+top_clip = top_clip -top_left_hole -top_right_hole
+
+bottom_frame = pocket + top_clip+down_clip +hole_plate_left+hole_plate_right-rectangle(-frame_width/2.0, frame_width/2.0, -frame_height/2.0, frame_height/2.0)
+
+
+bottom_frame = translate(bottom_frame, 150 , 0)
+cad.shape = 0*pocket + 0*clip + bottom_frame +top_clip+down_clip
+
+
+
+

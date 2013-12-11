@@ -1,4 +1,7 @@
+# This is a 3D modelisation based on kokopelli https://github.com/mkeeter/kokopelli
 from koko.lib.shapes import *
+
+# This script describe a support to attach a watertight pocket for mobile phone to kite lines
 
 cad.shape = rectangle(0,5,0,10)
 cad.shape -= circle(0,0,0.5)

@@ -1,3 +1,17 @@
+var ws = new WebSocket("ws://localhost:8080/websocket");
+ws.onmessage = function(evt){
+	myOutput.value = evt.data;
+}
+
+var inputs = document.getElementsByTagName('input');
+for(var i = 0; i < inputs.length; i++) {
+	if(inputs[i].type == 'range') {
+		inputs[i].addEventListener('click', function() {
+			this.focus(); 
+		});
+	}
+}
+
 function sendOrder1(){
   var msg = {
     type: "message",

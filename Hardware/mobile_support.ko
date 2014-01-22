@@ -1,6 +1,15 @@
 # This is a 3D modelisation based on kokopelli https://github.com/mkeeter/kokopelli
 from koko.lib.shapes import *
 
+# Use millimeter as unit
+cad.mm_per_unit = 1
+
+"""gik.xmax = 200
+gik.ymin = -200
+gik.ymax = 200"""
+
+cad.border = 0.05
+
 # This script describe a support to attach a watertight pocket for mobile phone to kite lines
 
 cad.shape = rectangle(0,5,0,10)
@@ -35,7 +44,7 @@ top_clip = rectangle(-clip_width/2.0, clip_width/2.0, frame_height/2.0, height/2
 
 
 hole_plate_left = rectangle(-clip_width/2.0-2, -frame_width/2.0, -7, 7)
-hole_plate_right = rectangle(frame_width/2.0, clip_width/2.0, -7, 7)
+hole_plate_right = rectangle(frame_width/2.0, clip_width/2.0+2, -7, 7)
 hole_left = rectangle(-clip_width/2.0+2, -frame_width/2.0, -2, 2)
 hole_right = rectangle(frame_width/2.0, clip_width/2.0-2, -2, 2)
 hole_plate_left=hole_plate_left - hole_left
@@ -43,19 +52,35 @@ hole_plate_right = hole_plate_right - hole_right
 
 # Define the holes
 
-bottom_left_hole = circle(-clip_width/2.0 + 5,-frame_height/2.0-5, 5/2)
-bottom_right_hole = circle(clip_width/2.0 - 5,-frame_height/2.0-5, 5/2)
-top_left_hole = circle(-clip_width/2.0 + 5,frame_height/2.0+5, 5/2)
-top_right_hole = circle(clip_width/2.0 - 5,frame_height/2.0+5, 5/2)
+bottom_left_hole = circle(-clip_width/2.0 + 5,-frame_height/2.0-5, 5/2.0)
+bottom_right_hole = circle(clip_width/2.0 - 5,-frame_height/2.0-5, 5/2.0)
+top_left_hole = circle(-clip_width/2.0 + 5,frame_height/2.0+5, 5/2.0)
+top_right_hole = circle(clip_width/2.0 - 5,frame_height/2.0+5, 5/2.0)
 down_clip = down_clip -bottom_left_hole -bottom_right_hole
 top_clip = top_clip -top_left_hole -top_right_hole
 
+# Define the slots
+slot_left = rectangle(-3-width/2.0, -width/2.0, -10, 0)
+slot_right = rectangle(width/2.0, width/2.0 +3, -10, 0)
+
 bottom_frame = pocket + top_clip+down_clip +hole_plate_left+hole_plate_right-rectangle(-frame_width/2.0, frame_width/2.0, -frame_height/2.0, frame_height/2.0)
+bottom_frame = bottom_frame - slot_left-slot_right
+
+#bottom_frame = translate(bottom_frame, 150 , 0)
+
+# Add the different parts and optimize placement
+all = bottom_frame \
++ translate(rotate(top_clip,90),50,0) \
++ translate(rotate(down_clip,90),-50,0)
 
 
-bottom_frame = translate(bottom_frame, 150 , 0)
-cad.shape = 0*pocket + 0*clip + bottom_frame +top_clip+down_clip
+# Translate to have reference at top left corner (tuning for laser cutting)
+all = translate(all, clip_width/2.0 + 2, -height/2.0)
 
+# Scale as mm is not taken into account when exporting
+inch_to_mm = 25.4
+all = scale_y(scale_x(all, 0, inch_to_mm), 0, inch_to_mm)
 
+cad.shapes = all,
 
 

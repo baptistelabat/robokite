@@ -1,7 +1,5 @@
-(Generated with: DXF2GCODE, Version: PyQt4 Beta, Date: $Date:: 2013-11-10 16:40:51#$)
-(Time: Wed Jan 22 16:34:23 2014)
-(Created from file: /media/bat/DATA/Nautilabs/kite_project/robokite/Hardware/support.dxf)
-G21 (Unit in mm) G0 X0 F1500
+G21 (Unit in mm)
+G0 X0 F1500
 
 (*** LAYER: 0 ***)
 T1 M6

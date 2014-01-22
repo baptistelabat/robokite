@@ -1,4 +1,5 @@
 G21 (Unit in mm)
+GO Z0 F300
 G0 X0 F1500
 
 (*** LAYER: 0 ***)

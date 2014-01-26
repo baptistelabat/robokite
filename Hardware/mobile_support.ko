@@ -35,10 +35,10 @@ clip = rectangle(-top_width/2.0, top_width/2.0, height/2.0, height/2.0+top_heigh
 minimum_wood_thickness = 3
 screw_diameter = 5
 frame_width = width - 2*10
-frame_height= height -2*10
+frame_height= height -2*12
 
 
-clip_width = width + 2*10
+clip_width = width +20
 down_clip = rectangle(-clip_width/2.0, clip_width/2.0, -height/2.0, -frame_height/2.0)
 top_clip = rectangle(-clip_width/2.0, clip_width/2.0, frame_height/2.0, height/2.0 )
 
@@ -47,15 +47,15 @@ hole_plate_left = rectangle(-clip_width/2.0-2, -frame_width/2.0, -7, 7)
 hole_plate_right = rectangle(frame_width/2.0, clip_width/2.0+2, -7, 7)
 hole_left = rectangle(-clip_width/2.0+2, -frame_width/2.0, -2, 2)
 hole_right = rectangle(frame_width/2.0, clip_width/2.0-2, -2, 2)
-hole_plate_left=hole_plate_left - hole_left
+hole_plate_left=hole_plate_left- hole_left
 hole_plate_right = hole_plate_right - hole_right
 
 # Define the holes
 
-bottom_left_hole = circle(-clip_width/2.0 + 5,-frame_height/2.0-5, 5/2.0)
-bottom_right_hole = circle(clip_width/2.0 - 5,-frame_height/2.0-5, 5/2.0)
-top_left_hole = circle(-clip_width/2.0 + 5,frame_height/2.0+5, 5/2.0)
-top_right_hole = circle(clip_width/2.0 - 5,frame_height/2.0+5, 5/2.0)
+bottom_left_hole = circle(-clip_width/2.0 + 7,-frame_height/2.0-6, 0.05/2.0)
+bottom_right_hole = circle(clip_width/2.0 - 7,-frame_height/2.0-6, 0.05/2.0)
+top_left_hole = circle(-clip_width/2.0 + 7,frame_height/2.0+6, 0.05/2.0)
+top_right_hole = circle(clip_width/2.0 - 7,frame_height/2.0+6, 0.05/2.0)
 down_clip = down_clip -bottom_left_hole -bottom_right_hole
 top_clip = top_clip -top_left_hole -top_right_hole
 
@@ -63,7 +63,8 @@ top_clip = top_clip -top_left_hole -top_right_hole
 slot_left = rectangle(-3-width/2.0, -width/2.0, -10, 0)
 slot_right = rectangle(width/2.0, width/2.0 +3, -10, 0)
 
-bottom_frame = pocket + top_clip+down_clip +hole_plate_left+hole_plate_right-rectangle(-frame_width/2.0, frame_width/2.0, -frame_height/2.0, frame_height/2.0)
+bottom_frame = pocket + top_clip+down_clip +\
+hole_plate_left+hole_plate_right-rectangle(-frame_width/2.0, frame_width/2.0, -frame_height/2.0, frame_height/2.0)
 bottom_frame = bottom_frame - slot_left-slot_right
 
 #bottom_frame = translate(bottom_frame, 150 , 0)

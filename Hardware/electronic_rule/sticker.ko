@@ -1,0 +1,26 @@
+from koko.lib.shapes import *
+import math
+
+# Use millimeter as unit
+cad.mm_per_unit = 1
+
+cad.shape = circle(0, 0, 0.5)
+
+# This script describe a support to attach a watertight pocket for mobile phone to kite lines
+length = 420.0
+width = 20
+all = rectangle(0, length, 0, width)
+
+resolution = 5
+
+for i in range(0, int(length/resolution)):
+  all=all -rectangle(i*resolution+1, (i+1)*resolution-1, 1, width/2.0-1)
+  if i == int(length/resolution/2.0):
+    all=all -rectangle(i*resolution+1, (i+1)*resolution-1, width/2.0 + 1, width -1)
+
+
+# Scale as mm is not taken into account when exporting
+inch_to_mm = 25.4
+all = scale_y(scale_x(all, 0, inch_to_mm), 0, inch_to_mm)
+
+cad.shapes = all,

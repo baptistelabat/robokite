@@ -3,6 +3,7 @@ import math
 
 # Use millimeter as unit
 cad.mm_per_unit = 1
+cad.border = 0
 
 cad.shape = circle(0, 0, 0.5)
 
@@ -16,7 +17,7 @@ resolution = 5
 for i in range(0, int(length/resolution)):
   all=all -rectangle(i*resolution+1, (i+1)*resolution-1, 1, width/2.0-1)
   if i == int(length/resolution/2.0):
-    all=all -rectangle(i*resolution+1, (i+1)*resolution-1, width/2.0 + 1, width -1)
+    all=all -rectangle(1, (i+1)*resolution-1, width/2.0 + 1, width -1)
 
 
 # Scale as mm is not taken into account when exporting

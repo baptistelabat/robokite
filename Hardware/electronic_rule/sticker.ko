@@ -8,7 +8,7 @@ cad.border = 0
 cad.shape = circle(0, 0, 0.5)
 
 # This script describe a support to attach a watertight pocket for mobile phone to kite lines
-length = 420.0
+length = 297.0
 width = 20
 all = rectangle(0, length, 0, width)
 

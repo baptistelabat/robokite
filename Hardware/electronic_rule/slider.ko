@@ -1,0 +1,43 @@
+from koko.lib.shapes import *
+import math
+
+# Use millimeter as unit
+cad.mm_per_unit = 1
+cad.border = 0
+
+#This file describes a support to mount components LTH-301-07 on a slider
+# http://composants.e44.com/files/produits/006/H301-07.pdf
+
+#First describe the optical components 
+
+width = 6.1
+height = 10 + 2.5 +1
+length = 14
+slot_length = 5
+slot_depth = 7.5
+leg_distance = 9
+leg_spacing = 2.54
+leg_length = 9
+main = cube(0, length, 0, height, 0, width)
+slot = cube(length/2.0 -slot_length/2.0, length/2.0 + slot_length/2.0, height-slot_depth, height, -20, width+20)
+
+
+length/2.0 -leg_distance/2.0
+width/2.0 -leg_spacing
+leg1 = cylinder(length/2.0 -leg_distance/2.0, width/2.0-leg_spacing, 0.35, -leg_length, 0) 
+leg2 = cylinder(length/2.0 +leg_distance/2.0, width/2.0-leg_spacing, 0.35, -leg_length, 0) 
+leg3 = cylinder(length/2.0 -leg_distance/2.0, width/2.0+leg_spacing, 0.35, -leg_length, 0) 
+leg4 = cylinder(length/2.0 +leg_distance/2.0, width/2.0+leg_spacing, 0.35, -leg_length, 0) 
+
+component =  main-slot+leg1+leg2+leg3+leg4
+
+thickness = 2 # Wall thickness
+
+box = cube(-thickness, length +thickness, -thickness, height, -thickness, width)-slot
+
+all = translate(reflect_y(box-component), 0, (height-1)*2, 0) + box-component
+
+# Rotate to help printing
+
+
+cad.shapes = all,

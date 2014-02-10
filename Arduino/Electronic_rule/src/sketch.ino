@@ -39,12 +39,25 @@ volatile uint8_t int1history = 0;
 uint8_t latest_interrupted_pin;
 uint8_t interrupt_count[20]={0}; // 20 possible arduino pins
 
+int pinA = 2;
+int pinB = 3;
+int pinReset = 4;
+
+// These constants won't change.  They're used to give names
+// to the pins used:
+const int analogInPin = 0;  // Analog input pin that the potentiometer is attached to
+const int analogOutPin = 9; // Analog output pin that the LED is attached to
+
+int sensorValue = 0;        // value read from the pot
+int outputValue = 0;        // value output to the PWM (analog out)
+
+
 void int0()
 	{
 	if ( micros() - int0time < threshold )
 		return;
 	int0history = int0signal;
-	int0signal = bitRead(PIND,2);
+	int0signal = bitRead(PIND,pinA);
 	if ( int0history==int0signal )
 		return;
 	int0time = micros();
@@ -59,28 +72,30 @@ void int1()
 	if ( micros() - int1time < threshold )
 		return;
 	int1history = int1signal;
-	int1signal = bitRead(PIND,3);
+	int1signal = bitRead(PIND,pinB);
 	if ( int1history==int1signal )
 		return;
 	int1time = micros();
 	}
 void reset()
 {
- rotaryHaflSteps = 0;
+ rotaryHalfSteps = 0;
  }
 
 void setup() {
-  pinMode(2, INPUT);
-  digitalWrite(2, HIGH);
-  PCintPort::attachInterrupt(2, &int0, CHANGE);
-  pinMode(3, INPUT);
-  digitalWrite(3, HIGH);
-  PCintPort::attachInterrupt(3, &int1, CHANGE);
+  pinMode(pinA, INPUT);
+  digitalWrite(pinA, HIGH);
+  attachInterrupt(0, int0, CHANGE);
+  //PCintPort::attachInterrupt(pinA, &int0, CHANGE);
+  pinMode(pinB, INPUT);
+  digitalWrite(pinB, HIGH);
+  attachInterrupt(1, int1, CHANGE);
+  //PCintPort::attachInterrupt(pinB, &int1, CHANGE);
   
   // Pin used to get absolute position
-  pinMode(4, INPUT);
-  digitalWrite(4, HIGH);
-  PCintPort::attachInterrupt(4, &reset, CHANGE);
+  pinMode(pinReset, INPUT);
+  digitalWrite(pinReset, HIGH);
+  PCintPort::attachInterrupt(pinReset, &reset, CHANGE);
   Serial.begin(115200);
   Serial.println("---------------------------------------");
 }
@@ -89,7 +104,29 @@ uint8_t i;
 
 void loop() {
   long actualRotaryTicks = (rotaryHalfSteps / 2);
-  Serial.println(actualRotaryTicks, DEC);
+    // read the analog in value:
+  Serial.print(rotaryHalfSteps*32+512); 
+  Serial.print(",");  
+  //Serial.print("\t output = ");      
+  //Serial.println(outputValue);
+  delay(2);
+    
+  for (int thisPin = 1; thisPin < 6; thisPin++) {
+  sensorValue = analogRead(thisPin);            
+  
+  // print the results to the serial monitor:
+  //Serial.print("sensor = " );                       
+  Serial.print(sensorValue); 
+  Serial.print(",");  
+  //Serial.print("\t output = ");      
+  //Serial.println(outputValue);
+  delay(2);   
+  }
+   Serial.println("");
+  // wait 2 milliseconds before the next loop
+  // for the analog-to-digital converter to settle
+  // after the last reading:
+  delay(2);  
 }
 
 

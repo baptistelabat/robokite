@@ -20,7 +20,7 @@
 // might possibly need to adjust it to 25000. However, this threshold
 // value is working perfectly for my situation
 //
-volatile unsigned long threshold = 10000;
+volatile unsigned long threshold = 1000;
 
 // 'rotaryHalfSteps' is the counter of half-steps. The actual
 // number of steps will be equal to rotaryHalfSteps / 2
@@ -105,7 +105,7 @@ uint8_t i;
 void loop() {
   long actualRotaryTicks = (rotaryHalfSteps / 2);
     // read the analog in value:
-  Serial.print(rotaryHalfSteps*32+512); 
+  Serial.print(rotaryHalfSteps*8+512); 
   Serial.print(",");  
   //Serial.print("\t output = ");      
   //Serial.println(outputValue);

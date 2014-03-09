@@ -245,4 +245,9 @@ myRange.value = myNumber.value;
 sendKd();
 } // end function
 
+ws.onmessage = function(evt){
+	var myOutput = document.getElementById("serverFeedback");
+	myOutput.value = evt.data;
+}
+
 

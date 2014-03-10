@@ -1,0 +1,69 @@
+<!DOCTYPE HTML>
+<html style="direction: ltr;" lang="fr">
+	<head>
+		<meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+		<style>input[type="range"].vVertical {
+   -webkit-appearance: slider-vertical;
+   background-color: pink;
+   width: 10px;
+   height:200px;
+}
+input[type="range"].vHorizon {
+   -webkit-appearance: none;
+   background-color: pink;
+   width: 200px;
+   height:10px;
+}
+</style>
+	</head>
+	<body>
+		<h1>Joystick demo</h1>
+				<p>
+					<label>Joy:  </label>
+					<input id = "JoyNumber"
+						type = "number"
+						min = "-100"
+						max = "100"
+						value = "00"
+						step = "1"
+						onchange = "updateJoyNumber()" />
+					<br/>
+					-1
+					<input id = "JoyRange"
+						type = "range"
+						class="vVertical"
+						id = "range"
+						min = "-100"
+						max = "100"
+						value = "00"
+						onchange = "updateJoyRange()" />
+					1
+				</p>
+				<p>
+					<label>Joy:  </label>
+					<input id = "JoyHorizonNumber"
+						type = "number"
+						min = "-100"
+						max = "100"
+						value = "00"
+						step = "1"
+						onchange = "updateJoyHorizonNumber()" />
+					<br/>
+					-1
+					<input id = "JoyHorizonRange"
+						type = "range"
+						class="vHorizon"
+						id = "range"
+						min = "-100"
+						max = "100"
+						value = "00"
+						onchange = "updateJoyHorizonRange()" />
+					1
+				</p>
+				
+		<script type = "text/javascript" language="javascript"
+			src = "static/script.js" charset="utf-8">
+		</script>
+	</body>
+</html>
+            

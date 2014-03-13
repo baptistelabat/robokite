@@ -7,12 +7,19 @@
 // It is as well derived from HBridgePWM.ino from robokite project
 // http://code.google.com/p/robokite/source/browse/HBridgePWM/HBridgePWM.ino
 // The selector 1 3 5 6 have to be on on.
-#include <SoftwareSerial.h>
+//
+// Using example in http://code.google.com/p/arduino-pinchangeint/wiki/Usage
+// Parts of code taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
+
+#define NO_PORTB_PINCHANGES // PortB used for mySofwareSerial
+#include <mySoftwareSerial.h>
 #include <SabertoothSimplified.h>
 #include <TinyGPS++.h>
 #include <PID_v1.h>
+#include <PinChangeInt.h>
 
-SoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
+
+mySoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
@@ -56,6 +63,50 @@ double Setpoint, Input, Output;
 //Specify the links and initial tuning parameters (Kp, Ki, Kd)
 PID myPID(&Input, &Output, &Setpoint, 1, 1, 1, DIRECT);
 
+
+//*****************************************************************************//
+// 'threshold' is the De-bounce Adjustment factor for the Rotary Encoder. halfSteps
+volatile unsigned long threshold = 1000;
+
+// 'halfSteps' is the counter of half-steps. The actual
+// number of steps will be equal to halfSteps / 2
+//
+volatile long halfSteps = 0;
+long halfStepsCorrection = 0;
+
+// Working variables for the interrupt routines
+//
+volatile unsigned long int0time = 0;
+volatile unsigned long int1time = 0;
+volatile uint8_t int0signal = 0;
+volatile uint8_t int1signal = 0;
+volatile uint8_t int0history = 0;
+volatile uint8_t int1history = 0;
+
+uint8_t latest_interrupted_pin;
+uint8_t interrupt_count[20]={0}; // 20 possible arduino pins
+
+int pinA = 2;
+int pinB = 3;
+int pinReset = 4;
+
+boolean isAbsoluteReference = false;
+
+// These constants won't change.  They're used to give names
+// to the pins used:
+const int potPin = 1;  // Analog input pin that the potentiometer is attached to
+
+int barrePotentiometerValue = 0;        // value read from the pot
+
+double linearResolution = 0.005; //Resolution of the linear encoder (in meters)
+double linearRange = 0.5; //Range of the sensor to normalize data (+/- linearRange/2)
+
+double potentiometerRangeDeg= 300; 
+double potentiometerMaxRange = potentiometerRangeDeg * 3.1414/180;
+double potentiometerUsedRange = 3.1415;
+double potentiometerDistance = 0.05;
+//*********************************************************************************************
+
 void setup()
 {
   // Initialize software serial communication with Sabertooth 
@@ -67,6 +118,22 @@ void setup()
   //turn the PID on
   myPID.SetMode(AUTOMATIC);
   myPID.SetOutputLimits(-50, 50);
+  
+  //*****************************************************
+  pinMode(pinA, INPUT);
+  digitalWrite(pinA, HIGH);
+  attachInterrupt(0, int0, CHANGE);
+  //PCintPort::attachInterrupt(pinA, &int0, CHANGE);
+  pinMode(pinB, INPUT);
+  digitalWrite(pinB, HIGH);
+  attachInterrupt(1, int1, CHANGE);
+  //PCintPort::attachInterrupt(pinB, &int1, CHANGE);
+  
+  // Pin used to get absolute position
+  pinMode(pinReset, INPUT);
+  digitalWrite(pinReset, HIGH);
+  PCintPort::attachInterrupt(pinReset, &reset, CHANGE);
+  
 }
 
 void serialEvent() {
@@ -129,12 +196,13 @@ void loop()
   int power1, power2;
   sensorValue = analogRead(analogInPin);
   setMode();
-  //alphaSigned=Output/127.0;
+  computePID();
+  alphaSigned1=Output/127.0;
   computeAlphaSigned();
   power1 = alphaSigned1*127;
   power2 = alphaSigned2*127;
   ST.motor(1, power1);
-  ST.motor(2, power2);
+  //ST.motor(2, power2);
   delay(10);
   if (millis()-lastWriteTime>100)
   {
@@ -226,6 +294,56 @@ void computeAlphaSigned()
   alphaSigned1 = min(1, max(-1, alphaSigned1));
   alphaSigned2 = min(1, max(-1, alphaSigned2));
 }
+
+
+void int0()
+{
+  if ( micros() - int0time < threshold )
+    return;
+  int0history = int0signal;
+  int0signal = bitRead(PIND,pinA);
+  if ( int0history==int0signal )
+    return;
+  int0time = micros();
+  if ( int0signal == int1signal )
+    halfSteps++;
+  else
+    halfSteps--;
+}
+
+void int1()
+{
+  if ( micros() - int1time < threshold )
+    return;
+  int1history = int1signal;
+  int1signal = bitRead(PIND,pinB);
+  if ( int1history==int1signal )
+    return;
+  int1time = micros();
+}
+
+void reset()
+{
+  halfStepsCorrection = halfSteps;
+  isAbsoluteReference = true;
+ }
+ 
+void computePID()
+{
+  long steps = (halfSteps / 2);
+  double relative_position_m = (halfSteps)*linearResolution/2;
+  double absolute_position_m = (halfSteps-halfStepsCorrection)*linearResolution/2;
+  
+  // read the analog in value:
+  double raw_angle = analogRead(potPin)/1024.0*potentiometerMaxRange;
+  double neutralAngle = 0.8*potentiometerMaxRange;
+  double angle = raw_angle - neutralAngle;
+  double correction_m = angle*potentiometerDistance;
+  Input = relative_position_m;
+  Setpoint = StrToFloat(pwm1.value());
+  myPID.Compute();
+}
+    
 
 
 

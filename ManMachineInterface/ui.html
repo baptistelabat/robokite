@@ -5,6 +5,19 @@
 		<style type=text/css>
 			body { background-image: url(http://localhost:8080/stream); background-repeat:no-repeat; background-position:center top; background-attachment:fixed; height:100% }
 		</style>
+		<style>input[type="range"].vVertical {
+		   -webkit-appearance: slider-vertical;
+		   background-color: pink;
+		   width: 10px;
+		   height:200px;
+			}
+		input[type="range"].vHorizon {
+		   -webkit-appearance: none;
+		   background-color: pink;
+		   width: 200px;
+		   height:10px;
+			}
+		</style>
 	</head>
 	<body>
 		<h1>Robokite: kite automatic pilot user interface</h1>
@@ -101,15 +114,18 @@
 						step = "1"
 						onchange = "updateSetpoint1Number()" />
 					<br/>
-					-100%
+					100%
+					<br/>
 					<input id = "setpoint1Range"
 						type = "range"
+						class="vVertical"
 						min = "-100"
 						max = "100"
 						value = "0"
 						step = "1"
 						onchange = "updateSetpoint1Range()" />
-					100%
+					<br/>
+					-100%
 				</p>
 					<label>Setpoint 2:   </label>
 					<input id = "setpoint2Number"
@@ -123,6 +139,7 @@
 					-100%
 					<input id = "setpoint2Range"
 						type = "range"
+						class="vHorizon"
 						min = "-100"
 						max = "100"
 						value = "0"
@@ -317,6 +334,9 @@
 		</form>
 		<script type = "text/javascript" language="javascript"
 			src = "static/script.js" charset="utf-8">
+		</script>
+		<script type = "text/javascript" language="javascript"
+			src = "static/scriptJoy.js" charset="utf-8">
 		</script>
 	</body>
 </html>

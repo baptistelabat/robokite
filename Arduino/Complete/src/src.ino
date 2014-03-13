@@ -5,7 +5,7 @@
 // This file used SoftwareSerial example (Copyright (c) 2012 Dimension Engineering LLC) for Sabertooth http://www.dimensionengineering.com/software/SabertoothSimplifiedArduinoLibrary/html/index.html
 // See license.txt in the Sabertooth arduino library for license details.
 // It is as well derived from HBridgePWM.ino from robokite project
-// http://code.google.com/p/robokite/source/browse/HBridgePWM/HBridgePWM.ino
+// https://github.com/baptistelabat/robokite/blob/master/HBridgePWM/HBridgePWM.ino
 // The selector 1 3 5 6 have to be on on.
 //
 // Using example in http://code.google.com/p/arduino-pinchangeint/wiki/Usage
@@ -17,7 +17,6 @@
 #include <TinyGPS++.h>
 #include <PID_v1.h>
 #include <PinChangeInt.h>
-
 
 mySoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
@@ -53,15 +52,25 @@ TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth 
 TinyGPSCustom roll     (nmea, "ORKST", 1);  // Kite STate roll (rotation in camera frame)
 TinyGPSCustom elevation(nmea, "ORKST", 2);  // Kite STate elevation
 TinyGPSCustom bearing  (nmea, "ORKST", 3);  // Kite STate bearing
-TinyGPSCustom kpm      (nmea, "ORKPM", 1);  // Proportional coefficient multiplicator
-TinyGPSCustom kim	   (nmea, "ORKIM", 1);  // Integral coefficient multiplicator
-TinyGPSCustom kdm      (nmea, "ORKDM", 1);  // Derivative coefficient multiplicator
+TinyGPSCustom kpm1      (nmea, "ORKP1", 1);  // Proportional coefficient multiplicator
+TinyGPSCustom kim1      (nmea, "ORKI1", 1);  // Integral coefficient multiplicator
+TinyGPSCustom kdm1      (nmea, "ORKD1", 1);  // Derivative coefficient multiplicator
+TinyGPSCustom kpm2      (nmea, "ORKP2", 1);  // Proportional coefficient multiplicator
+TinyGPSCustom kim2      (nmea, "ORKI2", 1);  // Integral coefficient multiplicator
+TinyGPSCustom kdm2      (nmea, "ORKD2", 1);  // Derivative coefficient multiplicator
+TinyGPSCustom kpmr      (nmea, "ORKPR", 1);  // Proportional coefficient multiplicator
+TinyGPSCustom kimr      (nmea, "ORKIR", 1);  // Integral coefficient multiplicator
+TinyGPSCustom kdmr      (nmea, "ORKDR", 1);  // Derivative coefficient multiplicator
 
-//Define Variables we'll be connecting to
-double Setpoint, Input, Output;
+// Define Variables we'll be connecting to
+double Setpoint1, Input1, Output1;
+double Setpoint2, Input2, Output2;
+double SetpointRoll, InputRoll, OutputRoll;
 
-//Specify the links and initial tuning parameters (Kp, Ki, Kd)
-PID myPID(&Input, &Output, &Setpoint, 1, 1, 1, DIRECT);
+// Specify the links and initial tuning parameters (Kp, Ki, Kd)
+PID myPID1(&Input1, &Output1, &Setpoint1, 1, 0, 0, DIRECT);
+PID myPID2(&Input2, &Output2, &Setpoint2, 1, 0, 0, DIRECT);
+PID myPIDRoll(&InputRoll, &OutputRoll, &SetpointRoll, 1, 0, 0, DIRECT);
 
 
 //*****************************************************************************//
@@ -84,7 +93,7 @@ volatile uint8_t int0history = 0;
 volatile uint8_t int1history = 0;
 
 uint8_t latest_interrupted_pin;
-uint8_t interrupt_count[20]={0}; // 20 possible arduino pins
+uint8_t interrupt_count[20] = {0}; // 20 possible arduino pins
 
 int pinA = 2;
 int pinB = 3;
@@ -101,23 +110,36 @@ int barrePotentiometerValue = 0;        // value read from the pot
 double linearResolution = 0.005; //Resolution of the linear encoder (in meters)
 double linearRange = 0.5; //Range of the sensor to normalize data (+/- linearRange/2)
 
-double potentiometerRangeDeg= 300; 
-double potentiometerMaxRange = potentiometerRangeDeg * 3.1414/180;
-double potentiometerUsedRange = 3.1415;
-double potentiometerDistance = 0.05;
+double pi = 3.1415;
+double potentiometerRangeDeg = 300; 
+double potentiometerMaxRange = potentiometerRangeDeg * pi/180;
+double potentiometerUsedRange = pi;
+double potentiometerDistance = 0.05; //Distance from rotation axis to lever arm
 //*********************************************************************************************
 
 void setup()
 {
   // Initialize software serial communication with Sabertooth 
   SWSerial.begin(9600);
+  
   // Initialize serial communications at 9600 bps:
   Serial.begin(19200);
-  Input = 0;
-  Setpoint = 0;
+  
+  // Initialize input and setpoint
+  Input1 = 0;
+  Input2 = 0;
+  InputRoll = 0;
+  Setpoint1 = 0;
+  Setpoint2 = 0;
+  SetpointRoll = 0;
+  
   //turn the PID on
-  myPID.SetMode(AUTOMATIC);
-  myPID.SetOutputLimits(-50, 50);
+  myPID1.SetMode(AUTOMATIC);
+  myPID2.SetMode(AUTOMATIC);
+  myPIDRoll.SetMode(AUTOMATIC);
+  myPID1.SetOutputLimits(-1, 1);
+  myPID2.SetOutputLimits(-1, 1);
+  myPIDRoll.SetOutputLimits(-1, 1);
   
   //*****************************************************
   pinMode(pinA, INPUT);
@@ -181,9 +203,8 @@ void serialEvent() {
       { 
         alphaSigned1 = StrToFloat(pwm1.value());
         alphaSigned2 = StrToFloat(pwm2.value());
-        Input = StrToFloat(elevation.value()); 
+        //Input1 = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
-        myPID.SetTunings(StrToFloat(kpm.value()), StrToFloat(kim.value()), StrToFloat(kdm.value()));
       }
     }
   }  
@@ -192,17 +213,21 @@ void serialEvent() {
 
 void loop()
 {
-  myPID.Compute();
+  
   int power1, power2;
   sensorValue = analogRead(analogInPin);
   setMode();
+  computeSetpoint();
+  computeFeedback();
+  computePIDTuning();
   computePID();
-  alphaSigned1=Output/127.0;
+  alphaSigned1 = Output1;
+  alphaSigned2 = Output2;
   computeAlphaSigned();
   power1 = alphaSigned1*127;
   power2 = alphaSigned2*127;
   ST.motor(1, power1);
-  //ST.motor(2, power2);
+  ST.motor(2, power2);
   delay(10);
   if (millis()-lastWriteTime>100)
   {
@@ -301,7 +326,7 @@ void int0()
   if ( micros() - int0time < threshold )
     return;
   int0history = int0signal;
-  int0signal = bitRead(PIND,pinA);
+  int0signal = bitRead(PIND, pinA);
   if ( int0history==int0signal )
     return;
   int0time = micros();
@@ -316,7 +341,7 @@ void int1()
   if ( micros() - int1time < threshold )
     return;
   int1history = int1signal;
-  int1signal = bitRead(PIND,pinB);
+  int1signal = bitRead(PIND, pinB);
   if ( int1history==int1signal )
     return;
   int1time = micros();
@@ -328,7 +353,7 @@ void reset()
   isAbsoluteReference = true;
  }
  
-void computePID()
+void computeFeedback()
 {
   long steps = (halfSteps / 2);
   double relative_position_m = (halfSteps)*linearResolution/2;
@@ -339,11 +364,34 @@ void computePID()
   double neutralAngle = 0.8*potentiometerMaxRange;
   double angle = raw_angle - neutralAngle;
   double correction_m = angle*potentiometerDistance;
-  Input = relative_position_m;
-  Setpoint = StrToFloat(pwm1.value());
-  myPID.Compute();
+  Input1 = relative_position_m/linearRange;
+  Input2 = angle/potentiometerUsedRange;
+  
+  InputRoll = StrToFloat(roll.value());
+
 }
-    
+
+void computeSetpoint()
+{
+  Setpoint1 = StrToFloat(pwm1.value())/127.0;
+  Setpoint2 = StrToFloat(pwm2.value())/127.0;
+  SetpointRoll = StrToFloat(roll.value());
+}
+
+void computePID()
+{
+  myPID1.Compute();
+  myPID2.Compute();
+  myPIDRoll.Compute();
+}
+
+void computePIDTuning()
+{
+  myPID1.SetTunings(StrToFloat(kpm1.value()), StrToFloat(kim1.value()), StrToFloat(kdm1.value()));
+  myPID2.SetTunings(StrToFloat(kpm2.value()), StrToFloat(kim2.value()), StrToFloat(kdm2.value()));
+  myPIDRoll.SetTunings(StrToFloat(kpmr.value()), StrToFloat(kimr.value()), StrToFloat(kdmr.value()));
+
+}
 
 
 

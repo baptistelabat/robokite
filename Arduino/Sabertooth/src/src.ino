@@ -116,7 +116,7 @@ void serialEvent() {
         alphaSigned2 = StrToFloat(pwm2.value());
         Input = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
-        myPID.SetTunings(kpm, kim, kdm);
+        myPID.SetTunings(StrToFloat(kpm.value()), StrToFloat(kim.value()), StrToFloat(kdm.value()));
       }
     }
   }  

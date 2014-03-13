@@ -35,33 +35,101 @@ function sendOrder2(){
   // Send the msg object as a JSON-formatted string.
   ws.send(JSON.stringify(msg));
 }
-function sendKp(){
+function sendKp1(){
   var msg = {
     type: "message",
-    value:  document.getElementById("KpNumber").value,
-    id:   "kp",
+    value:  document.getElementById("Kp1Number").value,
+    id:   "kp1",
     date: Date.now()
   };
 
   // Send the msg object as a JSON-formatted string.
   ws.send(JSON.stringify(msg));
 }
-function sendKi(){
+function sendKi1(){
   var msg = {
     type: "message",
-    value:  document.getElementById("KiNumber").value,
-    id:   "ki",
+    value:  document.getElementById("Ki1Number").value,
+    id:   "ki1",
     date: Date.now()
   };
 
   // Send the msg object as a JSON-formatted string.
   ws.send(JSON.stringify(msg));
 }
-function sendKd(){
+function sendKd1(){
   var msg = {
     type: "message",
-    value:  document.getElementById("KdNumber").value,
-    id:   "kd",
+    value:  document.getElementById("Kd1Number").value,
+    id:   "kd1",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+function sendKp2(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("Kp2Number").value,
+    id:   "kp2",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+function sendKi2(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("Ki2Number").value,
+    id:   "ki2",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+
+function sendKd2(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("Kd2Number").value,
+    id:   "kd2",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+
+function sendKpRoll(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("KpRollNumber").value,
+    id:   "kpRoll",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+function sendKiRoll(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("KiRollNumber").value,
+    id:   "kiRoll",
+    date: Date.now()
+  };
+
+  // Send the msg object as a JSON-formatted string.
+  ws.send(JSON.stringify(msg));
+}
+function sendKdRoll(){
+  var msg = {
+    type: "message",
+    value:  document.getElementById("KdRollNumber").value,
+    id:   "kdRoll",
     date: Date.now()
   };
 
@@ -191,58 +259,166 @@ myRange.value = myNumber.value;
 sendOrder2();
 } // end function
 
-function updateKpRange(){
+function updateKpRollRange(){
 //get elements
-var myRange = document.getElementById("KpRange");
-var myNumber = document.getElementById("KpNumber");
+var myRange = document.getElementById("KpRollRange");
+var myNumber = document.getElementById("KpRollNumber");
 //copy the value over
 myNumber.value = myRange.value;
-sendKp();
+sendKpRoll();
 } // end function
 
-function updateKpNumber(){
+function updateKpRollNumber(){
 //get elements
-var myRange = document.getElementById("KpRange");
-var myNumber = document.getElementById("KpNumber");
+var myRange = document.getElementById("KpRollRange");
+var myNumber = document.getElementById("KpRollNumber");
 //copy the value over
 myRange.value = myNumber.value;
-sendKp();
+sendKpRoll();
 } // end function
 
-function updateKiRange(){
+function updateKiRollRange(){
 //get elements
-var myRange = document.getElementById("KiRange");
-var myNumber = document.getElementById("KiNumber");
+var myRange = document.getElementById("KiRollRange");
+var myNumber = document.getElementById("KiRollNumber");
 //copy the value over
 myNumber.value = myRange.value;
-sendKi();
+sendKiRoll();
 } // end function
 
-function updateKiNumber(){
+function updateKiRollNumber(){
 //get elements
-var myRange = document.getElementById("KiRange");
-var myNumber = document.getElementById("KiNumber");
+var myRange = document.getElementById("KiRollRange");
+var myNumber = document.getElementById("KiRollNumber");
 //copy the value over
 myRange.value = myNumber.value;
-sendKi();
+sendKiRoll();
 } // end function
 
-function updateKdRange(){
+function updateKdRollRange(){
 //get elements
-var myRange = document.getElementById("KdRange");
-var myNumber = document.getElementById("KdNumber");
+var myRange = document.getElementById("KdRollRange");
+var myNumber = document.getElementById("KdRollNumber");
 //copy the value over
 myNumber.value = myRange.value;
-sendKd();
+sendKdRoll();
 } // end function
 
-function updateKdNumber(){
+function updateKdRollNumber(){
 //get elements
-var myRange = document.getElementById("KdRange");
-var myNumber = document.getElementById("KdNumber");
+var myRange = document.getElementById("KdRollRange");
+var myNumber = document.getElementById("KdRollNumber");
 //copy the value over
 myRange.value = myNumber.value;
-sendKd();
+sendKdRoll();
+} // end function
+
+function updateKp1Range(){
+//get elements
+var myRange = document.getElementById("Kp1Range");
+var myNumber = document.getElementById("Kp1Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKp1();
+} // end function
+
+function updateKp1Number(){
+//get elements
+var myRange = document.getElementById("Kp1Range");
+var myNumber = document.getElementById("Kp1Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKp1();
+} // end function
+
+function updateKi1Range(){
+//get elements
+var myRange = document.getElementById("Ki1Range");
+var myNumber = document.getElementById("Ki1Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKi1();
+} // end function
+
+function updateKi1Number(){
+//get elements
+var myRange = document.getElementById("Ki1Range");
+var myNumber = document.getElementById("Ki1Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKi1();
+} // end function
+
+function updateKd1Range(){
+//get elements
+var myRange = document.getElementById("Kd1Range");
+var myNumber = document.getElementById("Kd1Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKd1();
+} // end function
+
+function updateKd1Number(){
+//get elements
+var myRange = document.getElementById("Kd1Range");
+var myNumber = document.getElementById("Kd1Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKd1();
+} // end function
+
+function updateKp2Range(){
+//get elements
+var myRange = document.getElementById("Kp2Range");
+var myNumber = document.getElementById("Kp2Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKp2();
+} // end function
+
+function updateKp2Number(){
+//get elements
+var myRange = document.getElementById("Kp2Range");
+var myNumber = document.getElementById("Kp2Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKp2();
+} // end function
+
+function updateKi2Range(){
+//get elements
+var myRange = document.getElementById("Ki2Range");
+var myNumber = document.getElementById("Ki2Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKi2();
+} // end function
+
+function updateKi2Number(){
+//get elements
+var myRange = document.getElementById("Ki2Range");
+var myNumber = document.getElementById("Ki2Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKi2();
+} // end function
+
+function updateKd2Range(){
+//get elements
+var myRange = document.getElementById("Kd2Range");
+var myNumber = document.getElementById("Kd2Number");
+//copy the value over
+myNumber.value = myRange.value;
+sendKd2();
+} // end function
+
+function updateKd2Number(){
+//get elements
+var myRange = document.getElementById("Kd2Range");
+var myNumber = document.getElementById("Kd2Number");
+//copy the value over
+myRange.value = myNumber.value;
+sendKd2();
 } // end function
 
 ws.onmessage = function(evt){

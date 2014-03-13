@@ -170,15 +170,33 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         if msg.get('id')=='pwm2':
           alpha2 = float(msg.get('value'))/100.0
           msge = "ORPW2" + "," + str(alpha2)
-        if msg.get('id')=='kp':
+        if msg.get('id')=='kp1':
           data = float(msg.get('value'))/100.0
-          msge = "ORKP" + "," + str(data)
-        if msg.get('id')=='ki':
+          msge = "ORKP1" + "," + str(data)
+        if msg.get('id')=='ki1':
           data = float(msg.get('value'))/100.0
-          msge = "ORKI" + "," + str(data)
-        if msg.get('id')=='kd':
+          msge = "ORKI1" + "," + str(data)
+        if msg.get('id')=='kd1':
           data = float(msg.get('value'))/100.0
-          msge = "ORKD" + "," + str(data)
+          msge = "ORKD1" + "," + str(data)
+        if msg.get('id')=='kp2':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKP2" + "," + str(data)
+        if msg.get('id')=='ki2':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKI2" + "," + str(data)
+        if msg.get('id')=='kd2':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKD2" + "," + str(data)
+        if msg.get('id')=='kpRoll':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKPR" + "," + str(data)
+        if msg.get('id')=='kiRoll':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKIR + "," + str(data)
+        if msg.get('id')=='kdRoll':
+          data = float(msg.get('value'))/100.0
+          msge = "ORKDR" + "," + str(data)
         msg = "$" + msge + "*" + computeXORChecksum(msge) + chr(13).encode('ascii')
         try:
           ser.write(msg)

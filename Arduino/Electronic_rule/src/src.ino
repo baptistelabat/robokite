@@ -8,24 +8,14 @@
 
 //Parts of code taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
 
-// 'threshold' is the De-bounce Adjustment factor for the Rotary Encoder. 
-//
-// The threshold value I'm using limits it to 100 half pulses a second
-//
-// My encoder has 12 pulses per 360deg rotation and the specs say
-// it is rated at a maximum of 100rpm.
-//
-// This threshold will permit my encoder to reach 250rpm so if it was connected
-// to a motor instead of a manually operated knob I
-// might possibly need to adjust it to 25000. However, this threshold
-// value is working perfectly for my situation
-//
+// 'threshold' is the De-bounce Adjustment factor for the Rotary Encoder. halfSteps
 volatile unsigned long threshold = 1000;
 
-// 'rotaryHalfSteps' is the counter of half-steps. The actual
-// number of steps will be equal to rotaryHalfSteps / 2
+// 'halfStepshalfSteps' is the counter of half-steps. The actual
+// number of steps will be equal to halfSteps / 2
 //
-volatile long rotaryHalfSteps = 0;
+volatile long halfSteps = 0;
+long halfStepsCorrection = 0;
 
 // Working variables for the interrupt routines
 //
@@ -43,6 +33,8 @@ int pinA = 2;
 int pinB = 3;
 int pinReset = 4;
 
+boolean isAbsoluteReference = false;
+
 // These constants won't change.  They're used to give names
 // to the pins used:
 const int analogInPin = 0;  // Analog input pin that the potentiometer is attached to
@@ -51,35 +43,44 @@ const int analogOutPin = 9; // Analog output pin that the LED is attached to
 int sensorValue = 0;        // value read from the pot
 int outputValue = 0;        // value output to the PWM (analog out)
 
+double linearResolution = 0.005; //Resolution of the linear encoder (in meters)
+double linearRange = 0.5; //Range of the sensor to normalize data (+/- linearRange/2)
+
+double potentiometerRangeDeg= 300; 
+double potentiometerMaxRange = potentiometerRangeDeg * 3.1414/180;
+double potentiometerUsedRange = 3.1415;
+double potentiometerDistance = 0.05;
 
 void int0()
-	{
-	if ( micros() - int0time < threshold )
-		return;
-	int0history = int0signal;
-	int0signal = bitRead(PIND,pinA);
-	if ( int0history==int0signal )
-		return;
-	int0time = micros();
-	if ( int0signal == int1signal )
-		rotaryHalfSteps++;
-	else
-		rotaryHalfSteps--;
-	}
+{
+  if ( micros() - int0time < threshold )
+    return;
+  int0history = int0signal;
+  int0signal = bitRead(PIND,pinA);
+  if ( int0history==int0signal )
+    return;
+  int0time = micros();
+  if ( int0signal == int1signal )
+    halfSteps++;
+  else
+    halfSteps--;
+}
 
 void int1()
-	{
-	if ( micros() - int1time < threshold )
-		return;
-	int1history = int1signal;
-	int1signal = bitRead(PIND,pinB);
-	if ( int1history==int1signal )
-		return;
-	int1time = micros();
-	}
+{
+  if ( micros() - int1time < threshold )
+    return;
+  int1history = int1signal;
+  int1signal = bitRead(PIND,pinB);
+  if ( int1history==int1signal )
+    return;
+  int1time = micros();
+}
+
 void reset()
 {
- rotaryHalfSteps = 0;
+  halfStepsCorrection = halfSteps;
+  isAbsoluteReference = true;
  }
 
 void setup() {
@@ -96,22 +97,36 @@ void setup() {
   pinMode(pinReset, INPUT);
   digitalWrite(pinReset, HIGH);
   PCintPort::attachInterrupt(pinReset, &reset, CHANGE);
+  
+  // Setup serial communication
   Serial.begin(115200);
   Serial.println("---------------------------------------");
 }
 
-uint8_t i;
-
 void loop() {
-  long actualRotaryTicks = (rotaryHalfSteps / 2);
-    // read the analog in value:
-  Serial.print(rotaryHalfSteps*8+512); 
-  Serial.print(",");  
+  long steps = (halfSteps / 2);
+  double absolute_position_m = (halfSteps-halfStepsCorrection)*linearResolution/2;
+  
+  // read the analog in value:
+  double raw_angle = analogRead(1)/1024.0*potentiometerMaxRange;
+  double neutralAngle = 0.8*potentiometerMaxRange;
+  double angle = raw_angle - neutralAngle;
+  double correction_m = angle*potentiometerDistance; 
+    
+  Serial.print((absolute_position_m/linearRange)*1024 + 512);
+  Serial.print(",");
+  Serial.print(correction_m/linearRange*1024 + 512);
+  Serial.print(",");
+  Serial.print((absolute_position_m + correction_m)/linearRange*1024 + 512);
+  Serial.print(",");
+  Serial.print(angle/potentiometerUsedRange*1024 + 512);
+  Serial.print(",");
+
   //Serial.print("\t output = ");      
   //Serial.println(outputValue);
   delay(2);
     
-  for (int thisPin = 1; thisPin < 6; thisPin++) {
+  for (int thisPin = 0; thisPin < 2; thisPin++) {
   sensorValue = analogRead(thisPin);            
   
   // print the results to the serial monitor:

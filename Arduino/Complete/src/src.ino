@@ -108,12 +108,12 @@ const int potPin = 1;  // Analog input pin that the potentiometer is attached to
 int barrePotentiometerValue = 0;        // value read from the pot
 
 double linearResolution = 0.005; //Resolution of the linear encoder (in meters)
-double linearRange = 0.5; //Range of the sensor to normalize data (+/- linearRange/2)
+double linearRange = 0.05; //Range of the sensor to normalize data (+/- linearRange/2)
 
 double pi = 3.1415;
 double potentiometerRangeDeg = 300; 
 double potentiometerMaxRange = potentiometerRangeDeg * pi/180;
-double potentiometerUsedRange = pi;
+double potentiometerUsedRange = pi/8;
 double potentiometerDistance = 0.05; //Distance from rotation axis to lever arm
 //*********************************************************************************************
 
@@ -201,8 +201,6 @@ void serialEvent() {
       while (*gpsStream)
         if (nmea.encode(*gpsStream++))
       { 
-        alphaSigned1 = StrToFloat(pwm1.value());
-        alphaSigned2 = StrToFloat(pwm2.value());
         //Input1 = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
       }
@@ -216,14 +214,16 @@ void loop()
   
   int power1, power2;
   sensorValue = analogRead(analogInPin);
+  alphaSigned1 = StrToFloat(pwm1.value());
+  alphaSigned2 = StrToFloat(pwm2.value());
   setMode();
   computeSetpoint();
   computeFeedback();
-  computePIDTuning();
+  //computePIDTuning();
   computePID();
   alphaSigned1 = Output1;
   alphaSigned2 = Output2;
-  computeAlphaSigned();
+  //computeAlphaSigned();
   power1 = alphaSigned1*127;
   power2 = alphaSigned2*127;
   ST.motor(1, power1);
@@ -356,6 +356,8 @@ void reset()
 void computeFeedback()
 {
   long steps = (halfSteps / 2);
+  //Serial.print("T");
+  //Serial.println(steps);
   double relative_position_m = (halfSteps)*linearResolution/2;
   double absolute_position_m = (halfSteps-halfStepsCorrection)*linearResolution/2;
   
@@ -365,7 +367,11 @@ void computeFeedback()
   double angle = raw_angle - neutralAngle;
   double correction_m = angle*potentiometerDistance;
   Input1 = relative_position_m/linearRange;
-  Input2 = angle/potentiometerUsedRange;
+  Input2 = -angle/potentiometerUsedRange;
+  //Serial.print("P");
+  //Serial.println(Input1);
+  //Serial.print("A");
+  //Serial.println(Input2);
   
   InputRoll = StrToFloat(roll.value());
 
@@ -373,14 +379,15 @@ void computeFeedback()
 
 void computeSetpoint()
 {
-  Setpoint1 = StrToFloat(pwm1.value())/127.0;
-  Setpoint2 = StrToFloat(pwm2.value())/127.0;
+  Setpoint1 = StrToFloat(pwm1.value());
+  Setpoint2 = StrToFloat(pwm2.value());
   SetpointRoll = StrToFloat(roll.value());
 }
 
 void computePID()
 {
   myPID1.Compute();
+  //Serial.println(Output1);
   myPID2.Compute();
   myPIDRoll.Compute();
 }

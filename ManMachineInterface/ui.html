@@ -85,12 +85,6 @@
           
 					<input type = "radio"
 						name = "controlVariableRequest"
-						value = "motorSpeed"
-						onclick = "setControlVariable()" />
-					<label>Motor speed</label>
-          
-					<input type = "radio"
-						name = "controlVariableRequest"
 						value = "motorPosition"
 						onclick = "setControlVariable()" />
 					<label>Motor position</label>
@@ -151,7 +145,7 @@
 			<fieldset>
 				<legend>Gain tuning</legend>
 				<p>
-					<label>KpRoll:  </label>
+					<label>KpRollToBarAngle:  </label>
 					<input id = "KpRollNumber"
 						type = "number"
 						min = "0"
@@ -170,7 +164,7 @@
 					300%
 				</p>
 				<p>
-					<label>KdRoll:  </label>
+					<label>KdRollToBarAngle:  </label>
 					<input id = "KdRollNumber"
 						type = "number"
 						min = "0"
@@ -189,7 +183,7 @@
 					300%
 				</p>
 				<p>
-					<label>KiRoll:  </label>
+					<label>KiRollToBarAngle:  </label>
 					<input id = "KiRollNumber"
 						type = "number"
 						min = "0"
@@ -269,7 +263,7 @@
 			</fieldset>
 			<fieldset>
 				<p>
-					<label>Kp2:  </label>
+					<label>KpBarAngleToV2:  </label>
 					<input id = "Kp2Number"
 						type = "number"
 						min = "0"
@@ -288,7 +282,7 @@
 					300%
 				</p>
 				<p>
-					<label>Kd2:  </label>
+					<label>KdBarAngleToV2:  </label>
 					<input id = "Kd2Number"
 						type = "number"
 						min = "0"
@@ -307,7 +301,7 @@
 					300%
 				</p>
 				<p>
-					<label>Ki2:  </label>
+					<label>KiBarAngleToV2:  </label>
 					<input id = "Ki2Number"
 						type = "number"
 						min = "0"

@@ -123,7 +123,7 @@ def checkSerial():
     
     try:
         s = ser.readline()
-        print "Received from arduino: " + s
+        #print "Received from arduino: " + s
     except Exception, e:
         print("Error reading from serial port" + str(e))
         return
@@ -164,6 +164,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.write_message(u"Status OK " + message)
         print "received message from MMI: " + message
         msg = json.loads(message)
+        if msg.get('id')=='controlMode': 
+          print "controlMode" 
         if msg.get('id')=='pwm1':       
           alpha1 = float(msg.get('value'))/100.0
           msge = "ORPW1" + "," + str(alpha1)
@@ -193,7 +195,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
           msge = "ORKPR" + "," + str(data)
         if msg.get('id')=='kiRoll':
           data = float(msg.get('value'))/100.0
-          msge = "ORKIR + "," + str(data)
+          msge = "ORKIR"+ "," + str(data)
         if msg.get('id')=='kdRoll':
           data = float(msg.get('value'))/100.0
           msge = "ORKDR" + "," + str(data)

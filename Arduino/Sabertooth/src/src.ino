@@ -11,6 +11,7 @@
 #include <SabertoothSimplified.h>
 #include <TinyGPS++.h>
 #include <PID_v1.h>
+#include <Wire.h>
 
 SoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
@@ -54,7 +55,9 @@ TinyGPSCustom kdm      (nmea, "ORKDM", 1);  // Derivative coefficient multiplica
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters (Kp, Ki, Kd)
-PID myPID(&Input, &Output, &Setpoint, 1, 1, 1, DIRECT);
+PID myPID(&Input, &Output, &Setpoint, 1, 0, 0, DIRECT);
+
+int x = 0;
 
 void setup()
 {
@@ -67,6 +70,15 @@ void setup()
   //turn the PID on
   myPID.SetMode(AUTOMATIC);
   myPID.SetOutputLimits(-50, 50);
+  
+  Wire.begin(9);                // Start I2C Bus as a Slave (Device Number 9)
+  Wire.onReceive(receiveEvent); // register event
+  
+}
+
+void receiveEvent(int howMany) {
+  x = Wire.read();    // receive byte as an integer
+  Serial.println(x);
 }
 
 void serialEvent() {
@@ -116,7 +128,7 @@ void serialEvent() {
         alphaSigned2 = StrToFloat(pwm2.value());
         Input = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
-        myPID.SetTunings(StrToFloat(kpm.value()), StrToFloat(kim.value()), StrToFloat(kdm.value()));
+        //myPID.SetTunings(StrToFloat(kpm.value()), StrToFloat(kim.value()), StrToFloat(kdm.value()));
       }
     }
   }  
@@ -125,11 +137,12 @@ void serialEvent() {
 
 void loop()
 {
-  myPID.Compute();
+  //myPID.Compute();
   int power1, power2;
   sensorValue = analogRead(analogInPin);
   setMode();
-  //alphaSigned=Output/127.0;
+  computePID();
+  alphaSigned1=Output/127.0;
   computeAlphaSigned();
   power1 = alphaSigned1*127;
   power2 = alphaSigned2*127;
@@ -139,7 +152,8 @@ void loop()
   if (millis()-lastWriteTime>100)
   {
     lastWriteTime = millis();
-    
+    Serial.print(x);
+    Serial.print(" ");
     Serial.print(power1);
     Serial.print(" ");
     Serial.println(power2);
@@ -225,6 +239,13 @@ void computeAlphaSigned()
   }
   alphaSigned1 = min(1, max(-1, alphaSigned1));
   alphaSigned2 = min(1, max(-1, alphaSigned2));
+}
+
+void computePID()
+{ 
+  Input = -x;
+  Setpoint = 0.0;
+  myPID.Compute();
 }
 
 

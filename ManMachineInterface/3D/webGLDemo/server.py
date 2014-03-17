@@ -50,7 +50,7 @@ def timer():
     for c in clients:
         #c.write_message(datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%Mm_%Ss"))
         t = time.time()
-        c.write_message( json.dumps({'x':0, 'y':0, 'z':0, 'xrotation':math.sin(t), 'yrotation':math.cos(t), 'zrotation':0})
+        c.write_message( json.dumps({'x':30*math.sin(t), 'y':30*math.sin(t), 'z':30*math.sin(t), 'xrotation':math.sin(t), 'yrotation':math.cos(t), 'zrotation':0})
 )
  
 if __name__ == "__main__":

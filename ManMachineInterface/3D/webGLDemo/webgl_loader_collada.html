@@ -7,7 +7,7 @@
 		<style>
 			body {
 				font-family: Monospace;
-				background-color: #000000;
+				background-color: #87ceeb;
 				margin: 0px;
 				overflow: hidden;
 			}
@@ -30,14 +30,47 @@
 		<div id="info">
 			black
 		</div>
-		<script src="static/three.js"></script>
+		<script src="static/libs/three.js"></script>
 
 		<script src="static/loaders/ColladaLoader.js"></script>
 
 		<script src="static/Detector.js"></script>
 		<script src="static/libs/stats.min.js"></script>
+		<script src="static/libs/OrbitControls.js"></script>
+		<script src="static/libs/THREEx.KeyboardState.js"></script>
+		<script src="static/libs/THREEx.FullScreen.js"></script>
+		<script src="static/libs/THREEx.WindowResize.js"></script>
+		<script src='static/libs/DAT.GUI.min.js'></script>
 
 		<script>
+			var gui = new dat.GUI({
+				height : 5 * 32 - 1
+				});
+			var params = {
+				text : 'please use control',
+				roll: 0,
+				pitch : 0,
+				yaw : 0,
+				elevation:0,
+				azimuth:0,
+				lineLength:30,
+				speed:1,
+				position:0
+			};
+			gui.add(params, 'text')
+			gui.add(params, 'roll').min(-90).max(90).step(1);
+			gui.add(params, 'pitch').min(-90).max(90).step(1);
+			gui.add(params, 'yaw').min(-90).max(90).step(1);
+			gui.add(params, 'elevation').min(0).max(90).step(1);
+			gui.add(params, 'azimuth').min(-180).max(180).step(1);
+			gui.add(params, 'lineLength').min(0).max(100).step(1);
+			gui.add(params, 'position').min(-20).max(20).step(1);
+			gui.add(params, 'speed').min(0).max(5).step(1);
+
+
+
+
+
 			var ws = new WebSocket("ws://"+window.location.host + "/websocket");
             ws.onmessage = function(evt){
 		    var myOutput = document.getElementById("info");
@@ -48,10 +81,11 @@
 
 			var container, stats;
 
-			var camera, scene, renderer, objects;
+			var camera, scene, renderer, objects, controls;
+			var keyboard = new THREEx.KeyboardState();
 			var particleLight, pointLight;
-			var dae, skin, vectorAcc, vectorMag;
-
+			var kite, groundAnchor, skin, vectorAcc, vectorMag;
+			var kiteLines;
 			var loader = new THREE.ColladaLoader();
 			
 			// Use Z up as a convention (not the default one)
@@ -60,53 +94,64 @@
 			// Load the collada file ('.dae' extension)
 			loader.load( './static/kite.dae', function ( collada ) {
 
-				dae = collada.scene;
+				kite = collada.scene;
+				kite_geom = kite.children[0].children[0].geometry;
+				skin = collada.skins[ 0 ];
+				// Scale to fit the screen
+				kite.scale.x = kite.scale.y = kite.scale.z = 0.0254; //Because unit is inch in file
+				
+				// Initialisation
+				kite.rotation.x = 0;
+				kite.rotation.y = 0;
+				kite.rotation.z = 0;
+				kite.updateMatrix();
+				THREE.GeometryUtils.center(kite_geom);
+				var m1 = new THREE.Matrix4();
+				kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );	
+
+					
+			} );
+			var loader2 = new THREE.ColladaLoader();
+			loader2.options.convertUpAxis = true;
+			loader2.load( './static/groundAnchor.dae', function ( collada ) {
+
+				groundAnchor = collada.scene;
 				skin = collada.skins[ 0 ];
 				
 				// Scale to fit the screen
-				dae.scale.x = dae.scale.y = dae.scale.z = 0.006;
+				groundAnchor.scale.x = groundAnchor.scale.y = groundAnchor.scale.z = 0.01; //Because unit is cm in file
 				
 				// Initialisation
-				dae.rotation.x = 30/180*3;
-				dae.rotation.y = 30/180*3;
-				dae.rotation.z = 30/180*3;
-				dae.updateMatrix();
+				groundAnchor.position.x = -7;
+				groundAnchor.position.y = -2;
+				groundAnchor.position.z = 11;
+				groundAnchor.rotation.x = 0;
+				groundAnchor.rotation.y = 0;
+				groundAnchor.rotation.z = 0;
+				groundAnchor.updateMatrix();			
 				
-				// Add the vector
-				var matAcc = new THREE.LineBasicMaterial( { color:0xFF0000, linewidth: 3 } );
-				
-				// Add the vectors
-				var matMag = new THREE.LineBasicMaterial( { color:0x0000FF, linewidth: 3 } );
-				
-				var geometryVectorAcc = new THREE.Geometry();
-				
-				geometryVectorAcc.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
-				geometryVectorAcc.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
-				
-				var geometryVectorMag = new THREE.Geometry();
-				
-				geometryVectorMag.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
-				geometryVectorMag.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
-				vectorAcc = new THREE.Line( geometryVectorAcc, matAcc, THREE.LinePieces );
-				vectorMag = new THREE.Line( geometryVectorMag, matMag, THREE.LinePieces );
-
 				init();
 				animate();
+							
 
 			} );
+
 
 			function init() {
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
-
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
-				camera.up = new THREE.Vector3( 0, 0, 1 );
-				camera.position.set( 2, 2, 3 );
+				// CAMERA
+				var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+				var VIEW_ANGLE = 75, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+				camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+				//camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				//camera.up = new THREE.Vector3( 0, 0, 1 );
+				camera.position.set( -10, -0.5, -0 );
 
 				scene = new THREE.Scene();
 				
-				// Grid
+				/* // Grid
 				var size = 14, step = 1;
 
 				var geometry = new THREE.Geometry();
@@ -122,15 +167,13 @@
 				}
 
 				var line = new THREE.Line( geometry, material, THREE.LinePieces );
-				scene.add( line );
-				
-				//scene.add(vectorMag);
-				//scene.add(vectorAcc);
+				scene.add( line );*/
 				
 				// Add the COLLADA		
-				scene.add( dae );
+				scene.add( kite );
+				scene.add( groundAnchor);
 
-				particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+				particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.003, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe : true } ) );
 				scene.add( particleLight );
 
 				// Lights
@@ -159,18 +202,109 @@
 				container.appendChild( stats.domElement );
 
 				//
+				// EVENTS
+				THREEx.WindowResize(renderer, camera);
+				THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+				// CONTROLS
+				controls = new THREE.OrbitControls( camera, renderer.domElement );
 
-				window.addEventListener( 'resize', onWindowResize, false );
+				// FLOOR
+				var floorTexture = new THREE.ImageUtils.loadTexture( 'static/images/checkerboard.jpg' );
+				floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+				floorTexture.repeat.set( 10, 10 );
+				var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+				var floorGeometry = new THREE.PlaneGeometry(40, 40);
+				var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+				floor.position.y = -2;
+				floor.rotation.x = Math.PI / 2;
+				scene.add(floor);
+				
+				var segmentCount = 32,
+					radius = 100,
+					geometry = new THREE.Geometry(),
+					material = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
 
-			}
+				for (var i = 0; i <= segmentCount; i++) {
+					var theta = (i / segmentCount) * Math.PI * 2;
+					geometry.vertices.push(
+						new THREE.Vector3(
+							Math.cos(theta) * radius,
+							Math.sin(theta) * radius,
+							0));            
+				}
 
-			function onWindowResize() {
+				scene.add(new THREE.Line(geometry, material));
+				
+				var radius   = 30,
+					segments = 64,
+					material = new THREE.LineBasicMaterial( { color: 0x0000ff } ),
+					geometry = new THREE.CircleGeometry( radius, segments );
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+				// Remove center vertex
+				geometry.vertices.shift();
+				circle = new THREE.Line( geometry, material );
+				for (var i=0; i<18;i++){
+					var circle = new THREE.Line( geometry, material );
+					circle.rotation.y = 10*i*Math.PI/180;
+					scene.add( circle );
+				}
+				for (var i=-0; i<18;i++){
+					var radius   = 30*Math.cos(10*i*Math.PI/180),
+					segments = 64,
+					material = new THREE.LineBasicMaterial( { color: 0xFF0000 } ),
+					geometry = new THREE.CircleGeometry( radius, segments );
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+					// Remove center vertex
+					geometry.vertices.shift();
+					var circle = new THREE.Line( geometry, material );
+					circle.rotation.y = 90*Math.PI/180;
+					circle.position.x = 30*Math.sin(10*i*Math.PI/180);
+					scene.add( circle );
+				}
+				
+				for (var i=-90; i<18;i++){
+					var radius   = 30*Math.cos(10*i*Math.PI/180),
+					segments = 64,
+					material = new THREE.LineBasicMaterial( { color: 0x0000ff } ),
+					geometry = new THREE.CircleGeometry( radius, segments );
 
+					// Remove center vertex
+					geometry.vertices.shift();
+					var circle = new THREE.Line( geometry, material );
+					circle.rotation.x = 90*Math.PI/180;
+					circle.position.y = 30*Math.sin(10*i*Math.PI/180);
+					scene.add( circle );
+				}
+				
+				// Add the vector
+				var matAcc = new THREE.LineBasicMaterial( { color:0xFF0000, linewidth: 3 } );
+				
+				// Add the vectors
+				var matMag = new THREE.LineBasicMaterial( { color:0x0000FF, linewidth: 3 } );
+				
+				var geometryVectorAcc = new THREE.Geometry();
+				
+				geometryVectorAcc.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				geometryVectorAcc.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				
+				var geometryVectorMag = new THREE.Geometry();
+				
+				geometryVectorMag.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				geometryVectorMag.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				vectorAcc = new THREE.Line( geometryVectorAcc, matAcc, THREE.LinePieces );
+				vectorMag = new THREE.Line( geometryVectorMag, matMag, THREE.LinePieces );
+
+				// Add kite lines
+				var matKiteLines = new THREE.LineBasicMaterial( { color:0x000000, linewidth: 3 } );
+				var geometryKiteLines = new THREE.Geometry();
+				geometryKiteLines.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				geometryKiteLines.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+				kiteLines = new THREE.Line( geometryKiteLines, matKiteLines, THREE.LinePieces );
+				
+				
+				//scene.add(vectorMag);
+				//scene.add(vectorAcc);
+				scene.add(kiteLines);
 			}
 
 			//
@@ -206,25 +340,31 @@
 					
 
 				}*/
-				//t += delta;
+				t += delta*params.speed;
 				
 				// The websocket stream is stored in info
 				var myOutput = document.getElementById("info");
 				obj = JSON.parse(myOutput.innerHTML);
 
 				// "Classical" roll, pitch, yaw euler angles
-				dae.rotation.order = 'ZYX';
-				dae.rotation.x = obj.xrotation;
-				dae.rotation.y = obj.yrotation;
-				dae.rotation.z = obj.zrotation;
-				dae.position.x = obj.x;
-				dae.position.y = obj.y;
-				dae.position.z = obj.z;
-				//dae.quaternion.x = obj.q0
-				//dae.quaternion.y = obj.q1
-				//dae.quaternion.z = obj.q2
-				//dae.quaternion.w = obj.q3
-				dae.updateMatrix();
+				kite.rotation.order = 'YZX';
+				/*kite.rotation.x = obj.xrotation;
+				kite.rotation.y = obj.yrotation;
+				kite.rotation.z = obj.zrotation;
+				kite.position.x = obj.x;
+				kite.position.y = obj.y;
+				kite.position.z = obj.z;*/
+				kite.rotation.x = params.roll*Math.PI/180;
+				kite.rotation.z = params.pitch*Math.PI/180;
+				kite.rotation.y = params.yaw*Math.PI/180;
+				kite.position.x = 7+groundAnchor.position.x+params.lineLength*Math.cos(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+				kite.position.y = 2+groundAnchor.position.y+params.lineLength*Math.sin(params.elevation*Math.PI/180);
+				kite.position.z = -11+groundAnchor.position.z+params.lineLength*Math.sin(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+				//kite.quaternion.x = obj.q0
+				//kite.quaternion.y = obj.q1
+				//kite.quaternion.z = obj.q2
+				//kite.quaternion.w = obj.q3
+				kite.updateMatrix();
 				
 				// Plots the vector
 				vectorAcc.geometry.vertices[1].x = obj.accx;
@@ -237,13 +377,28 @@
 				vectorMag.geometry.vertices[1].z = obj.magz;
 				vectorMag.geometry.verticesNeedUpdate = true;
 				
+				// Plots the kite lines
+				kiteLines.geometry.vertices[0].x = 7+groundAnchor.position.x;
+				kiteLines.geometry.vertices[0].y = 2+groundAnchor.position.y;
+				kiteLines.geometry.vertices[0].z = -11+groundAnchor.position.z;
+				kiteLines.geometry.vertices[1].x = kite.position.x;
+				kiteLines.geometry.vertices[1].y = kite.position.y;
+				kiteLines.geometry.vertices[1].z = kite.position.z;
+				kiteLines.geometry.verticesNeedUpdate = true;
+				
+				groundAnchor.position.z = (t+20)%20 -20+11;
+				groundAnchor.updateMatrix();
+				
 				render();
-				stats.update();
-
+				update();
 			}
+			function update() {
+					controls.update();
+					stats.update();
+				}
 
 			function render() {
-
+				/*
 				var timer = Date.now() * 0.0005;
 
 				camera.position.x = 0;
@@ -255,7 +410,7 @@
 				particleLight.position.x = Math.sin( timer * 4 * 0 ) * 3009;
 				particleLight.position.y = Math.cos( timer * 5 * 0 ) * 4000;
 				particleLight.position.z = Math.cos( timer * 4 * 0 ) * 3009;
-
+				*/
 				renderer.render( scene, camera );
 
 			}

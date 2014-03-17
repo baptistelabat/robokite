@@ -71,11 +71,11 @@
 
 
 
-			var ws = new WebSocket("ws://"+window.location.host + "/websocket");
+			/*var ws = new WebSocket("ws://"+window.location.host + "/websocket");
             ws.onmessage = function(evt){
 		    var myOutput = document.getElementById("info");
                 myOutput.innerHTML = evt.data;
-            }
+            }*/
 
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -340,11 +340,11 @@
 					
 
 				}*/
-				t += delta*params.speed;
+				t += delta;
 				
 				// The websocket stream is stored in info
-				var myOutput = document.getElementById("info");
-				obj = JSON.parse(myOutput.innerHTML);
+				/*var myOutput = document.getElementById("info");
+				obj = JSON.parse(myOutput.innerHTML);*/
 
 				// "Classical" roll, pitch, yaw euler angles
 				kite.rotation.order = 'YZX';
@@ -366,7 +366,7 @@
 				//kite.quaternion.w = obj.q3
 				kite.updateMatrix();
 				
-				// Plots the vector
+				/*// Plots the vector
 				vectorAcc.geometry.vertices[1].x = obj.accx;
 				vectorAcc.geometry.vertices[1].y = obj.accy;
 				vectorAcc.geometry.vertices[1].z = obj.accz;
@@ -375,7 +375,7 @@
 				vectorMag.geometry.vertices[1].x = obj.magx;
 				vectorMag.geometry.vertices[1].y = obj.magy;
 				vectorMag.geometry.vertices[1].z = obj.magz;
-				vectorMag.geometry.verticesNeedUpdate = true;
+				vectorMag.geometry.verticesNeedUpdate = true;*/
 				
 				// Plots the kite lines
 				kiteLines.geometry.vertices[0].x = 7+groundAnchor.position.x;
@@ -385,8 +385,19 @@
 				kiteLines.geometry.vertices[1].y = kite.position.y;
 				kiteLines.geometry.vertices[1].z = kite.position.z;
 				kiteLines.geometry.verticesNeedUpdate = true;
-				
-				groundAnchor.position.z = (t+20)%20 -20+11;
+				if (params.speed==0)
+				{
+					groundAnchor.position.z = params.position;
+					t =0;
+				}
+				else
+				{
+					params.position += delta*params.speed;
+					params.position = (params.position+20)%20 -20;
+				}
+				groundAnchor.position.z = params.position+11;
+
+					
 				groundAnchor.updateMatrix();
 				
 				render();

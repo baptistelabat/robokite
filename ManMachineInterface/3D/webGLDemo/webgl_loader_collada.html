@@ -55,7 +55,8 @@
 				azimuth:0,
 				lineLength:30,
 				speed:1,
-				position:0
+				position:0,
+				windspeed:5
 			};
 			gui.add(params, 'text')
 			gui.add(params, 'roll').min(-90).max(90).step(1);
@@ -66,6 +67,7 @@
 			gui.add(params, 'lineLength').min(0).max(100).step(1);
 			gui.add(params, 'position').min(-20).max(20).step(1);
 			gui.add(params, 'speed').min(0).max(5).step(1);
+			gui.add(params, 'windspeed').min(0).max(30).step(1);
 
 
 
@@ -84,7 +86,7 @@
 			var camera, scene, renderer, objects, controls;
 			var keyboard = new THREEx.KeyboardState();
 			var particleLight, pointLight;
-			var kite, groundAnchor, skin, vectorAcc, vectorMag;
+			var kite, groundAnchor, clouds, skin, vectorAcc, vectorMag;
 			var kiteLines;
 			var loader = new THREE.ColladaLoader();
 			
@@ -110,6 +112,20 @@
 				kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );	
 
 					
+			} );
+			var loader1 = new THREE.ColladaLoader();
+			
+			// Use Z up as a convention (not the default one)
+			loader1.options.convertUpAxis = true;
+			
+			// Load the collada file ('.dae' extension)
+			loader1.load( './static/clouds.dae', function ( collada ) {
+
+				clouds = collada.scene;
+				clouds_geom = clouds.children[0].children[0].geometry;
+				skin = collada.skins[ 0 ];
+				// Scale to fit the screen
+				clouds.scale.x = clouds.scale.y = clouds.scale.z = 0.0254; //Because unit is inch in file	
 			} );
 			var loader2 = new THREE.ColladaLoader();
 			loader2.options.convertUpAxis = true;
@@ -172,6 +188,7 @@
 				// Add the COLLADA		
 				scene.add( kite );
 				scene.add( groundAnchor);
+				scene.add( clouds);
 
 				particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.003, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe : true } ) );
 				scene.add( particleLight );
@@ -218,22 +235,6 @@
 				floor.position.y = -2;
 				floor.rotation.x = Math.PI / 2;
 				scene.add(floor);
-				
-				var segmentCount = 32,
-					radius = 100,
-					geometry = new THREE.Geometry(),
-					material = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
-
-				for (var i = 0; i <= segmentCount; i++) {
-					var theta = (i / segmentCount) * Math.PI * 2;
-					geometry.vertices.push(
-						new THREE.Vector3(
-							Math.cos(theta) * radius,
-							Math.sin(theta) * radius,
-							0));            
-				}
-
-				scene.add(new THREE.Line(geometry, material));
 				
 				var radius   = 30,
 					segments = 64,
@@ -393,12 +394,12 @@
 				else
 				{
 					params.position += delta*params.speed;
-					params.position = (params.position+20)%20 -20;
+					params.position = (params.position+20)%40 -20;
 				}
 				groundAnchor.position.z = params.position+11;
-
-					
 				groundAnchor.updateMatrix();
+				
+				clouds.position.x = (clouds.position.x + delta*params.windspeed+20)%40 -20;
 				
 				render();
 				update();

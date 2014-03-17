@@ -66,7 +66,7 @@
 			gui.add(params, 'azimuth').min(-180).max(180).step(1);
 			gui.add(params, 'lineLength').min(0).max(100).step(1);
 			gui.add(params, 'position').min(-20).max(20).step(1);
-			gui.add(params, 'speed').min(0).max(5).step(1);
+			gui.add(params, 'speed').min(0).max(5).step(0.1);
 			gui.add(params, 'windspeed').min(0).max(30).step(1);
 
 
@@ -86,7 +86,7 @@
 			var camera, scene, renderer, objects, controls;
 			var keyboard = new THREEx.KeyboardState();
 			var particleLight, pointLight;
-			var kite, groundAnchor, clouds, skin, vectorAcc, vectorMag;
+			var kite, groundAnchor, clouds, flag, skin, vectorAcc, vectorMag;
 			var kiteLines;
 			var loader = new THREE.ColladaLoader();
 			
@@ -112,6 +112,21 @@
 				kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );	
 
 					
+			} );
+			var loader0 = new THREE.ColladaLoader();
+			
+			// Use Z up as a convention (not the default one)
+			loader0.options.convertUpAxis = true;
+			
+			// Load the collada file ('.dae' extension)
+			loader0.load( './static/flag.dae', function ( collada ) {
+
+				flag = collada.scene;
+				flag_geom = flag.children[0].children[0].geometry;
+				skin = collada.skins[ 0 ];
+				// Scale to fit the screen
+				flag.scale.x = flag.scale.y = flag.scale.z = 0.01; //Because unit is inch in file
+				THREE.GeometryUtils.center(flag_geom);		
 			} );
 			var loader1 = new THREE.ColladaLoader();
 			
@@ -189,6 +204,7 @@
 				scene.add( kite );
 				scene.add( groundAnchor);
 				scene.add( clouds);
+				scene.add( flag);
 
 				particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.003, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe : true } ) );
 				scene.add( particleLight );
@@ -386,21 +402,22 @@
 				kiteLines.geometry.vertices[1].y = kite.position.y;
 				kiteLines.geometry.vertices[1].z = kite.position.z;
 				kiteLines.geometry.verticesNeedUpdate = true;
-				if (params.speed==0)
-				{
-					groundAnchor.position.z = params.position;
-					t =0;
-				}
-				else
-				{
-					params.position += delta*params.speed;
-					params.position = (params.position+20)%40 -20;
-				}
+
+				params.position += delta*params.speed;
+				params.position = (params.position+20)%40 -20;
 				groundAnchor.position.z = params.position+11;
 				groundAnchor.updateMatrix();
 				
 				clouds.position.x = (clouds.position.x + delta*params.windspeed+20)%40 -20;
 				
+				var f = Math.sqrt(params.speed*params.speed + params.windspeed*params.windspeed);
+				console.log(Math.atan2(params.speed, params.windspeed));
+				flag.rotation.y = Math.atan2(params.speed, params.windspeed)-Math.PI/2+ 1*Math.PI/180*Math.sin(3*f*t);
+				flag.position.z = groundAnchor.position.z -11;
+				flag.position.y = 1;
+				flag.position.x = 1;
+				flag.updateMatrix();
+
 				render();
 				update();
 			}

@@ -58,7 +58,7 @@ def computeXORChecksum(chksumdata):
         # and stores the new XOR value in csum
         csum ^= ord(c)
     h = hex(csum)    
-    return h[2:] # Get hex data without 0x prefix
+    return h[2:].zfill(2) # Get hex data without 0x prefix
     
 def openSerial():
   global ser

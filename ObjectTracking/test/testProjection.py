@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 sys.path.append(os.getcwd())
+sys.path.append('../Sensors')
 import mobileState
 
 def isPixelInImage((x,y), image):

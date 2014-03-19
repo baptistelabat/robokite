@@ -217,7 +217,8 @@ class Kite:
 
     # Get an image from camera
     if not isPaused:
-      img = cam.getImage().scale(scaleFactor)# never rotate the image except for display
+      img = cam.getImage()
+      img = img.resize(int(scaleFactor*img.width), int(scaleFactor*img.height))
     
     if display:
       # Pause image when right button is pressed

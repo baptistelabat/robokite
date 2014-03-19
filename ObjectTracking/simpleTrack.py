@@ -249,7 +249,8 @@ class Kite:
             # Note that the selection should be included in the target and not contain background
               try:
                 selection.save('../ObjectTracking/'+ 'kite_detail_tmp.jpg')
-                pal = selection.getPalette(bins = 2, hue = False)
+                img0 = Image("kite_detail_tmp.jpg") # For unknown reason I have to reload the image...
+                pal = img0.getPalette(bins = 2, hue = False)
               except: # getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
                 pal = pal
               wasTargetFoundInPreviousFrame = False
@@ -301,7 +302,9 @@ class Kite:
       for col in pal: 
         c = tuple([int(col[i]) for i in range(0,3)])
             # Search the target based on color
-        filter_img = ROI.colorDistance(color = c)
+        ROI.save('../ObjectTracking/'+ 'ROI_tmp.jpg')
+        img1 = Image('../ObjectTracking/'+ 'ROI_tmp.jpg')
+        filter_img = img1.colorDistance(color = c)
         h = filter_img.histogram(numbins=256)
         cs = np.cumsum(h)
         thmax = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
@@ -320,9 +323,9 @@ class Kite:
           [R, G, B] = filter_img.splitChannels()
           white = (R-R).invert()
           r = R*1.0/255*c[0]
-          g = B*1.0/255*c[1]
-          b = G*1.0/255*c[2]
-          tmp = filter_img#R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
+          g = G*1.0/255*c[1]
+          b = B*1.0/255*c[2]
+          tmp = white.mergeChannels(r, g, b)
           decomposition.append(tmp)
 
       # Get a black background with with white target foreground

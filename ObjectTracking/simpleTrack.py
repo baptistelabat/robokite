@@ -7,23 +7,35 @@
 # https://github.com/baptistelabat/robokite
 # Authors: Baptiste LABAT
 
-
-from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera, JpegStreamer
-import scipy as sp
-import numpy as np
+# Import module from standard library
 import datetime
 import time
 import os
 import sys
 import threading
-from mpl_toolkits.basemap import Basemap
+
+# Import external library
+from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color, JpegStreamCamera, JpegStreamer
+import scipy as sp
+import numpy as np
+import csv
+try:
+  from mpl_toolkits.basemap import Basemap
+  useBasemap = True
+except ImportError:
+  useBasemap = False
+try:
+  import h5py
+  useHDF5 = True
+except ImportError:
+  useHDF5 = False
+
+# Import robokite specific lib
 sys.path.append(os.getcwd())
 sys.path.append('../Control')
 sys.path.append('../Sensors')
 import mobileState
 import PID
-import csv
-import h5py
 
 def localProjection(lon, lat, radius, lon_0, lat_0, inverse = False):
   """ This function was written to use instead of Basemap which is very slow"""
@@ -50,7 +62,7 @@ def isPixelInImage((x,y), image):
     return (x>0 and x<image.width and y>0 and y<image.height)
     
 def computeXORChecksum(chksumdata):
-	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
     csum = 0
     
@@ -62,7 +74,7 @@ def computeXORChecksum(chksumdata):
         # and stores the new XOR value in csum
         csum ^= ord(c)
     h = hex(csum)    
-    return h[2:]#get hex data without 0x prefix
+    return h[2:].zfill(2)#get hex data without 0x prefix
     
 
 class Kite:
@@ -84,9 +96,9 @@ class Kite:
   print "Target can be upside down"
 
   #Parameters
-  isUDPConnection = True # Currently switched manually in the code
+  isUDPConnection = False # Currently switched manually in the code
   display = True
-  displayDebug = False
+  displayDebug = True
   useBasemap = False
   maxRelativeMotionPerFrame = 2 # How much the target can moved between two succesive frames
   pixelPerRadians = 320
@@ -196,12 +208,12 @@ class Kite:
     if isUDPConnection:
       mobile.computeRPY([2, 0, 1], [-1, 1, 1])
     ctm = np.array([[sp.cos(mobile.roll), -sp.sin(mobile.roll)], \
-		    [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
+            [sp.sin(mobile.roll), sp.cos(mobile.roll)]]) # Coordinate transform matrix
 
     if useBasemap:
     # Warning this really slows down the computation
       m = Basemap(width=img.width, height=img.height, projection='aeqd',
-		    lat_0=sp.rad2deg(mobile.pitch), lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
+            lat_0=sp.rad2deg(mobile.pitch), lon_0=sp.rad2deg(mobile.yaw), rsphere = radius)
 
     # Get an image from camera
     if not isPaused:
@@ -219,305 +231,307 @@ class Kite:
       selectionLayer = DrawingLayer((img.width, img.height))
 
     if img:
-	    if display: 
-	    # Create a new layer to host information retrieved from video
-	      layer = DrawingLayer((img.width, img.height))
-            # Selection is a rectangle drawn while holding mouse left button down
-	      if disp.leftButtonDown:
-	        corner1 = (disp.mouseX, disp.mouseY)
-                selectionInProgress = True
-  	      if selectionInProgress:
-                corner2 = (disp.mouseX, disp.mouseY)
-                bb = disp.pointsToBoundingBox(corner1, corner2)
-                if disp.leftButtonUp: # User has finished is selection
-                  selectionInProgress = False
-		  selection = img.crop(bb[0], bb[1], bb[2], bb[3])
-		  if selection != None:
-                  # The 3 main colors in the area selected are considered.
-		  # Note that the selection should be included in the target and not contain background
-		    try:
-			  selection.save('../ObjectTracking/'+ 'kite_detail_tmp.jpg')
-			  pal = selection.getPalette(bins = 2, hue = False)
-		    except: # getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
-			  pal = pal
-   		    wasTargetFoundInPreviousFrame = False
-		    previous_coord_px = (bb[0] + bb[2]/2, bb[1] + bb[3]/2)
-                if corner1 != corner2:
-                  selectionLayer.rectangle((bb[0], bb[1]), (bb[2], bb[3]), width = 5, color = Color.YELLOW)
-            
-	    # If the target was already found, we can save computation time by
-	    # reducing the Region Of Interest around predicted position
-	    if wasTargetFoundInPreviousFrame:
-                ROITopLeftCorner = (max(0, previous_coord_px[0]-maxRelativeMotionPerFrame/2*width), \
- 				    max(0, previous_coord_px[1] -height*maxRelativeMotionPerFrame/2))
-		ROI = img.crop(ROITopLeftCorner[0], ROITopLeftCorner[1],                          \
-                               maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height, \
-			       centered = False)
-                if display :
-		# Draw the rectangle corresponding to the ROI on the complete image
-		  layer.rectangle((previous_coord_px[0]-maxRelativeMotionPerFrame/2*width,  \
-                                     previous_coord_px[1]-maxRelativeMotionPerFrame/2*height), \
-                                  (maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height), \
-				   color = Color.GREEN, width = 2)
-	    else:
-		# Search on the whole image if no clue of where is the target
-		ROITopLeftCorner = (0, 0)
-		ROI = img
+      if display: 
+      # Create a new layer to host information retrieved from video
+        layer = DrawingLayer((img.width, img.height))
+          # Selection is a rectangle drawn while holding mouse left button down
+        if disp.leftButtonDown:
+          corner1 = (disp.mouseX, disp.mouseY)
+          selectionInProgress = True
+        if selectionInProgress:
+          corner2 = (disp.mouseX, disp.mouseY)
+          bb = disp.pointsToBoundingBox(corner1, corner2)# Display the temporary selection
+          if disp.leftButtonUp: # User has finished is selection
+            selectionInProgress = False
+            selection = img.crop(bb[0], bb[1], bb[2], bb[3])
+            if selection != None:
+                    # The 3 main colors in the area selected are considered.
+            # Note that the selection should be included in the target and not contain background
+              try:
+                selection.save('../ObjectTracking/'+ 'kite_detail_tmp.jpg')
+                pal = selection.getPalette(bins = 2, hue = False)
+              except: # getPalette is sometimes bugging and raising LinalgError because matrix not positive definite
+                pal = pal
+              wasTargetFoundInPreviousFrame = False
+              previous_coord_px = (bb[0] + bb[2]/2, bb[1] + bb[3]/2)
+          if corner1 != corner2:
+            selectionLayer.rectangle((bb[0], bb[1]), (bb[2], bb[3]), width = 5, color = Color.YELLOW)
+                       
+   
+      # If the target was already found, we can save computation time by
+      # reducing the Region Of Interest around predicted position
+      if wasTargetFoundInPreviousFrame:
+        ROITopLeftCorner = (max(0, previous_coord_px[0]-maxRelativeMotionPerFrame/2*width), \
+                  max(0, previous_coord_px[1] -height*maxRelativeMotionPerFrame/2))
+        ROI = img.crop(ROITopLeftCorner[0], ROITopLeftCorner[1],                          \
+                             maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height, \
+                 centered = False)
+        if display :
+      # Draw the rectangle corresponding to the ROI on the complete image
+          layer.rectangle((previous_coord_px[0]-maxRelativeMotionPerFrame/2*width,  \
+                                   previous_coord_px[1]-maxRelativeMotionPerFrame/2*height), \
+                                (maxRelativeMotionPerFrame*width, maxRelativeMotionPerFrame*height), \
+                 color = Color.GREEN, width = 2)
+      else:
+        # Search on the whole image if no clue of where is the target
+        ROITopLeftCorner = (0, 0)
+        ROI = img
 
-	    '''#Option 1
-	    target_part0 = ROI.hueDistance(color=(142,50,65)).invert().threshold(150)
-	    target_part1 = ROI.hueDistance(color=(93,16,28)).invert().threshold(150)
-	    target_part2 = ROI.hueDistance(color=(223,135,170)).invert().threshold(150)
-	    target_raw_img = target_part0+target_part1+target_part2
-	    target_img = target_raw_img.erode(5).dilate(5)
+        '''#Option 1
+        target_part0 = ROI.hueDistance(color=(142,50,65)).invert().threshold(150)
+        target_part1 = ROI.hueDistance(color=(93,16,28)).invert().threshold(150)
+        target_part2 = ROI.hueDistance(color=(223,135,170)).invert().threshold(150)
+        target_raw_img = target_part0+target_part1+target_part2
+        target_img = target_raw_img.erode(5).dilate(5)
 
-	    #Option 2
-	    target_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
-	
-            # Find sky color
-	    sky = (img-img.binarize()).findBlobs(minsize=10000)
-	    if sky:
-	     skycolor = sky[0].meanColor()
-	    # Option 3
-	    target_img = ROI-ROI # Black image
-	    		
-	    # Loop through palette of target colors
-	    if display and displayDebug:
-              decomposition = []
-	    i_col = 0
-	    for col in pal: 
-	      c = tuple([int(col[i]) for i in range(0,3)])
-              # Search the target based on color
-	      filter_img = ROI.colorDistance(color = c)
-              h = filter_img.histogram(numbins=256)
-              cs = np.cumsum(h)
-	      thmax = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
-	      thmin = np.argmin(abs(cs- 0.005*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
-	      if thmin==thmax:
-		newth = thmin
-	      else:
-                newth = np.argmin(h[thmin:thmax]) + thmin
-	      alpha = 0.5
-	      th[i_col] = alpha*th[i_col]+(1-alpha)*newth
-	      filter_img = filter_img.threshold(max(40,min(200,th[i_col]))).invert()
-              target_img = target_img + filter_img
-              #print th
-	      i_col = i_col + 1
-	      if display and displayDebug:
-	        [R, G, B] = filter_img.splitChannels()
-	        white = (R-R).invert()
-		r = R*1.0/255*c[0]
-		g = B*1.0/255*c[1]
-		b = G*1.0/255*c[2]
-		tmp = filter_img#R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
-		decomposition.append(tmp)
+        #Option 2
+        target_img = ROI.hueDistance(imgModel.getPixel(10,10)).binarize().invert().erode(2).dilate(2)'''
+    
+          # Find sky color
+      sky = (img-img.binarize()).findBlobs(minsize=10000)
+      if sky:
+       skycolor = sky[0].meanColor()
+      # Option 3
+      target_img = ROI-ROI # Black image
+              
+      # Loop through palette of target colors
+      if display and displayDebug:
+            decomposition = []
+      i_col = 0
+      for col in pal: 
+        c = tuple([int(col[i]) for i in range(0,3)])
+            # Search the target based on color
+        filter_img = ROI.colorDistance(color = c)
+        h = filter_img.histogram(numbins=256)
+        cs = np.cumsum(h)
+        thmax = np.argmin(abs(cs- 0.02*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
+        thmin = np.argmin(abs(cs- 0.005*img.width*img.height)) # find the threshold to have 10% of the pixel in the expected color
+        if thmin==thmax:
+          newth = thmin
+        else:
+          newth = np.argmin(h[thmin:thmax]) + thmin
+        alpha = 0.5
+        th[i_col] = alpha*th[i_col]+(1-alpha)*newth
+        filter_img = filter_img.threshold(max(40,min(200,th[i_col]))).invert()
+        target_img = target_img + filter_img
+        #print th
+        i_col = i_col + 1
+        if display and displayDebug:
+          [R, G, B] = filter_img.splitChannels()
+          white = (R-R).invert()
+          r = R*1.0/255*c[0]
+          g = B*1.0/255*c[1]
+          b = G*1.0/255*c[2]
+          tmp = filter_img#R.mergeChannels(r, b, g) # Order had to be changed here for unknown reason
+          decomposition.append(tmp)
 
-	    # Get a black background with with white target foreground
-	    target_img = target_img.threshold(150)
-	
-	    target_img = target_img - ROI.colorDistance(color = skycolor).threshold(80).invert()
+      # Get a black background with with white target foreground
+      target_img = target_img.threshold(150)
+  
+      target_img = target_img - ROI.colorDistance(color = skycolor).threshold(80).invert()
 
-	    if display and displayDebug:
-	      small_ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
-              for tmp in decomposition:
-              	small_ini = small_ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
-              small_ini = small_ini.adaptiveScale((int(img.width), int(img.height)))
-	      toDisplay = img.sideBySide(small_ini)
-	    else:
-              toDisplay = img
-            #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
+      if display and displayDebug:
+        small_ini = target_img.resize(int(img.width/(len(pal)+1)),  int(img.height/(len(pal)+1)))
+        for tmp in decomposition:
+          small_ini = small_ini.sideBySide(tmp.resize(int(img.width/(len(pal)+1)), int(img.height/(len(pal)+1))), side = 'bottom')
+        small_ini = small_ini.adaptiveScale((int(img.width), int(img.height)))
+        toDisplay = img.sideBySide(small_ini)
+      else:
+        toDisplay = img
+          #target_img = ROI.hueDistance(color = Color.RED).threshold(10).invert()
 
-	    # Search for binary large objects representing potential target
-	    target = target_img.findBlobs(minsize = 500)
-	    
-	    if target: # If a target was found
-		
-		if wasTargetFoundInPreviousFrame:
-		    predictedTargetPosition = (width*maxRelativeMotionPerFrame/2, height*maxRelativeMotionPerFrame/2) # Target will most likely be close to the center of the ROI   
-		else:
-		    predictedTargetPosition = previous_coord_px
-                # If there are several targets in the image, take the one which is the closest of the predicted position
-		target = target.sortDistance(predictedTargetPosition)
+      # Search for binary large objects representing potential target
+      target = target_img.findBlobs(minsize = 500)
+      
+      if target: # If a target was found
+      
+        if wasTargetFoundInPreviousFrame:
+          predictedTargetPosition = (width*maxRelativeMotionPerFrame/2, height*maxRelativeMotionPerFrame/2) # Target will most likely be close to the center of the ROI   
+        else:
+          predictedTargetPosition = previous_coord_px
+              # If there are several targets in the image, take the one which is the closest of the predicted position
+        target = target.sortDistance(predictedTargetPosition)
 
-		# Get target coordinates according to minimal bounding rectangle or centroid.
-		coordMinRect = ROITopLeftCorner + np.array((target[0].minRectX(), target[0].minRectY()))
-		coord_px = ROITopLeftCorner + np.array(target[0].centroid())
+        # Get target coordinates according to minimal bounding rectangle or centroid.
+        coordMinRect = ROITopLeftCorner + np.array((target[0].minRectX(), target[0].minRectY()))
+        coord_px = ROITopLeftCorner + np.array(target[0].centroid())
 
-		# Rotate the coordinates of roll angle around the middle of the screen
-                rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
-                if useBasemap:
-		  coord = sp.deg2rad(m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True))
-		else:
-                  coord = localProjection(rot_coord_px[0]-img.width/2, img.height/2-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True)
-		target_bearing, target_elevation = coord
+        # Rotate the coordinates of roll angle around the middle of the screen
+        rot_coord_px = np.dot(ctm, coord_px - np.array([img.width/2, img.height/2])) + np.array([img.width/2, img.height/2])
+        if useBasemap:
+          coord = sp.deg2rad(m(rot_coord_px[0], img.height-rot_coord_px[1], inverse = True))
+        else:
+          coord = localProjection(rot_coord_px[0]-img.width/2, img.height/2-rot_coord_px[1], radius, mobile.yaw, mobile.pitch, inverse = True)
+        target_bearing, target_elevation = coord
 
-		# Get minimum bounding rectangle for display purpose
-		minR = ROITopLeftCorner + np.array(target[0].minRect())
+      # Get minimum bounding rectangle for display purpose
+        minR = ROITopLeftCorner + np.array(target[0].minRect())
 
-		contours = target[0].contour()
+        contours = target[0].contour()
 
-		contours = [ ROITopLeftCorner + np.array(contour) for contour in contours]
+        contours = [ ROITopLeftCorner + np.array(contour) for contour in contours]
 
 
-	
-		# Get target features
-		angle = sp.deg2rad(target[0].angle()) + mobile.roll
-		angle =  sp.deg2rad(unwrap180(sp.rad2deg(angle), sp.rad2deg(previous_angle)))
-		width = target[0].width()
-		height = target[0].height()
+  
+        # Get target features
+        angle = sp.deg2rad(target[0].angle()) + mobile.roll
+        angle =  sp.deg2rad(unwrap180(sp.rad2deg(angle), sp.rad2deg(previous_angle)))
+        width = target[0].width()
+        height = target[0].height()
 
-		# Check if the kite is upside down
-		# First rotate the kite
-    		ctm2 = np.array([[sp.cos(-angle+mobile.roll), -sp.sin(-angle+mobile.roll)], \
-		    [sp.sin(-angle+mobile.roll), sp.cos(-angle+mobile.roll)]]) # Coordinate transform matrix
-		rotated_contours = [np.dot(ctm2, contour-coordMinRect) for contour in contours]  
-  		y = [-tmp[1] for tmp in rotated_contours]
-		itop = np.argmax(y) # Then looks at the points at the top
-		ibottom = np.argmin(y) # and the point at the bottom
-		# The point the most excentered is at the bottom
-		if abs(rotated_contours[itop][0])>abs(rotated_contours[ibottom][0]):
-		  isInverted = True
-		else:
-		  isInverted = False	
-		
-		if isInverted:
-			angle = angle + sp.pi	 
+        # Check if the kite is upside down
+        # First rotate the kite
+        ctm2 = np.array([[sp.cos(-angle+mobile.roll), -sp.sin(-angle+mobile.roll)], \
+            [sp.sin(-angle+mobile.roll), sp.cos(-angle+mobile.roll)]]) # Coordinate transform matrix
+        rotated_contours = [np.dot(ctm2, contour-coordMinRect) for contour in contours]  
+        y = [-tmp[1] for tmp in rotated_contours]
+        itop = np.argmax(y) # Then looks at the points at the top
+        ibottom = np.argmin(y) # and the point at the bottom
+        # The point the most excentered is at the bottom
+        if abs(rotated_contours[itop][0])>abs(rotated_contours[ibottom][0]):
+          isInverted = True
+        else:
+          isInverted = False    
+        
+        if isInverted:
+            angle = angle + sp.pi    
 
-		
+        
                 # Filter the data
-		alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
-                if not(isPaused):
-		  dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
-	          dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
-		else : 
-		  dCoord = np.array([0, 0])
-		  dAngle = np.array([0]) 
+        alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+        if not(isPaused):
+          dCoord = np.array(previous_dCoord)*(1-alpha) + alpha*(np.array(coord_px) - previous_coord_px) # related to the speed only if cam is fixed
+          dAngle = np.array(previous_dAngle)*(1-alpha) + alpha*(np.array(angle) - previous_angle)
+        else : 
+          dCoord = np.array([0, 0])
+          dAngle = np.array([0]) 
 #print coord_px, angle, width, height, dCoord
-	
-		# Record important data
-		times.append(timestamp)
-		coords_px.append(coord_px)
-		angles.append(angle)
-  		target_elevations.append(target_elevation)
-		target_bearings.append(target_bearing)
-		
-		# Export data to controller
-		self.elevation = target_elevation
-		self.bearing = target_bearing
-		self.orientation = angle
-                dt = time.time()-timeLastTarget
-		self.ROT = dAngle/dt
-                self.lastUpdateTime = t
-		
-		# Save for initialisation of next step
-		previous_dCoord = dCoord
-		previous_angle = angle
-		previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
-		wasTargetFoundInPreviousFrame = True
-		timeLastTarget = time.time()
-		
-	    else:
-		wasTargetFoundInPreviousFrame = False
-            if useHDF5:
-  	      hdfSize = hdfSize+1
-	      dset.resize((hdfSize, 7))
-              imset.resize((hdfSize, img.width, img.height, 3))
-  	      dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
-	      imset[hdfSize-1,:,:,:] = img.getNumpy()
-	      recordFile.flush()
-	    else:
-	      csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
+    
+        # Record important data
+        times.append(timestamp)
+        coords_px.append(coord_px)
+        angles.append(angle)
+        target_elevations.append(target_elevation)
+        target_bearings.append(target_bearing)
+        
+        # Export data to controller
+        self.elevation = target_elevation
+        self.bearing = target_bearing
+        self.orientation = angle
+        dt = time.time()-timeLastTarget
+        self.ROT = dAngle/dt
+        self.lastUpdateTime = t
+        
+        # Save for initialisation of next step
+        previous_dCoord = dCoord
+        previous_angle = angle
+        previous_coord_px = (int(coord_px[0]), int(coord_px[1]))
+        wasTargetFoundInPreviousFrame = True
+        timeLastTarget = time.time()
+      
+      else:
+        wasTargetFoundInPreviousFrame = False
+        
+      if useHDF5:
+        hdfSize = hdfSize+1
+        dset.resize((hdfSize, 7))
+        imset.resize((hdfSize, img.width, img.height, 3))
+        dset[hdfSize-1,:] = [time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT]
+        imset[hdfSize-1,:,:,:] = img.getNumpy()
+        recordFile.flush()
+      else:
+        csv_writer.writerow([time.time(), coord_px[0], coord_px[1], angle, self.elevation, self.bearing, self.ROT])
 
 
 
-            if display :
-              if target:
-		# Add target features to layer
- 		# Minimal rectange and its center in RED
-		  layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
-		  layer.circle((int(coordMinRect[0]), int(coordMinRect[1])), 10, filled = True, color = Color.RED)
-		
+      if display :
+        if target:
+        # Add target features to layer
+        # Minimal rectange and its center in RED
+          layer.polygon(minR[(0, 1, 3, 2), :], color = Color.RED, width = 5)
+          layer.circle((int(coordMinRect[0]), int(coordMinRect[1])), 10, filled = True, color = Color.RED)
+        
                 # Target contour and centroid in BLUE
-		  layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
-                  layer.polygon(contours, color = Color.BLUE, width = 5)
+          layer.circle((int(coord_px[0]), int(coord_px[1])), 10, filled = True, color = Color.BLUE)
+          layer.polygon(contours, color = Color.BLUE, width = 5)
 
-		# Speed vector in BLACK
-		  layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)
-		
-		# Line giving angle
-		  layer.line((int(coord_px[0]+200*sp.cos(angle)), int(coord_px[1]+200*sp.sin(angle))), (int(coord_px[0]-200*sp.cos(angle)), int(coord_px[1]-200*sp.sin(angle))), color = Color.RED)
+        # Speed vector in BLACK
+          layer.line((int(coord_px[0]), int(coord_px[1])), (int(coord_px[0]+20*dCoord[0]), int(coord_px[1]+20*dCoord[1])), width = 3)
+        
+        # Line giving angle
+          layer.line((int(coord_px[0]+200*sp.cos(angle)), int(coord_px[1]+200*sp.sin(angle))), (int(coord_px[0]-200*sp.cos(angle)), int(coord_px[1]-200*sp.sin(angle))), color = Color.RED)
 
-		# Line giving rate of turn
-		#layer.line((int(coord_px[0]+200*sp.cos(angle+dAngle*10)), int(coord_px[1]+200*sp.sin(angle+dAngle*10))), (int(coord_px[0]-200*sp.cos(angle + dAngle*10)), int(coord_px[1]-200*sp.sin(angle+dAngle*10))))
+        # Line giving rate of turn
+        #layer.line((int(coord_px[0]+200*sp.cos(angle+dAngle*10)), int(coord_px[1]+200*sp.sin(angle+dAngle*10))), (int(coord_px[0]-200*sp.cos(angle + dAngle*10)), int(coord_px[1]-200*sp.sin(angle+dAngle*10))))
             
-	    # Add the layer to the raw image 
-	      toDisplay.addDrawingLayer(layer)
-	      toDisplay.addDrawingLayer(selectionLayer)
+      # Add the layer to the raw image 
+        toDisplay.addDrawingLayer(layer)
+        toDisplay.addDrawingLayer(selectionLayer)
 
-	    # Add time metadata
-	      toDisplay.drawText(str(i_frame)+" "+ str(timestamp), x=0, y=0, fontsize=20)
+      # Add time metadata
+        toDisplay.drawText(str(i_frame)+" "+ str(timestamp), x=0, y=0, fontsize=20)
 
-	    # Add Line giving horizon
-            #layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
+      # Add Line giving horizon
+          #layer.line((0, int(img.height/2 + mobile.pitch*pixelPerRadians)),(img.width, int(img.height/2 + mobile.pitch*pixelPerRadians)), width = 3, color = Color.RED)
 
-	    # Plot parallels
-	      for lat in range(-90, 90, 15):
-	        r = range(0, 361, 10)
-                if useBasemap:
-		  # \todo improve for high roll
-		  l = m (r, [lat]*len(r))
-	          pix = [np.array(l[0]), img.height-np.array(l[1])]
-                else:
-		  l = localProjection(sp.deg2rad(r), \
- 				      sp.deg2rad([lat]*len(r)), \
-				      radius, \
-				      lon_0 = mobile.yaw, \
-				      lat_0 = mobile.pitch, \
-				      inverse = False)
-		  l = np.dot(ctm, l)
-	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
+      # Plot parallels
+        for lat in range(-90, 90, 15):
+          r = range(0, 361, 10)
+          if useBasemap:
+            # \todo improve for high roll
+            l = m (r, [lat]*len(r))
+            pix = [np.array(l[0]), img.height-np.array(l[1])]
+          else:
+            l = localProjection(sp.deg2rad(r), \
+                    sp.deg2rad([lat]*len(r)), \
+                    radius, \
+                    lon_0 = mobile.yaw, \
+                    lat_0 = mobile.pitch, \
+                    inverse = False)
+            l = np.dot(ctm, l)
+            pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
-	        for i in range(len(r)-1):
-                  if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
+          for i in range(len(r)-1):
+            if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+              layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
-	    # Plot meridians
-	      for lon in range(0, 360, 15):
-	        r = range(-90, 91, 10)
-	        if useBasemap:
-		  # \todo improve for high roll
-                  l = m ([lon]*len(r), r)
- 	          pix = [np.array(l[0]), img.height-np.array(l[1])]
-                else:
-		  l = localProjection(sp.deg2rad([lon]*len(r)), \
-				      sp.deg2rad(r), \
-				      radius, \
-				      lon_0 = mobile.yaw, \
-				      lat_0 = mobile.pitch, \
-				      inverse = False)
-		  l = np.dot(ctm, l)
- 	          pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
+      # Plot meridians
+        for lon in range(0, 360, 15):
+          r = range(-90, 91, 10)
+          if useBasemap:
+        # \todo improve for high roll
+            l = m ([lon]*len(r), r)
+            pix = [np.array(l[0]), img.height-np.array(l[1])]
+          else:
+            l= localProjection(sp.deg2rad([lon]*len(r)), \
+                    sp.deg2rad(r), \
+                    radius, \
+                    lon_0 = mobile.yaw, \
+                    lat_0 = mobile.pitch, \
+                    inverse = False)
+            l = np.dot(ctm, l)
+            pix = [np.array(l[0])+img.width/2, img.height/2-np.array(l[1])]
 
-	        for i in range(len(r)-1):
-                  if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
-	            layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
+          for i in range(len(r)-1):
+            if isPixelInImage((pix[0][i],pix[1][i]), img) or isPixelInImage((pix[0][i+1],pix[1][i+1]), img):
+              layer.line((pix[0][i],pix[1][i]), (pix[0][i+1], pix[1][i+1]), color=Color.WHITE, width = 2)
 
-	    # Text giving bearing
-	    # \todo improve for high roll
-	      for bearing_deg in range(0, 360, 30):
-                l = localProjection(sp.deg2rad(bearing_deg), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-		l = np.dot(ctm, l)
-                layer.text(str(bearing_deg), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
+      # Text giving bearing
+      # \todo improve for high roll
+        for bearing_deg in range(0, 360, 30):
+          l = localProjection(sp.deg2rad(bearing_deg), sp.deg2rad(0), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+          l = np.dot(ctm, l)
+          layer.text(str(bearing_deg), ( img.width/2+int(l[0]), img.height-20), color = Color.RED)
 
-	    # Text giving elevation
-	    # \todo improve for high roll
-	      for elevation_deg in range(-60, 91, 30):
-                l = localProjection(0, sp.deg2rad(elevation_deg), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
-		l = np.dot(ctm, l)
-                layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
+      # Text giving elevation
+      # \todo improve for high roll
+        for elevation_deg in range(-60, 91, 30):
+          l = localProjection(0, sp.deg2rad(elevation_deg), radius, lon_0 = mobile.yaw, lat_0 = mobile.pitch, inverse = False)
+          l = np.dot(ctm, l)
+          layer.text(str(elevation_deg), ( img.width/2 ,img.height/2-int(l[1])), color = Color.RED)
 
-	      #toDisplay.save(js)
-              toDisplay.save(disp)
+        #toDisplay.save(js)
+        toDisplay.save(disp)
     if display : 
       toDisplay.removeDrawingLayer(1)
       toDisplay.removeDrawingLayer(0)
@@ -530,26 +544,5 @@ if __name__ == '__main__':
   a = threading.Thread(None, Kite.track, None, (kite,))
   print 'here'
   a.start()
-  print 'haaa'
-  pid = PID.PID(0.01, 0, 10)
-  offset = sp.pi/3*0
-  ser = serial.Serial('/dev/ttyACM0', 19200)
-  dt = 0.1
-  time.sleep(1.5)
-  ser.write('i1')
-  while True:
-    setpoint = 0*sp.pi/1.7*sp.sin(2*sp.pi/7*time.time())+offset
-    error = kite.orientation -setpoint
-    pid.incrementTime(error, dt)
-    order = pid.computeCorrection(error, kite.ROT)
-    alpha = np.round(100*order)/100.0
-    msg = "ORPWM"+","+str(alpha)
-    msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
-    print msg
-    ser.write(msg)
-    msg = "ORPOS"+","+str(np.round(sp.rad2deg(kite.orientation),1))+","+str(np.round(sp.rad2deg(kite.elevation),1))+","+str(np.round(sp.rad2deg(kite.bearing),1))
-    msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
-    print msg
-    ser.write(msg)
-    time.sleep(dt)
-	    
+#
+        

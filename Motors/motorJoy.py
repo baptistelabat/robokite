@@ -21,7 +21,7 @@ mon_joystick = pygame.joystick.Joystick(0)
 mon_joystick.init() #Initialisation
 
 def computeXORChecksum(chksumdata):
-	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
     csum = 0
     
@@ -54,19 +54,42 @@ msg1 = "ORPW1"+","+str(0.00)
 msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
 msg2 = "ORPW2"+","+str(0.00)
 msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
+MANUAL=0
+AUTO=1
+mode = MANUAL
 while True:
   for event in pygame.event.get():
+    if event.type == JOYBUTTONDOWN:
+        if event.button == 0:
+            mode = MANUAL
+            print "MANUAL"
+            msg1 = "ORPW1"+","+str(alpha1)
+            msg2 = "ORPW2"+","+str(alpha2)
+        if event.button == 1:
+            mode = AUTO
+            print "AUTO"
+            msg1 = "ORSP1"+","+str(alpha1)
+            msg2 = "ORSP2"+","+str(alpha2)
+    msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
+    msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
     if event.type == JOYAXISMOTION:
       if event.axis == 2:
-        #print "direction control ", event.value
-        alpha2 = np.round(event.value, 2)
-        msg2 = "ORPW2"+","+str(alpha2)
-        msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
-      if event.axis == 3:
         #print "power control ", event.value
         alpha1 = np.round(event.value, 2)
-        msg1 = "ORPW1"+","+str(alpha1)
+        if mode == MANUAL:
+            msg1 = "ORPW1"+","+str(alpha1)
+        if mode == AUTO:
+            msg1 = "ORSP1"+","+str(alpha1)
+        
         msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
+      if event.axis == 3:
+        #print "direction control ", event.value
+        alpha2 = np.round(event.value, 2)
+        if mode == MANUAL:
+            msg2 = "ORPW2"+","+str(alpha2)
+        if mode == AUTO:
+            msg2 = "ORSP2"+","+str(alpha2)
+        msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
   if time.time()-t0 > dt:
     ser.write(msg1)
     print msg1
@@ -79,5 +102,5 @@ while True:
     print "Received from arduino: ", line
   except Exception, e:
     print("Error reading from serial port" + str(e))
-	  
+      
 ser.close()

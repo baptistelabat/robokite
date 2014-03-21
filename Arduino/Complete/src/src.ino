@@ -134,9 +134,9 @@ void setup()
   SetpointRoll = 0;
   
   //turn the PID on
-  myPID1.SetMode(AUTOMATIC);
-  myPID2.SetMode(AUTOMATIC);
-  myPIDRoll.SetMode(AUTOMATIC);
+  myPID1.SetMode(MANUAL);
+  myPID2.SetMode(MANUAL);
+  myPIDRoll.SetMode(MANUAL);
   myPID1.SetOutputLimits(-1, 1);
   myPID2.SetOutputLimits(-1, 1);
   myPIDRoll.SetOutputLimits(-1, 1);
@@ -198,11 +198,29 @@ void serialEvent() {
       char c[50];
       inputString.toCharArray(c, 50);
       char *gpsStream = c;
+      
       while (*gpsStream)
         if (nmea.encode(*gpsStream++))
       { 
         //Input1 = StrToFloat(elevation.value()); 
         lastSerialInputTime = millis();
+        if (pwm1.isUpdated())
+        { 
+          myPID1.SetMode(MANUAL);
+        }
+        if (pwm2.isUpdated())
+        {
+          myPID2.SetMode(MANUAL);
+        }
+        if (setpos1.isUpdated())
+        { 
+          myPID1.SetMode(AUTOMATIC);
+        }
+        if (setpos2.isUpdated())
+        {
+          myPID2.SetMode(AUTOMATIC);
+        }
+          
       }
     }
   }  
@@ -214,16 +232,9 @@ void loop()
   
   int power1, power2;
   sensorValue = analogRead(analogInPin);
-  alphaSigned1 = StrToFloat(pwm1.value());
-  alphaSigned2 = StrToFloat(pwm2.value());
-  setMode();
-  computeSetpoint();
-  computeFeedback();
-  //computePIDTuning();
-  computePID();
-  alphaSigned1 = Output1;
-  alphaSigned2 = Output2;
-  //computeAlphaSigned();
+
+  process();
+  
   power1 = alphaSigned1*127;
   power2 = alphaSigned2*127;
   ST.motor(1, power1);
@@ -233,9 +244,9 @@ void loop()
   {
     lastWriteTime = millis();
     
-    Serial.print(power1);
+    Serial.print(alphaSigned1);
     Serial.print(" ");
-    Serial.println(power2);
+    Serial.println(alphaSigned2);
     if (isSerialControl)
     {
       //Serial.println("S");
@@ -366,8 +377,8 @@ void computeFeedback()
   double neutralAngle = 0.8*potentiometerMaxRange;
   double angle = raw_angle - neutralAngle;
   double correction_m = angle*potentiometerDistance;
-  Input1 = relative_position_m/linearRange;
-  Input2 = -angle/potentiometerUsedRange;
+  Input1 = angle/potentiometerUsedRange;
+  Input2 = relative_position_m/linearRange;
   //Serial.print("P");
   //Serial.println(Input1);
   //Serial.print("A");
@@ -377,19 +388,30 @@ void computeFeedback()
 
 }
 
-void computeSetpoint()
+void process()
 {
-  Setpoint1 = StrToFloat(pwm1.value());
-  Setpoint2 = StrToFloat(pwm2.value());
-  SetpointRoll = StrToFloat(roll.value());
-}
-
-void computePID()
-{
-  myPID1.Compute();
-  //Serial.println(Output1);
-  myPID2.Compute();
-  myPIDRoll.Compute();
+  //setMode();
+  computeFeedback();
+  if (myPID1.GetMode() ==MANUAL)
+  {
+    alphaSigned1 = StrToFloat(pwm1.value());
+  }
+  if (myPID1.GetMode() ==AUTOMATIC)
+  {
+    Setpoint1 = StrToFloat(setpos1.value());
+    myPID1.Compute();
+    alphaSigned1 = Output1;
+  }
+  if (myPID2.GetMode() ==MANUAL)
+  {
+    alphaSigned2 = StrToFloat(pwm2.value());
+  }
+  if (myPID2.GetMode() ==AUTOMATIC)
+  {
+    Setpoint2 = StrToFloat(setpos2.value());
+    myPID2.Compute();
+    alphaSigned2 = Output2;
+  }
 }
 
 void computePIDTuning()

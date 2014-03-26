@@ -113,7 +113,7 @@ double linearRange = 0.05; //Range of the sensor to normalize data (+/- linearRa
 double pi = 3.1415;
 double potentiometerRangeDeg = 300; 
 double potentiometerMaxRange = potentiometerRangeDeg * pi/180;
-double potentiometerUsedRange = pi/8;
+double potentiometerUsedRange = pi/3;
 double potentiometerDistance = 0.05; //Distance from rotation axis to lever arm
 //*********************************************************************************************
 
@@ -235,8 +235,8 @@ void loop()
 
   process();
   
-  power1 = alphaSigned1*127;
-  power2 = alphaSigned2*127;
+  power1 = -alphaSigned1*127;
+  power2 = -alphaSigned2*127;
   ST.motor(1, power1);
   ST.motor(2, power2);
   delay(10);
@@ -378,7 +378,7 @@ void computeFeedback()
   double angle = raw_angle - neutralAngle;
   double correction_m = angle*potentiometerDistance;
   Input1 = angle/potentiometerUsedRange;
-  Input2 = relative_position_m/linearRange;
+  Input2 = absolute_position_m/linearRange;
   //Serial.print("P");
   //Serial.println(Input1);
   //Serial.print("A");
@@ -408,7 +408,8 @@ void process()
   }
   if (myPID2.GetMode() ==AUTOMATIC)
   {
-    Setpoint2 = StrToFloat(setpos2.value());
+    double offset_m = -0.02;
+    Setpoint2 = StrToFloat(setpos2.value()) + offset_m/linearRange;
     myPID2.Compute();
     alphaSigned2 = Output2;
   }

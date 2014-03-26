@@ -70,8 +70,8 @@ while True:
             print "AUTO"
             msg1 = "ORSP1"+","+str(alpha1)
             msg2 = "ORSP2"+","+str(alpha2)
-    msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
-    msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
+        msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
+        msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
     if event.type == JOYAXISMOTION:
       if event.axis == 2:
         #print "power control ", event.value
@@ -79,8 +79,7 @@ while True:
         if mode == MANUAL:
             msg1 = "ORPW1"+","+str(alpha1)
         if mode == AUTO:
-            msg1 = "ORSP1"+","+str(alpha1)
-        
+            msg1 = "ORSP1"+","+str(alpha1) 
         msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
       if event.axis == 3:
         #print "direction control ", event.value

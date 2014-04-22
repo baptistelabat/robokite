@@ -22,6 +22,7 @@ mySoftwareSerial SWSerial(NOT_A_PIN, 8); // RX on no pin (unused), TX on pin 11 
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
+const int tensionPin = A2;
 
 int sensorValue = 0;        // Value read from the potentiometer
 int initialSensorValue = 0;
@@ -31,6 +32,7 @@ String inputString = "";         // A string to hold incoming data
 boolean stringComplete = false;  // Whether the string is complete
 boolean isSerialControl = true; 
 boolean isManualControl = false;
+boolean isFeedbackRequested = false;
 // Read the analog in value
 // The range was reduced 
 double sensorValueMin = 200;//0
@@ -61,10 +63,12 @@ TinyGPSCustom kdm2      (nmea, "ORKD2", 1);  // Derivative coefficient multiplic
 TinyGPSCustom kpmr      (nmea, "ORKPR", 1);  // Proportional coefficient multiplicator
 TinyGPSCustom kimr      (nmea, "ORKIR", 1);  // Integral coefficient multiplicator
 TinyGPSCustom kdmr      (nmea, "ORKDR", 1);  // Derivative coefficient multiplicator
+TinyGPSCustom feedback_request      (nmea, "ORFBR", 1);  // Feedback request
 
 // Define Variables we'll be connecting to
 double Setpoint1, Input1, Output1;
 double Setpoint2, Input2, Output2;
+double Input3;
 double SetpointRoll, InputRoll, OutputRoll;
 
 // Specify the links and initial tuning parameters (Kp, Ki, Kd)
@@ -100,6 +104,7 @@ int pinB = 3;
 int pinReset = 4;
 
 boolean isAbsoluteReference = false;
+boolean isConnectionAlive = false;
 
 // These constants won't change.  They're used to give names
 // to the pins used:
@@ -159,7 +164,7 @@ void setup()
 }
 
 void serialEvent() {
-
+  isConnectionAlive = true;
   inputString="";
   Serial.flush();
   while (Serial.available()) {
@@ -220,6 +225,10 @@ void serialEvent() {
         {
           myPID2.SetMode(AUTOMATIC);
         }
+        if (feedback_request.isUpdated())
+        {
+          isFeedbackRequested = true;
+        }
           
       }
     }
@@ -240,13 +249,21 @@ void loop()
   ST.motor(1, power1);
   ST.motor(2, power2);
   delay(10);
-  if (millis()-lastWriteTime>100)
+  if (isFeedbackRequested)
   {
-    lastWriteTime = millis();
+    //lastWriteTime = millis();
     
     Serial.print(alphaSigned1);
-    Serial.print(" ");
-    Serial.println(alphaSigned2);
+    Serial.print(", ");
+    Serial.print(alphaSigned2);
+    Serial.print(", ");
+    Serial.print(Input1);
+    Serial.print(", ");
+    Serial.print(Input2);
+    Serial.print(", ");
+    Serial.println(Input3);
+    //isConnectionAlive = false;
+    isFeedbackRequested = false;
     if (isSerialControl)
     {
       //Serial.println("S");
@@ -379,6 +396,7 @@ void computeFeedback()
   double correction_m = angle*potentiometerDistance;
   Input1 = angle/potentiometerUsedRange;
   Input2 = absolute_position_m/linearRange;
+  Input3 = analogRead(tensionPin);
   //Serial.print("P");
   //Serial.println(Input1);
   //Serial.print("A");

@@ -95,10 +95,13 @@ while True:
     ser.write(msg2)
     print msg2
     t0 = time.time()
+    mfb = "ORFBR" + ","+str(0)
+    msg2 = "$"+ mfb +"*"+ computeXORChecksum(mfb) + chr(13).encode('ascii')
 
   try: #The ressource can be temporarily unavailable
-    line = ser.readline()
-    print "Received from arduino: ", line
+    if ser.inWaiting() > 0:
+        line = ser.readline()
+        print "Received from arduino: ", line
   except Exception, e:
     print("Error reading from serial port" + str(e))
       

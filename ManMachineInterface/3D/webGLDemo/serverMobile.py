@@ -76,7 +76,7 @@ def timer():
            'accx':mobile.acceleration_filtered[0], 'accy':mobile.acceleration_filtered[1], 'accz':mobile.acceleration_filtered[2],\
            'magx':mobile.magnetic_filtered[0], 'magy':mobile.magnetic_filtered[1], 'magz':mobile.magnetic_filtered[2]\
            })
-        print msg
+        #print msg
         c.write_message(msg)
  
 if __name__ == "__main__":

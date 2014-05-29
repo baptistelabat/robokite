@@ -52,7 +52,7 @@ class mobileState:
     self.pitch = theta
     self.yaw = psi # Sign changed to get correct output \todo find the first bug
     [q, loss] = esoq2p1.esoq2p1( sp.array([[Gpx, Bpx], [Gpy, Bpy], [Gpz, Bpz]]), sp.array([[0, -17], [0, 0], [-9.8, -42]]), sp.array([1,1]))
-    print q
+    #print q
     self.q = q
 
   def decodeMessageSensorUDP(self, msg):
@@ -61,7 +61,7 @@ class mobileState:
     So now acceleration and magnetic vectors should be used"""
     data = msg.split(', ')
     if data[0]=='G':
-		# This is GPS message
+        # This is GPS message
         time = decimalstr2float(data[2])
         latitude_deg = decimalstr2float(data[3])
         longitude_deg = decimalstr2float(data[4])
@@ -70,26 +70,26 @@ class mobileState:
         vdop = decimalstr2float(data[8]) # Vertical dilution of precision
         print time, latitude_deg, longitude_deg, altitude, hdop, vdop
     if data[0]=='O':
-		# \note This is no more used as orientation convention were unclear
+        # \note This is no more used as orientation convention were unclear
         #  'O, 146, 1366575961732, 230,1182404, -075,2031250, 001,7968750'
         [ u, u,    # data not used                                         \    
         heading_deg, # pointing direction of top of phone                    \ 
         roll_deg,    # around horizontal axis, positive clockwise [-180:180] \   
         pitch_deg] = decimalstr2float(data[1:])  # around vertical axis [_90:90]
-        elevation_deg = -sp.rad2deg(sp.arctan2( 					\
-			sp.cos(sp.deg2rad(pitch_deg))*sp.cos(sp.deg2rad(roll_deg)),     \
- 			sp.sqrt(1+sp.cos(sp.deg2rad(roll_deg))**2*(sp.sin(sp.deg2rad(pitch_deg))**2-1)))) #positive up
+        elevation_deg = -sp.rad2deg(sp.arctan2(                     \
+            sp.cos(sp.deg2rad(pitch_deg))*sp.cos(sp.deg2rad(roll_deg)),     \
+            sp.sqrt(1+sp.cos(sp.deg2rad(roll_deg))**2*(sp.sin(sp.deg2rad(pitch_deg))**2-1)))) #positive up
         inclinaison_deg = pitch_deg #positive clockwise
         print heading_deg, roll_deg, pitch_deg, elevation_deg, inclinaison_deg
     if data[0] == 'A':
-	# Accelerometer data
+    # Accelerometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
         deltaT = decimalstr2float(data[2])/1000 - self.time_acceleration
         if self.filterTimeConstant == 0.0:
-		  alpha = 1
+          alpha = 1
         else:
-		  alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
-		  
+          alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+          
         self.time_acceleration = decimalstr2float(data[2])/1000
         self.acceleration_raw[0] = decimalstr2float(data[3])
         self.acceleration_raw[1] = decimalstr2float(data[4])
@@ -97,19 +97,19 @@ class mobileState:
         # Filter the data
         self.acceleration_filtered +=alpha*(sp.array(self.acceleration_raw)-self.acceleration_filtered)
     if data[0] == 'M':
-	# Magnetometer data
+    # Magnetometer data
     # Index and sign are adjusted to obtain x through the screen, and z down
         deltaT =  decimalstr2float(data[2])/1000-self.time_magnetic
         if self.filterTimeConstant == 0.0:
-		  alpha = 1
+          alpha = 1
         else:
-		  alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
-		  
+          alpha = 1-sp.exp(-deltaT/self.filterTimeConstant)
+          
         self.time_magnetic = decimalstr2float(data[2])/1000
         self.magnetic_raw[0] = decimalstr2float(data[3])
         self.magnetic_raw[1] = decimalstr2float(data[4])
         self.magnetic_raw[2] = -decimalstr2float(data[5])# Adapt to a bug in sensorUDP?
-		# Filter the data
+        # Filter the data
         self.magnetic_filtered += alpha*(sp.array(self.magnetic_raw)-self.magnetic_filtered)
 
   def checkUpdate(self):
@@ -127,7 +127,7 @@ class mobileState:
         except (KeyboardInterrupt, SystemExit):
           raise
         except:
-	  traceback.print_exc()
+          traceback.print_exc()
 
 if __name__ == '__main__':
   max_length = 0

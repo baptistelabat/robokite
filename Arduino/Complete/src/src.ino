@@ -23,6 +23,7 @@ SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 
 const int analogInPin = A0;  // Analog input pin that the potentiometer is attached to
 const int tensionPin = A2;
+const int ledPin = 13;
 
 int sensorValue = 0;        // Value read from the potentiometer
 int initialSensorValue = 0;
@@ -161,6 +162,8 @@ void setup()
   digitalWrite(pinReset, HIGH);
   PCintPort::attachInterrupt(pinReset, &reset, CHANGE);
   
+  pinMode(ledPin, OUTPUT); 
+  
 }
 
 void serialEvent() {
@@ -228,6 +231,7 @@ void serialEvent() {
         if (feedback_request.isUpdated())
         {
           isFeedbackRequested = true;
+          digitalWrite(ledPin, HIGH);
         }
           
       }
@@ -264,6 +268,7 @@ void loop()
     Serial.println(Input3);
     //isConnectionAlive = false;
     isFeedbackRequested = false;
+    digitalWrite(ledPin, LOW);
     if (isSerialControl)
     {
       //Serial.println("S");

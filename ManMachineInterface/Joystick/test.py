@@ -20,6 +20,9 @@ print("Hats :", mon_joystick.get_numhats())
 continuer = 1
 while continuer:
   for event in pygame.event.get():
+    if event.type == JOYBUTTONDOWN:
+        print "button"
+        print event.button == 0
     if event.type == JOYAXISMOTION:
       if event.axis == 2:
         print "direction control ", event.value

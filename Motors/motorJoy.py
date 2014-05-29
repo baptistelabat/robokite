@@ -35,74 +35,88 @@ def computeXORChecksum(chksumdata):
     h = hex(csum)    
     return h[2:].zfill(2)#get hex data without 0x prefix
     
+def NMEA(message_type, value, talker_id= "OR"):
+  msg = talker_id + message_type +","+ str(value)
+  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+  return msg
+  
+
+    
 
 dt = 0.01
 locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
-for device in locations:
-  try:
-    print "Trying...", device
-    ser = serial.Serial(device, baudrate=19200, timeout=1)
-    print "Connected on ", device
-    break
-  except:
-    print "Failed to connect on ", device
-time.sleep(1.5)
-ser.write('i1')
-t0 = time.time()
-
-msg1 = "ORPW1"+","+str(0.00)
-msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
-msg2 = "ORPW2"+","+str(0.00)
-msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
+msg1 = NMEA("PW1", 0.00, "OR")
+msg2 = NMEA("PW2", 0.00, "OR")
+mfb = NMEA("FBR", 0, "OR")
 MANUAL=0
 AUTO=1
 mode = MANUAL
-while True:
-  for event in pygame.event.get():
-    if event.type == JOYBUTTONDOWN:
-        if event.button == 0:
-            mode = MANUAL
-            print "MANUAL"
-            msg1 = "ORPW1"+","+str(alpha1)
-            msg2 = "ORPW2"+","+str(alpha2)
-        if event.button == 1:
-            mode = AUTO
-            print "AUTO"
-            msg1 = "ORSP1"+","+str(alpha1)
-            msg2 = "ORSP2"+","+str(alpha2)
-        msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
-        msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
-    if event.type == JOYAXISMOTION:
-      if event.axis == 2:
-        #print "power control ", event.value
-        alpha1 = np.round(event.value, 2)
-        if mode == MANUAL:
-            msg1 = "ORPW1"+","+str(alpha1)
-        if mode == AUTO:
-            msg1 = "ORSP1"+","+str(alpha1) 
-        msg1 = "$"+msg1 +"*"+ computeXORChecksum(msg1) + chr(13).encode('ascii')
-      if event.axis == 3:
-        #print "direction control ", event.value
-        alpha2 = np.round(event.value, 2)
-        if mode == MANUAL:
-            msg2 = "ORPW2"+","+str(alpha2)
-        if mode == AUTO:
-            msg2 = "ORSP2"+","+str(alpha2)
-        msg2 = "$"+msg2 +"*"+ computeXORChecksum(msg2) + chr(13).encode('ascii')
-  if time.time()-t0 > dt:
-    ser.write(msg1)
-    print msg1
-    ser.write(msg2)
-    print msg2
-    t0 = time.time()
-    mfb = "ORFBR" + ","+str(0)
-    msg2 = "$"+ mfb +"*"+ computeXORChecksum(mfb) + chr(13).encode('ascii')
 
-  try: #The ressource can be temporarily unavailable
-    if ser.inWaiting() > 0:
-        line = ser.readline()
-        print "Received from arduino: ", line
-  except Exception, e:
-    print("Error reading from serial port" + str(e))
+while True:
+    for device in locations:
+      try:
+        print "Trying...", device
+        ser = serial.Serial(device, baudrate=19200, timeout=1)
+        print "Connected on ", device
+        break
+      except:
+        print "Failed to connect on ", device
+    time.sleep(1.5)
+    try:
+        ser.write('i1')
+    except:
+        print "Can not write i1"
+        ser.close()
+    t0 = time.time()
+
+
+    while True:
+      for event in pygame.event.get():
+        if event.type == JOYBUTTONDOWN:
+            if event.button == 0:
+                mode = MANUAL
+                print "MANUAL"
+                msg1 = NMEA("PW1", alpha1, "OR")
+                msg2 = NMEA("PW2", alpha2, "OR")
+            if event.button == 1:
+                mode = AUTO
+                print "AUTO"
+                msg1 = NMEA("SP1", alpha1, "OR")
+                msg2 = NMEA("SP2", alpha2, "OR")
+            
+        if event.type == JOYAXISMOTION:
+          if event.axis == 2:
+            #print "power control ", event.value
+            alpha1 = np.round(event.value, 2)
+            if mode == MANUAL:
+                msg1 = NMEA("PW1", alpha1, "OR")
+            if mode == AUTO:
+                msg1 = NMEA("SP1", alpha1, "OR")
+          if event.axis == 3:
+            #print "direction control ", event.value
+            alpha2 = np.round(event.value, 2)
+            if mode == MANUAL:
+                msg2 = NMEA("PW2", alpha2, "OR")
+            if mode == AUTO:
+                msg2 = NMEA("SP2", alpha2, "OR")
+      if time.time()-t0 > dt:
+        try:
+            ser.write(msg1)
+            print msg1
+            ser.write(msg2)
+            print msg2
+            t0 = time.time()
+            ser.write(mfb)
+            print mfb
+        except:
+            print "break"
+            break
+
+      try: #The ressource can be temporarily unavailable
+        if ser.inWaiting() > 0:
+            line = ser.readline()
+            print "Received from arduino: ", line
+      except Exception, e:
+        print("Error reading from serial port" + str(e))
       
 ser.close()

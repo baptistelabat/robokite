@@ -11,7 +11,7 @@ import serial
 import numpy as np
 
 def computeXORChecksum(chksumdata):
-	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
     csum = 0
     
@@ -25,7 +25,14 @@ def computeXORChecksum(chksumdata):
     h = hex(csum)    
     return h[2:].zfill(2)#get hex data without 0x prefix
     
-
+def NMEA(message_type, value, talker_id= "OR"):
+  msg = talker_id + message_type +","+ str(value)
+  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+  return msg
+    
+msg1 = NMEA("PW1", 0.00, "OR")
+msg2 = NMEA("PW2", 0.00, "OR")
+mfb = NMEA("FBR", 0, "OR")
 dt = 0.01
 locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
 for device in locations:
@@ -46,20 +53,18 @@ while True:
   print "n= ", n, ", t= ", t
   order = 0.2*np.sin(t)
   alpha = np.round(order, 2)
-  msg = "ORPW1"+","+str(alpha)
-  msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
-  print msg
-  ser.write(msg)
-  msg = "ORPW2"+","+str(alpha)
-  msg = "$"+msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
-  print msg
-  ser.write(msg)
+  msg1 = NMEA("PW1", alpha, "OR")
+  msg2 = NMEA("PW2", alpha, "OR")
+  print msg1
+  ser.write(msg1)
+  ser.write(msg2)
   print "Message sent"
   try: #The ressource can be temporarily unavailable
+    ser.write(mfb)
     line = ser.readline()
     print "Received from arduino: ", line
   except Exception, e:
     print("Error reading from serial port" + str(e))
-	  
+      
   time.sleep(dt)
 ser.close()

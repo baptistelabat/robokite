@@ -38,11 +38,18 @@ THE SOFTWARE.
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "HMC5883L.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 
 // class default I2C address is 0x1E
 // specific I2C addresses may be passed as a parameter here
 // this device only supports one I2C address (0x1E)
 HMC5883L mag;
+// class default I2C address is 0x68
+// specific I2C addresses may be passed as a parameter here
+// AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
+// AD0 high = 0x69
+//MPU6050 mpu;
+MPU6050 mpu(0x69); // <-- use for AD0 high
 
 int16_t mx, my, mz;
 
@@ -57,6 +64,8 @@ void setup() {
     // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
     // it's really up to you depending on your project)
     Serial.begin(38400);
+    mpu.setI2CMasterModeEnabled(0);
+    mpu.setI2CBypassEnabled(1);
 
     // initialize device
     Serial.println("Initializing I2C devices...");

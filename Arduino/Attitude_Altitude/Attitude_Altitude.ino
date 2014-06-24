@@ -1,6 +1,6 @@
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-
+#include "HMC5883L.h"
 #include "MS561101BA.h"
 #include "Wire.h"
 
@@ -13,6 +13,10 @@
 
 #define MOVAVG_SIZE 32
 
+// class default I2C address is 0x1E
+// specific I2C addresses may be passed as a parameter here
+// this device only supports one I2C address (0x1E)
+HMC5883L mag;
 MPU6050 mpu(0x69); // <-- use for AD0 high
 MS561101BA baro = MS561101BA();
 
@@ -33,6 +37,10 @@ MS561101BA baro = MS561101BA();
 ///******* Acc+gyro
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 bool blinkState = false;
+
+// Magneto
+int16_t mx, my, mz;
+float heading;
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -122,10 +130,13 @@ void setup() {
     // initialize device
     Serial.println(F("Initializing Gyro+Acc..."));
     mpu.initialize();
+    
+    mag.initialize();
 
     // verify connection
     Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+    Serial.println(mag.testConnection() ? "HMC5883L connection successful" : "HMC5883L connection failed");
 
     while (Serial.available() && Serial.read()); // empty buffer
 
@@ -168,6 +179,10 @@ void setup() {
 
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
+    
+    //Allow to get magnetometer data
+    mpu.setI2CMasterModeEnabled(0);
+    mpu.setI2CBypassEnabled(1);
      
 }
 
@@ -179,11 +194,20 @@ void setup() {
 long last_time =0;
 
 void loop() {
+
+    
     // if programming failed, don't try to do anything
     if (!dmpReady) return;
 
     // wait for MPU interrupt or extra packet(s) available
     while (!mpuInterrupt && fifoCount < packetSize) {
+      
+        // read raw heading measurements from device
+        mag.getHeading(&mx, &my, &mz);
+        // To calculate heading in degrees. 0 degree indicates North
+        heading = atan2(my, mx);
+        if(heading < 0)
+          heading += 2 * M_PI;
             
         // other program behavior stuff here        
         float temperature = baro.getTemperature(MS561101BA_OSR_4096);
@@ -240,7 +264,7 @@ void loop() {
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             attitude.u = ypr[0] * 180/M_PI*100;
             attitude.v = ypr[1] * 180/M_PI*100;
-            attitude.w= ypr[2] * 180/M_PI*100;
+            attitude.w = ypr[2] * 180/M_PI*100;
             /*Serial.print("ypr\t");  Serial.print(ypr[0] * 180/M_PI);
             Serial.print("\t");  Serial.print(ypr[1] * 180/M_PI);
             Serial.print("\t"); Serial.println(ypr[2] * 180/M_PI);*/
@@ -290,6 +314,8 @@ void sendData()
   //Sending data to gbase
         char SensorMsg1[7];   
         //itoa(attitude.u,SensorMsg1,10);
+        Serial.print("heading:\t");
+        Serial.println(heading * 180/M_PI);
         sprintf(SensorMsg1,"%c%d",'u',attitude.u);
         Serial.println(SensorMsg1);
         sprintf(SensorMsg1,"%c%d",'v',attitude.v);

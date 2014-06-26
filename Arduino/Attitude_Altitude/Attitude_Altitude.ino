@@ -1,3 +1,10 @@
+// Note that MPU6050_6Axis_MotionApps20.h had to be modified to reduce fifo fill rate
+
+#include <RH_ASK.h>
+#include <SPI.h> // Not actually used but needed to compile
+
+RH_ASK driver(4000, 11, 12);
+
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "HMC5883L.h"
@@ -5,9 +12,8 @@
 #include "Wire.h"
 
 #include <MsTimer2.h>
-#include <VirtualWire.h> 
 
-#define UPDATE_RATE 500
+#define UPDATE_RATE 200
 #define BAUDRATE 57600
 
 
@@ -183,7 +189,8 @@ void setup() {
     //Allow to get magnetometer data
     mpu.setI2CMasterModeEnabled(0);
     mpu.setI2CBypassEnabled(1);
-     
+    if (!driver.init())
+         Serial.println("init failed");
 }
 
 
@@ -313,26 +320,55 @@ void sendData()
 {
   //Sending data to gbase
         char SensorMsg1[7];   
-        //itoa(attitude.u,SensorMsg1,10);
+        itoa(int(heading * 180/M_PI), SensorMsg1,10);
         Serial.print("heading:\t");
         Serial.println(heading * 180/M_PI);
+        
         sprintf(SensorMsg1,"%c%d",'u',attitude.u);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'v',attitude.v);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'w',attitude.w);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'x',attitude.x);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'y',attitude.y);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'z',attitude.z);
         Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'h',attitude.h);
         Serial.println(SensorMsg1);
+        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'p',attitude.p);
         Serial.println(SensorMsg1);
+        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.waitPacketSent();
+        
         sprintf(SensorMsg1,"%c%d",'t',attitude.t);
         Serial.println(SensorMsg1);
+        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.waitPacketSent();
+        
         Serial.println();
+  
 }

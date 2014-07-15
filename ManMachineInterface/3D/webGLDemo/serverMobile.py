@@ -28,8 +28,7 @@ global mobile
 try:
   # Get the mobile orientation
   mobile = mobileState.mobileState()
-  a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
-  a.start()
+  mobile.open()
 except KeyboardInterrupt:
  mobile.stop_requested = True
 

@@ -8,7 +8,7 @@ RH_ASK driver(4000, 11, 12);
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "HMC5883L.h"
-#include "MS561101BA.h"
+//#include "MS561101BA.h"
 #include "Wire.h"
 
 #include <MsTimer2.h>
@@ -24,7 +24,7 @@ RH_ASK driver(4000, 11, 12);
 // this device only supports one I2C address (0x1E)
 HMC5883L mag;
 MPU6050 mpu(0x69); // <-- use for AD0 high
-MS561101BA baro = MS561101BA();
+//MS561101BA baro = MS561101BA();
 
 // uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
 // pitch/roll angles (in degrees) calculated from the quaternions coming
@@ -125,12 +125,12 @@ void setup() {
     Serial.println(F("Initializing Barometer..."));
     // Suppose that the CSB pin is connected to GND.
     // You'll have to check this on your breakout schematics
-    baro.init(MS561101BA_ADDR_CSB_LOW); 
+//    baro.init(MS561101BA_ADDR_CSB_LOW); 
     delay(100);
   
     // populate movavg_buff before starting loop
     for(int i=0; i<MOVAVG_SIZE; i++) {
-    movavg_buff[i] = baro.getPressure(MS561101BA_OSR_4096);
+    //movavg_buff[i] = baro.getPressure(MS561101BA_OSR_4096);
     }  
 
     // initialize device
@@ -217,7 +217,7 @@ void loop() {
           heading += 2 * M_PI;
             
         // other program behavior stuff here        
-        float temperature = baro.getTemperature(MS561101BA_OSR_4096);
+        /*float temperature = baro.getTemperature(MS561101BA_OSR_4096);
         if(temperature) { temp = temperature;   }
         attitude.t = temp*100;
         //Serial.print(" temp: "); Serial.print(temp);
@@ -231,7 +231,7 @@ void loop() {
         float altitude = getAltitude(press, temp);
         attitude.h = altitude;
         //Serial.print(" mbar altitude: "); Serial.print(altitude); Serial.println(" m");
-        
+        */
         if (millis() > last_time +UPDATE_RATE)
          { sendData();
            last_time = millis();

@@ -356,17 +356,17 @@ void sendData()
         
         sprintf(SensorMsg1,"%c%d",'h',attitude.h);
         Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
         driver.waitPacketSent();
         
         sprintf(SensorMsg1,"%c%d",'p',attitude.p);
         Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
         driver.waitPacketSent();
         
         sprintf(SensorMsg1,"%c%d",'t',attitude.t);
         Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
         driver.waitPacketSent();
         
         Serial.println();

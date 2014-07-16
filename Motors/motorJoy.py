@@ -48,6 +48,8 @@ locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/tty
 msg1 = NMEA("PW1", 0.00, "OR")
 msg2 = NMEA("PW2", 0.00, "OR")
 mfb = NMEA("FBR", 0, "OR")
+alpha1 = 0
+alpha2 = 0
 MANUAL=0
 AUTO=1
 mode = MANUAL
@@ -102,12 +104,12 @@ while True:
       if time.time()-t0 > dt:
         try:
             ser.write(msg1)
-            print msg1
+            #print msg1
             ser.write(msg2)
             print msg2
             t0 = time.time()
             ser.write(mfb)
-            print mfb
+            #print mfb
         except:
             print "break"
             break

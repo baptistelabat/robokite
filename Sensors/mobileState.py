@@ -113,21 +113,32 @@ class mobileState:
         self.magnetic_filtered += alpha*(sp.array(self.magnetic_raw)-self.magnetic_filtered)
 
   def checkUpdate(self):
+    while not(self.stop_requested):
+        try:
+          message, address = self.socket.recvfrom(9000)
+          self.decodeMessageSensorUDP(message)
+          self.isToUpdate = True
+        except (KeyboardInterrupt, SystemExit):
+          raise
+          self.close()
+        except:
+          traceback.print_exc()
+          
+  def open(self):
     host = ''
     port = 12345
-
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     s.bind((host, port))
-    while not(self.stop_requested):
-        try:
-          message, address = s.recvfrom(9000)
-          self.decodeMessageSensorUDP(message)
-        except (KeyboardInterrupt, SystemExit):
-          raise
-        except:
-          traceback.print_exc()
+    self.socket = s
+    a = threading.Thread(None, self.checkUpdate, None, ())
+    a.start()
+    
+  def close(self):
+    self.stop_requested = True
+    self.socket.close()
+    
 
 if __name__ == '__main__':
   max_length = 0
@@ -142,9 +153,8 @@ if __name__ == '__main__':
   import time
   t0 = time.time()
   mobile = mobileState()
+  mobile.open()
   try:
-    a = threading.Thread(None, mobileState.checkUpdate, None, (mobile,))
-    a.start()
     while time.time()-t0 < 60:
         mobile.computeRPY()
         print mobile.acceleration_raw
@@ -157,11 +167,10 @@ if __name__ == '__main__':
         fileout.write('%f %f %f\n' % (mobile.acceleration_raw[0], mobile.acceleration_raw[1], mobile.acceleration_raw[2]))
         filemag.write('%f %f %f\n' % (mobile.magnetic_raw[0], mobile.magnetic_raw[1], mobile.magnetic_raw[2]))
   except KeyboardInterrupt:
-    mobile.stop_requested = True
+    mobile.close()
     fileout.close()
     filemag.close()
     
-  mobile.stop_requested = True
   plt.hold()
   plt.plot(np.array(timeList)-timeList[0], np.array(headingList))
   plt.plot(np.array(timeList)-timeList[0], np.array(rollList), 'g')
@@ -170,4 +179,5 @@ if __name__ == '__main__':
   plt.show()
   fileout.close()
   filemag.close()
+  mobile.close()
 

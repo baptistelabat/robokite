@@ -288,7 +288,7 @@ void loop() {
         Now = micros();
         deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
         lastUpdate = Now;
-        MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180*250.0f/32768.0*100, gy*PI/180.0*250.0f/32768.0*100, gz*PI/180.0*250.0f/32768.0*100,  mx,  my,  mz);
+        MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180*250.0f/32768.0*180, gy*PI/180.0*250.0f/32768.0*180, gz*PI/180.0*250.0f/32768.0*180,  mx,  my,  mz);
         
 
     }

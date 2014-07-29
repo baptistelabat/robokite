@@ -55,7 +55,7 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
-#define UPDATE_RATE 50
+#define UPDATE_RATE 100
 float deltat = 0.0f;        // integration interval for both filter schemes
 
 uint32_t lastUpdate = 0; // used to calculate integration interval
@@ -124,7 +124,7 @@ void setup() {
     // initialize serial communication
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
-    Serial.begin(115200);
+    Serial.begin(4800);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
@@ -289,7 +289,9 @@ void loop() {
         deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
         lastUpdate = Now;
         MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180*250.0f/32768.0*180, gy*PI/180.0*250.0f/32768.0*180, gz*PI/180.0*250.0f/32768.0*180,  mx,  my,  mz);
-        
+            // blink LED to indicate activity
+    blinkState = !blinkState;
+    digitalWrite(LED_PIN, blinkState);
 
     }
 }
@@ -304,9 +306,5 @@ void sendData()
     Serial.print(", ");
     Serial.print(qq[3]*10000);
     Serial.print(", ");
-    Serial.println("");
-    // blink LED to indicate activity
-    blinkState = !blinkState;
-    digitalWrite(LED_PIN, blinkState);
-        
+    Serial.println("");        
 }

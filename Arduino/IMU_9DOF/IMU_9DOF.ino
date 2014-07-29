@@ -28,6 +28,11 @@ A5 to SCL
 D2 to INT (#0)
 GND to GND
 5V to 5V
+
+Arduino to TX transmitter
+D12 to ATAD
+GND to GND
+5V to 5V
 */
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
@@ -43,6 +48,11 @@ GND to GND
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
+
+#include <RH_ASK.h>
+#include <SPI.h> // Not actually used but needed to compile
+
+RH_ASK driver(4800, 11, 12);
 
 float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
 float qq[4] = {1.0f, 0.0f, 0.0f, 0.0f};
@@ -94,6 +104,8 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorInt16 aa;         // [x, y, z]            accel sensor measurements
 int16_t rr[3];
+float euler[3];         // [psi, theta, phi]    Euler angle container
+
 
 // Magneto
 int16_t mx16, my16, mz16;
@@ -188,6 +200,9 @@ void setup() {
     //Allow to get magnetometer data
     mpu.setI2CMasterModeEnabled(0);
     mpu.setI2CBypassEnabled(1);
+    
+    if (!driver.init())
+      Serial.println("init failed");
 }
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
@@ -296,15 +311,34 @@ void loop() {
     }
 }
 void sendData()
-{     
-    char msg[7];
-    Serial.print(qq[0]*10000);
-    Serial.print(", ");;
+{   
+    char SensorMsg1[7];
+    q = Quaternion(qq[0], qq[1], qq[2], qq[3]);
+    mpu.dmpGetEuler(euler, &q);
+    
+    Serial.print(euler[0]);
+    Serial.print(", ");
+    Serial.print(euler[1]);
+    Serial.print(", ");
+    Serial.print(euler[2]);
+    Serial.print(", ");
+    Serial.println(""); 
+    sprintf(SensorMsg1,"%c%d",'u',euler[1]);
+    driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
+    driver.waitPacketSent();
+    /*Serial.print(qq[0]*10000);
+    Serial.print(", ");
     Serial.print(qq[1]*10000);
     Serial.print(", ");
     Serial.print(qq[2]*10000);
     Serial.print(", ");
     Serial.print(qq[3]*10000);
     Serial.print(", ");
-    Serial.println("");        
+    Serial.println("");*/
+    
+    const char *msgn = "hello";
+
+    driver.send((uint8_t *)msgn, strlen(msgn));
+    driver.waitPacketSent();
+    
 }

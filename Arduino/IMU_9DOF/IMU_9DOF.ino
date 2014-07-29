@@ -22,6 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ===============================================
+Arduino to IMU Drotek 9dof
+A4 to SDA
+A5 to SCL
+D2 to INT (#0)
+GND to GND
+5V to 5V
 */
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
@@ -137,12 +143,6 @@ void setup() {
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
     Serial.println(mag.testConnection() ? "HMC5883L connection successful" : "HMC5883L connection failed");
 
-    // wait for ready
-    Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    while (Serial.available() && Serial.read()); // empty buffer
-    while (!Serial.available());                 // wait for data
-    while (Serial.available() && Serial.read()); // empty buffer again
-
     // load and configure the DMP
     Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
@@ -189,7 +189,6 @@ void setup() {
     mpu.setI2CMasterModeEnabled(0);
     mpu.setI2CBypassEnabled(1);
 }
-
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
@@ -201,8 +200,7 @@ void loop() {
     // wait for MPU interrupt or extra packet(s) available
     while (!mpuInterrupt && fifoCount < packetSize) {
       
-        // read raw heading measurements from device
-        mag.getHeading(&mx16, &my16, &mz16);
+
         // other program behavior stuff here
         // .
         // .
@@ -213,12 +211,8 @@ void loop() {
         // .
         // .
         // .
-        if (millis() > last_time + UPDATE_RATE)
+         if (millis() > last_time + UPDATE_RATE)
          { 
-               Now = micros();
-               deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
-               lastUpdate = Now;
-               MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180*250.0f/32768.0, gy*PI/180.0*250.0f/32768.0, gz*PI/180.0*250.0f/32768.0,  mx,  my,  mz);
                sendData();
                last_time = millis();
          }
@@ -259,8 +253,8 @@ void loop() {
         Serial.print("\t");
         Serial.print(aa.y);
         Serial.print("\t");
-        Serial.println(aa.z);
-        */
+        Serial.println(aa.z);*/
+        
         // display real acceleration, adjusted to remove gravity
         mpu.dmpGetGyro(rr, fifoBuffer);
         gx = rr[0];
@@ -274,20 +268,29 @@ void loop() {
         Serial.print("\t");
         Serial.println(rr[2]);
         */
+        
+        // read raw heading measurements from device
+        mag.getHeading(&mx16, &my16, &mz16);
+        mx16-=60;
+        my16-=261;
+        mz16+=334;
         mx = mx16;
         my = my16;
         mz = mz16;
-        /*
-        Serial.print("m\t");
+        
+        /*Serial.print("m\t");
         Serial.print(mx);
         Serial.print("\t");
         Serial.print(my);
         Serial.print("\t");
-        Serial.println(mz);
-        */
-        // blink LED to indicate activity
-        blinkState = !blinkState;
-        digitalWrite(LED_PIN, blinkState);
+        Serial.println(mz);*/
+        
+        Now = micros();
+        deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
+        lastUpdate = Now;
+        MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180*250.0f/32768.0*100, gy*PI/180.0*250.0f/32768.0*100, gz*PI/180.0*250.0f/32768.0*100,  mx,  my,  mz);
+        
+
     }
 }
 void sendData()
@@ -302,5 +305,8 @@ void sendData()
     Serial.print(qq[3]*10000);
     Serial.print(", ");
     Serial.println("");
+    // blink LED to indicate activity
+    blinkState = !blinkState;
+    digitalWrite(LED_PIN, blinkState);
         
 }

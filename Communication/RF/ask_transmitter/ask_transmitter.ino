@@ -7,8 +7,8 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-RH_ASK driver;
-
+RH_ASK driver(4800, 11, 12);
+//Transmitter : ATAD D12
 void setup()
 {
     Serial.begin(9600);	  // Debugging only

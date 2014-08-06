@@ -248,7 +248,7 @@ void loop()
 
   process();
   
-  power1 = -alphaSigned1*127;
+  power1 = alphaSigned1*127;
   power2 = -alphaSigned2*127;
   ST.motor(1, power1);
   ST.motor(2, power2);
@@ -257,15 +257,18 @@ void loop()
   {
     //lastWriteTime = millis();
     
-    Serial.print(alphaSigned1);
+    Serial.print((alphaSigned1+1)*512);
     Serial.print(", ");
-    Serial.print(alphaSigned2);
+    Serial.print((alphaSigned2+1)*512);
     Serial.print(", ");
-    Serial.print(Input1);
+    Serial.print((Input1+1)*512);
     Serial.print(", ");
-    Serial.print(Input2);
+    Serial.print((Input2+1)*512);
+    Serial.print(", ");
+    Serial.print(Input3);
     Serial.print(", ");
     Serial.println(Input3);
+    
     //isConnectionAlive = false;
     isFeedbackRequested = false;
     digitalWrite(ledPin, LOW);
@@ -396,11 +399,11 @@ void computeFeedback()
   
   // read the analog in value:
   double raw_angle = analogRead(potPin)/1024.0*potentiometerMaxRange;
-  double neutralAngle = 0.8*potentiometerMaxRange;
+  double neutralAngle = 0.75*potentiometerMaxRange;
   double angle = raw_angle - neutralAngle;
   double correction_m = angle*potentiometerDistance;
   Input1 = angle/potentiometerUsedRange;
-  Input2 = absolute_position_m/linearRange;
+  Input2 = relative_position_m/linearRange;
   Input3 = analogRead(tensionPin);
   //Serial.print("P");
   //Serial.println(Input1);
@@ -431,7 +434,7 @@ void process()
   }
   if (myPID2.GetMode() ==AUTOMATIC)
   {
-    double offset_m = -0.02;
+    double offset_m = -0.0;
     Setpoint2 = StrToFloat(setpos2.value()) + offset_m/linearRange;
     myPID2.Compute();
     alphaSigned2 = Output2;

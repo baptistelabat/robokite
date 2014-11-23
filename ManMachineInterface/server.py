@@ -38,7 +38,7 @@ clients = [] # Stores the web client which are connected.
 global kite
 
 kite = simpleTrack.Kite()
-#cv_thread = threading.Thread(None, simpleTrack.Kite.track, None, (kite,))
+cv_thread = threading.Thread(None, simpleTrack.Kite.track, None, (kite,))
 try:
   cv_thread.start()
   print "Kite sensors properly initialised"
@@ -46,7 +46,7 @@ except:
   print "No kite sensors"
 
 def computeXORChecksum(chksumdata):
-    # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
     csum = 0
     
@@ -82,37 +82,37 @@ def updateSerial():
     global alpha1
     global alpha2
     global ser
-    
+	
     try:
-        # Send an in house proprietary message
-        # 0: stands for open-source (by contradiction to P, which stands for proprietary!)
-        # R: stands for robokite, the name of the project
-        # PWM: stands for Pulse Width Modulation, the way the motor is controlled.
-        msg = "ORPW1" + "," + str(alpha1)
-        msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
-        print "Send " + msg
-        ser.write(msg)
-        
-        msg = "ORPW2" + "," + str(alpha2)
-        msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
-        print "Send " + msg
-        ser.write(msg)
+		# Send an in house proprietary message
+		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
+		# R: stands for robokite, the name of the project
+		# PWM: stands for Pulse Width Modulation, the way the motor is controlled.
+		msg = "ORPW1" + "," + str(alpha1)
+		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "Send " + msg
+		ser.write(msg)
+		
+		msg = "ORPW2" + "," + str(alpha2)
+		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "Send " + msg
+		ser.write(msg)
     except Exception, e:
         print("Serial exception: " + str(e))
         
 def updateFeedback():
     global ser
     global kite
-    
+	
     try:
-        # Send an in house proprietary message
-        # 0: stands for open-source (by contradiction to P, which stands for proprietary!)
-        # R: stands for robokite, the name of the project
-        # POS: stands for POSition
-        msg = "ORKST"+","+str(np.round(np.rad2deg(kite.orientation), 1))+","+str(np.round(np.rad2deg(kite.elevation), 1))+","+str(np.round(np.rad2deg(kite.bearing),1))
-        msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
-        print "Send " + msg
-        ser.write(msg)
+		# Send an in house proprietary message
+		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
+		# R: stands for robokite, the name of the project
+		# POS: stands for POSition
+		msg = "ORKST"+","+str(np.round(np.rad2deg(kite.orientation), 1))+","+str(np.round(np.rad2deg(kite.elevation), 1))+","+str(np.round(np.rad2deg(kite.bearing),1))
+		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		print "Send " + msg
+		ser.write(msg)
     except Exception, e:
         print("Serial exception: " + str(e))
         

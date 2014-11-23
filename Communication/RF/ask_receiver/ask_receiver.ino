@@ -32,7 +32,7 @@ void loop()
 	// Message with a good checksum received, dump it.
 	//driver.printBuffer("Got:", buf, buflen);
         for (byte i = 0; i < buflen; i++) // Si il n'est pas corrompu on l'affiche via Serial
-	    //Serial.println(buf[i]);
+	    Serial.print(buf[i]);
             SensorMsg1[i] = char(buf[i]);
         //Serial.println("");
         SensorMsg1[buflen] = '\0';       

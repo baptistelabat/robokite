@@ -7,7 +7,7 @@ import datetime
 cv2.namedWindow("preview")
 
 # Video feed created with android ip webcam program
-vc = cv2.VideoCapture("http://localhost:8080?something.mjpeg")
+vc = cv2.VideoCapture("http://192.168.1.25:8080/videofeed?something.mjpeg")
 
 # Save output video
 width, height = 640, 480

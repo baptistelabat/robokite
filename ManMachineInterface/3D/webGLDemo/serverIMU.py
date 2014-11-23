@@ -35,7 +35,7 @@ def openSerial():
   for device in locations:
     try:
       print "Trying...",device
-      ser = serial.Serial(device, baudrate=9600, timeout=1)
+      ser = serial.Serial(device, baudrate=115200, timeout=1)
       print "Connected on ", device
       time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
       # An alternative would be to listen to a message from the arduino saying it is ready

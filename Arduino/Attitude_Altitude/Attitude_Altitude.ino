@@ -1,9 +1,9 @@
-// Note that MPU6050_6Axis_MotionApps20.h had to be modified to reduce fifo fill rate
+ // Note that MPU6050_6Axis_MotionApps20.h had to be modified to reduce fifo fill rate
 
-#include <RH_ASK.h>
+//#include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-RH_ASK driver(4000, 11, 12);
+//RH_ASK driver(4000, 11, 12);
 
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -18,6 +18,23 @@ RH_ASK driver(4000, 11, 12);
 
 
 #define MOVAVG_SIZE 32
+float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+float qq[4] = {1.0f, 0.0f, 0.0f, 0.0f};
+float eInt[3] = {0.0f, 0.0f, 0.0f}; 
+// global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
+#define GyroMeasError PI * (40.0f / 180.0f)      // gyroscope measurement error in rads/s (shown as 40 deg/s)
+#define GyroMeasDrift PI * (2.0f / 180.0f)       // gyroscope measurement drift in rad/s/s (shown as 2.0 deg/s/s)
+#define beta sqrt(3.0f / 4.0f) * GyroMeasError   // compute beta
+#define zeta sqrt(3.0f / 4.0f) * GyroMeasDrift   // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
+#define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
+#define Ki 0.0f
+
+float deltat = 0.0f;        // integration interval for both filter schemes
+
+uint32_t lastUpdate = 0; // used to calculate integration interval
+uint32_t Now = 0;        // used to calculate integration interval
+
+
 
 // class default I2C address is 0x1E
 // specific I2C addresses may be passed as a parameter here
@@ -37,7 +54,7 @@ MPU6050 mpu(0x69); // <-- use for AD0 high
 // components with gravity removed and adjusted for the world frame of
 // reference (yaw is relative to initial orientation, since no magnetometer
 // is present in this case). Could be quite handy in some cases.
-#define OUTPUT_READABLE_WORLDACCEL
+//#define OUTPUT_READABLE_WORLDACCEL
 
 
 ///******* Acc+gyro
@@ -45,7 +62,7 @@ MPU6050 mpu(0x69); // <-- use for AD0 high
 bool blinkState = false;
 
 // Magneto
-int16_t mx, my, mz;
+int16_t mx16, my16, mz16;
 float heading;
 
 // MPU control/status vars
@@ -58,9 +75,10 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
 Quaternion q;           // [w, x, y, z]         quaternion container
-VectorInt16 aa;         // [x, y, z]            accel sensor measurements
-VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+int32_t aa[3];         // [x, y, z]            accel sensor measurements
+int32_t rr[3];         // [x, y, z]            accel sensor measurements
+//VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+//VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
@@ -98,7 +116,7 @@ Attitude attitude;
 
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
 void dmpDataReady() {
-    mpuInterrupt = true;
+    mpuInterrupt = true;  
 }
 
 // ================================================================
@@ -122,16 +140,17 @@ void setup() {
     // 38400 or slower in these cases, or use some kind of external separate
     // crystal solution for the UART timer.
     
+    /*
     Serial.println(F("Initializing Barometer..."));
     // Suppose that the CSB pin is connected to GND.
     // You'll have to check this on your breakout schematics
-//    baro.init(MS561101BA_ADDR_CSB_LOW); 
+    baro.init(MS561101BA_ADDR_CSB_LOW); 
     delay(100);
-  
+    
     // populate movavg_buff before starting loop
     for(int i=0; i<MOVAVG_SIZE; i++) {
-    //movavg_buff[i] = baro.getPressure(MS561101BA_OSR_4096);
-    }  
+    movavg_buff[i] = baro.getPressure(MS561101BA_OSR_4096);
+    }  */
 
     // initialize device
     Serial.println(F("Initializing Gyro+Acc..."));
@@ -189,8 +208,8 @@ void setup() {
     //Allow to get magnetometer data
     mpu.setI2CMasterModeEnabled(0);
     mpu.setI2CBypassEnabled(1);
-    if (!driver.init())
-         Serial.println("init failed");
+    //if (!driver.init())
+    //     Serial.println("init failed");
 }
 
 
@@ -210,14 +229,15 @@ void loop() {
     while (!mpuInterrupt && fifoCount < packetSize) {
       
         // read raw heading measurements from device
-        mag.getHeading(&mx, &my, &mz);
+        mag.getHeading(&mx16, &my16, &mz16);
         // To calculate heading in degrees. 0 degree indicates North
-        heading = atan2(my, mx);
+        heading = atan2(my16, mx16);
         if(heading < 0)
           heading += 2 * M_PI;
-            
+          
+        /*    
         // other program behavior stuff here        
-        /*float temperature = baro.getTemperature(MS561101BA_OSR_4096);
+        float temperature = baro.getTemperature(MS561101BA_OSR_4096);
         if(temperature) { temp = temperature;   }
         attitude.t = temp*100;
         //Serial.print(" temp: "); Serial.print(temp);
@@ -229,12 +249,17 @@ void loop() {
         //Serial.print(" degC pres: "); Serial.print(press);//
         
         float altitude = getAltitude(press, temp);
-        attitude.h = altitude;
+        attitude.h = altitude;*/
         //Serial.print(" mbar altitude: "); Serial.print(altitude); Serial.println(" m");
-        */
-        if (millis() > last_time +UPDATE_RATE)
-         { sendData();
-           last_time = millis();
+        
+        if (millis() > last_time + UPDATE_RATE)
+         { 
+               Now = micros();
+               deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
+               lastUpdate = Now;
+               MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  -mx,  -mz);
+               sendData();
+               last_time = millis();
          }
        
        // enf of other programm behavior
@@ -264,7 +289,7 @@ void loop() {
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
-             
+        
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
@@ -272,23 +297,25 @@ void loop() {
             attitude.u = ypr[0] * 180/M_PI*100;
             attitude.v = ypr[1] * 180/M_PI*100;
             attitude.w = ypr[2] * 180/M_PI*100;
-            /*Serial.print("ypr\t");  Serial.print(ypr[0] * 180/M_PI);
-            Serial.print("\t");  Serial.print(ypr[1] * 180/M_PI);
-            Serial.print("\t"); Serial.println(ypr[2] * 180/M_PI);*/
-                
-            // display initial world-frame acceleration, adjusted to remove gravity
-            // and rotated based on known orientation from quaternion
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetAccel(&aa, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-            attitude.x = aaWorld.x;
-            attitude.y = aaWorld.y;
-            attitude.z = aaWorld.z;
-            /*Serial.print("aworld\t");  Serial.print(aaWorld.x);
-            Serial.print("\t");  Serial.print(aaWorld.y);
-            Serial.print("\t");  Serial.println(aaWorld.z);*/
+             
+        mpu.dmpGetAccel(aa, fifoBuffer);
+        ax = aa[0];
+        ay = aa[1];
+        az = aa[2];
+        mpu.dmpGetGyro(rr, fifoBuffer);
+        gx = rr[0];
+        gy = rr[1];
+        gz = rr[2];
+        
+        mx = mx16;
+        my = my16;
+        mz = mz16;
+
+      
+        Now = micros();
+        deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
+        lastUpdate = Now;
+        //MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  -mx,  -mz);
            
         // blink LED to indicate activity
         blinkState = !blinkState;
@@ -320,9 +347,34 @@ void sendData()
 {
   //Sending data to gbase
         char SensorMsg1[7];   
-        itoa(int(heading * 180/M_PI), SensorMsg1,10);
+        /*itoa(int(heading * 180/M_PI), SensorMsg1,10);
         Serial.print("heading:\t");
         Serial.println(heading * 180/M_PI);
+        */
+        /*
+        sprintf(SensorMsg1,"%c%d",'ax',ax);
+        Serial.println(ax);
+        sprintf(SensorMsg1,"%c%d",'ay',ay);
+        Serial.println(ay);
+        sprintf(SensorMsg1,"%c%d",'az',az);
+        Serial.println(az);
+        */
+        /*
+        sprintf(SensorMsg1,"%c%d",'mx',mx);
+        Serial.println(SensorMsg1);
+        sprintf(SensorMsg1,"%c%d",'my',my);
+        Serial.println(SensorMsg1);
+        sprintf(SensorMsg1,"%c%d",'mz',mz);
+        Serial.println(SensorMsg1);
+        */
+        
+        sprintf(SensorMsg1,"%c%d",'gx',gx);
+        Serial.println(SensorMsg1);
+        sprintf(SensorMsg1,"%c%d",'gy',gy);
+        Serial.println(SensorMsg1);
+        sprintf(SensorMsg1,"%c%d",'gz',gz);
+        Serial.println(SensorMsg1);
+        
         
         sprintf(SensorMsg1,"%c%d",'u',attitude.u);
         Serial.println(SensorMsg1);
@@ -336,38 +388,41 @@ void sendData()
         
         sprintf(SensorMsg1,"%c%d",'w',attitude.w);
         Serial.println(SensorMsg1);
+        ///driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        //driver.waitPacketSent();
+        
+        //sprintf(SensorMsg1,"%c%d",'x',attitude.x);
+        //Serial.println(SensorMsg1);
         //driver.send((uint8_t *)SensorMsg1, strlen(msg));
         //driver.waitPacketSent();
         
-        sprintf(SensorMsg1,"%c%d",'x',attitude.x);
-        Serial.println(SensorMsg1);
+//        sprintf(SensorMsg1,"%c%d",'y',attitude.y);
+//        Serial.println(SensorMsg1);
+//        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+//        //driver.waitPacketSent();
+//        
+//        sprintf(SensorMsg1,"%c%d",'z',attitude.z);
+//        Serial.println(SensorMsg1);
         //driver.send((uint8_t *)SensorMsg1, strlen(msg));
         //driver.waitPacketSent();
         
-        sprintf(SensorMsg1,"%c%d",'y',attitude.y);
-        Serial.println(SensorMsg1);
-        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        // Altitude
+//        sprintf(SensorMsg1,"%c%d",'h',attitude.h);
+//        Serial.println(SensorMsg1);
+//        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
+//        driver.waitPacketSent();
+        
+        // Pressure
+        //sprintf(SensorMsg1,"%c%d",'p',attitude.p);
+        //Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
         //driver.waitPacketSent();
         
-        sprintf(SensorMsg1,"%c%d",'z',attitude.z);
-        Serial.println(SensorMsg1);
-        //driver.send((uint8_t *)SensorMsg1, strlen(msg));
+        // Temperature
+        //sprintf(SensorMsg1,"%c%d",'t',attitude.t);
+        //Serial.println(SensorMsg1);
+        //driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
         //driver.waitPacketSent();
-        
-        sprintf(SensorMsg1,"%c%d",'h',attitude.h);
-        Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
-        driver.waitPacketSent();
-        
-        sprintf(SensorMsg1,"%c%d",'p',attitude.p);
-        Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
-        driver.waitPacketSent();
-        
-        sprintf(SensorMsg1,"%c%d",'t',attitude.t);
-        Serial.println(SensorMsg1);
-        driver.send((uint8_t *)SensorMsg1, strlen(SensorMsg1));
-        driver.waitPacketSent();
         
         Serial.println();
   

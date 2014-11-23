@@ -47,10 +47,6 @@ The LSM9DS0 has a maximum voltage of 3.5V. Make sure you power it
 off the 3.3V rail! And either use level shifters between SCL
 and SDA or just use a 3.3V Arduino Pro.	  
 
-In addition, this sketch uses a Nokia 5110 48 x 84 pixel display which requires 
-digital pins 5 - 9 described below. If using SPI you might need to press one of the A0 - A3 pins
-into service as a digital input instead.
-
 Development environment specifics:
 	IDE: Arduino 1.0.5
 	Hardware Platform: Arduino Pro 3.3V/8MHz
@@ -68,7 +64,7 @@ Distributed as-is; no warranty is given.
 #include "MPU6050_9Axis_MotionApps41.h"
 
 // Declare device MPU6050 class
-MPU6050 mpu;
+MPU6050 mpu(0x69);
 
 // global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
 #define GyroMeasError PI * (40.0f / 180.0f)       // gyroscope measurement error in rads/s (shown as 3 deg/s)
@@ -101,20 +97,21 @@ float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor dat
 float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};    // vector to hold quaternion
 float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for Mahony method
 
-
 void setup()
 {
-  Serial.begin(38400); // Start serial at 38400 bps
+  // join I2C bus (I2Cdev library doesn't do this automatically)
+  Wire.begin();
+  Serial.begin(57600); // Start serial at 57600 bps
 
   delay(2000);            
 
-    // initialize MPU6050 device
-    Serial.println(F("Initializing I2C devices..."));
-    mpu.initialize();
+  // initialize MPU6050 device
+  Serial.println(F("Initializing I2C devices..."));
+  mpu.initialize();
 
-    // verify connection
-    Serial.println(F("Testing device connections..."));
-    Serial.println(mpu.testConnection() ? F("MPU9150 connection successful") : F("MPU9150 connection failed"));
+  // verify connection
+  Serial.println(F("Testing device connections..."));
+  Serial.println(mpu.testConnection() ? F("MPU9150 connection successful") : F("MPU9150 connection failed"));
 
 // Set up the accelerometer, gyro, and magnetometer for data output
 
@@ -154,7 +151,7 @@ void setup()
 
 void loop()
 {
-         if(mpu.getIntDataReadyStatus() == 1) { // wait for data ready status register to update all data registers
+    if(mpu.getIntDataReadyStatus() == 1) { // wait for data ready status register to update all data registers
             mcount++;
            // read the raw sensor data
             mpu.getAcceleration  ( &a1, &a2, &a3  );

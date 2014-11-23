@@ -66,16 +66,6 @@ Distributed as-is; no warranty is given.
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU6050_9Axis_MotionApps41.h"
-#include <Adafruit_GFX.h>
-#include <Adafruit_PCD8544.h>
-
-// Using NOKIA 5110 monochrome 84 x 48 pixel display
-// pin 9 - Serial clock out (SCLK)
-// pin 8 - Serial data out (DIN)
-// pin 7 - Data/Command select (D/C)
-// pin 5 - LCD chip select (CS)
-// pin 6 - LCD reset (RST)
-Adafruit_PCD8544 display = Adafruit_PCD8544(9, 8, 7, 5, 6);
 
 // Declare device MPU6050 class
 MPU6050 mpu;
@@ -115,28 +105,8 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for M
 void setup()
 {
   Serial.begin(38400); // Start serial at 38400 bps
- 
-  display.begin(); // Initialize the display
-  display.setContrast(58); // Set the contrast
-  display.setRotation(0); //  0 or 2) width = width, 1 or 3) width = height, swapped etc.
-  
-// Start device display with ID of sensor
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setCursor(0,0);  display.print("MPU9150");
-  display.setTextSize(1);
-  display.setCursor(0, 20); display.print("9 DOF sensor");
-  display.setCursor(0, 30); display.print("data fusion");
-  display.setCursor(20, 40); display.print("AHRS");
-  display.display();
-  delay(2000);
 
-// Set up for data display
-  display.setTextSize(1); // Set text size to normal, 2 is twice normal etc.
-  display.setTextColor(BLACK); // Set pixel color; 1 on the monochrome screen
-  display.clearDisplay();   // clears the screen and buffer
-  display.display();
-            
+  delay(2000);            
 
     // initialize MPU6050 device
     Serial.println(F("Initializing I2C devices..."));
@@ -271,30 +241,7 @@ void loop()
     
     Serial.print("rate = "); Serial.print((float)1.0f/deltat, 2); Serial.println(" Hz");
 
-    display.clearDisplay();
-     
- 
-    display.setCursor(0, 0); display.print(" x   y   z  ");
-
-    display.setCursor(0,  8); display.print((int)(1000*ax)); 
-    display.setCursor(24, 8); display.print((int)(1000*ay)); 
-    display.setCursor(48, 8); display.print((int)(1000*az)); 
-    display.setCursor(72, 8); display.print("mg");
     
-    display.setCursor(0,  16); display.print((int)(gx)); 
-    display.setCursor(24, 16); display.print((int)(gy)); 
-    display.setCursor(48, 16); display.print((int)(gz)); 
-    display.setCursor(66, 16); display.print("o/s");    
-
-    display.setCursor(0,  24); display.print((int)(mx)); 
-    display.setCursor(24, 24); display.print((int)(my)); 
-    display.setCursor(48, 24); display.print((int)(mz)); 
-    display.setCursor(72, 24); display.print("mG");    
- 
-    display.setCursor(0,  32); display.print((int)(yaw)); 
-    display.setCursor(24, 32); display.print((int)(pitch)); 
-    display.setCursor(48, 32); display.print((int)(roll)); 
-    display.setCursor(66, 32); display.print("ypr");  
   
     // With these settings the filter is updating at a ~145 Hz rate using the Madgwick scheme and 
     // >200 Hz using the Mahony scheme even though the display refreshes at only 2 Hz.
@@ -307,9 +254,7 @@ void loop()
     // stabilization control of a fast-moving robot or quadcopter. Compare to the update rate of 200 Hz
     // produced by the on-board Digital Motion Processor of Invensense's MPU6050 6 DoF and MPU9150 9DoF sensors.
     // The 3.3 V 8 MHz Pro Mini is doing pretty well!
-    display.setCursor(0, 40); display.print("rt: "); display.print((1/deltat)); display.print(" Hz"); 
 
-    display.display();
     count = millis();
     }
 }

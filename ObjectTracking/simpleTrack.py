@@ -187,9 +187,7 @@ class Kite:
   # Launch a thread to get UDP message with orientation of the camera
   mobile = mobileState.mobileState()
   if isUDPConnection:
-   a = threading.Thread(None, mobileState.mobileState.checkUpdate, None, (mobile,))
-   a.start()
-
+    mobile.open()
   # Loop while not canceled by user
   t0 = time.time()
   previousTime = t0

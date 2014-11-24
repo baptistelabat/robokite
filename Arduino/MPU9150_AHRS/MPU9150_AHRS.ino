@@ -59,6 +59,11 @@ buy us a round!
 Distributed as-is; no warranty is given.
 *****************************************************************/
 
+#define USE_MAVLINK //Uncomment this line to use mavlink
+#ifdef USE_MAVLINK
+  #include "/home/bat/sketchbook/libraries/mavlink/ardupilotmega/mavlink.h"        // Mavlink interface
+#endif
+
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU6050_9Axis_MotionApps41.h"
@@ -99,9 +104,13 @@ float deltat = 0.0f;        // integration interval for both filter schemes
 uint16_t lastUpdate = 0; // used to calculate integration interval
 uint16_t now = 0;        // used to calculate integration interval
 
-float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+float ax_g, ay_g, az_g, gx_degps, gy_degps, gz_degps, mx, my, mz; // variables to hold latest sensor data values 
 float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};    // vector to hold quaternion
 float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for Mahony method
+
+uint8_t system_id = 100;
+uint8_t component_id = 200;
+long time_boot_ms;
 
 void setup()
 {
@@ -161,14 +170,14 @@ void loop()
             mcount++;
            // read the raw sensor data
             mpu.getAcceleration  ( &a1, &a2, &a3  );
-            ax = a1*2.0f/32768.0f; // 2 g full range for accelerometer
-            ay = a2*2.0f/32768.0f;
-            az = a3*2.0f/32768.0f;
+            ax_g = a1*2.0f/32768.0f; // 2 g full range for accelerometer
+            ay_g = a2*2.0f/32768.0f;
+            az_g = a3*2.0f/32768.0f;
 
             mpu.getRotation  ( &g1, &g2, &g3  );
-            gx = g1*250.0f/32768.0f; // 250 deg/s full range for gyroscope
-            gy = g2*250.0f/32768.0f;
-            gz = g3*250.0f/32768.0f;
+            gx_degps = g1*250.0f/32768.0f; // 250 deg/s full range for gyroscope
+            gy_degps = g2*250.0f/32768.0f;
+            gz_degps = g3*250.0f/32768.0f;
 //  The gyros and accelerometers can in principle be calibrated in addition to any factory calibration but they are generally
 //  pretty accurate. You can check the accelerometer by making sure the reading is +1 g in the positive direction for each axis.
 //  The gyro should read zero for each axis when the sensor is at rest. Small or zero adjustment should be needed for these sensors.
@@ -187,6 +196,7 @@ void loop()
          }
    
   now = micros();
+  time_boot_ms = now/1000;
   deltat = ((now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
   lastUpdate = now;
   // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
@@ -196,69 +206,89 @@ void loop()
   // in the LSM9DS0 sensor. This rotation can be modified to allow any convenient orientation convention.
   // This is ok by aircraft orientation standards!  
   // Pass gyro rate as rad/s
-   MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
-// MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, my, mx, mz);
+   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f,  my,  mx, mz);
+// MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 
-    // Serial print and/or display at 0.5 s rate independent of data rates
+    // Serial print and/or display at 0.05 s rate independent of data rates
     delt_t = millis() - count;
-    if (delt_t > 500) { // update LCD once per half-second independent of read rate
+    if (delt_t > 50) { //update at 20Hz
 
-    Serial.print("ax = "); Serial.print((int)1000*ax);  
-    Serial.print(" ay = "); Serial.print((int)1000*ay); 
-    Serial.print(" az = "); Serial.print((int)1000*az); Serial.println(" mg");
-    Serial.print("gx = "); Serial.print( gx, 2); 
-    Serial.print(" gy = "); Serial.print( gy, 2); 
-    Serial.print(" gz = "); Serial.print( gz, 2); Serial.println(" deg/s");
-    Serial.print("mx = "); Serial.print( (int)mx ); 
-    Serial.print(" my = "); Serial.print( (int)my ); 
-    Serial.print(" mz = "); Serial.print( (int)mz ); Serial.println(" mG");
-    
-    Serial.print("q0 = "); Serial.print(q[0]);
-    Serial.print(" qx = "); Serial.print(q[1]); 
-    Serial.print(" qy = "); Serial.print(q[2]); 
-    Serial.print(" qz = "); Serial.println(q[3]); 
-                   
-    
-  // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
-  // In this coordinate system, the positive z-axis is down toward Earth. 
-  // Yaw is the angle between Sensor x-axis and Earth magnetic North (or true North if corrected for local declination, looking down on the sensor positive yaw is counterclockwise.
-  // Pitch is angle between sensor x-axis and Earth ground plane, toward the Earth is positive, up toward the sky is negative.
-  // Roll is angle between sensor y-axis and Earth ground plane, y-axis up is positive roll.
-  // These arise from the definition of the homogeneous rotation matrix constructed from quaternions.
-  // Tait-Bryan angles as well as Euler angles are non-commutative; that is, the get the correct orientation the rotations must be
-  // applied in the correct order which for this configuration is yaw, pitch, and then roll.
-  // For more see http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles which has additional links.
-    yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
-    pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-    roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
-    pitch *= 180.0f / PI;
-    yaw   *= 180.0f / PI + LOCAL_DECLINATION_DEG; // Declination is difference between magnetic and true north
-    roll  *= 180.0f / PI;
-
-    Serial.print("Yaw, Pitch, Roll: ");
-    Serial.print(yaw, 2);
-    Serial.print(", ");
-    Serial.print(pitch, 2);
-    Serial.print(", ");
-    Serial.println(roll, 2);
-    
-    Serial.print("rate = "); Serial.print((float)1.0f/deltat, 2); Serial.println(" Hz");
-
-    
+    // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
+    // In this coordinate system, the positive z-axis is down toward Earth. 
+    // Yaw is the angle between Sensor x-axis and Earth magnetic North (or true North if corrected for local declination, looking down on the sensor positive yaw is counterclockwise.
+    // Pitch is angle between sensor x-axis and Earth ground plane, toward the Earth is positive, up toward the sky is negative.
+    // Roll is angle between sensor y-axis and Earth ground plane, y-axis up is positive roll.
+    // These arise from the definition of the homogeneous rotation matrix constructed from quaternions.
+    // Tait-Bryan angles as well as Euler angles are non-commutative; that is, the get the correct orientation the rotations must be
+    // applied in the correct order which for this configuration is yaw, pitch, and then roll.
+    // For more see http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles which has additional links.
+      yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
+      pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+      roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+      yaw = yaw + LOCAL_DECLINATION_DEG*PI/180.0f; // Declination is difference between magnetic and true north
   
-    // With these settings the filter is updating at a ~145 Hz rate using the Madgwick scheme and 
-    // >200 Hz using the Mahony scheme even though the display refreshes at only 2 Hz.
-    // The filter update rate is determined mostly by the mathematical steps in the respective algorithms, 
-    // the processor speed (8 MHz for the 3.3V Pro Mini), and the magnetometer ODR:
-    // an ODR of 10 Hz for the magnetometer produce the above rates, maximum magnetometer ODR of 100 Hz produces
-    // filter update rates of 36 - 145 and ~38 Hz for the Madgwick and Mahony schemes, respectively. 
-    // This is presumably because the magnetometer read takes longer than the gyro or accelerometer reads.
-    // This filter update rate should be fast enough to maintain accurate platform orientation for 
-    // stabilization control of a fast-moving robot or quadcopter. Compare to the update rate of 200 Hz
-    // produced by the on-board Digital Motion Processor of Invensense's MPU6050 6 DoF and MPU9150 9DoF sensors.
-    // The 3.3 V 8 MHz Pro Mini is doing pretty well!
-
-    count = millis();
+#ifdef USE_MAVLINK
+      // Initialize the required buffers 
+      mavlink_message_t msg; 
+      uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+      mavlink_msg_heartbeat_pack(system_id, component_id, &msg, MAV_TYPE_KITE, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+      uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      
+      //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+      // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
+      mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      
+      mavlink_msg_scaled_imu_pack(system_id, component_id, &msg, time_boot_ms, ax_g*1000, ay_g*1000, az_g*1000, gx_degps*PI/180.0f*1000, gy_degps*PI/180.0f*1000, gz_degps*PI/180.0f*1000, mx, my, mz);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      //static inline uint16_t mavlink_msg_attitude_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+      //  uint32_t time_boot_ms, float roll, float pitch, float yaw, float rollspeed, float pitchspeed, float yawspeed)
+      mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      
+#else
+      Serial.print("ax = "); Serial.print((int)1000*ax_g);  
+      Serial.print(" ay = "); Serial.print((int)1000*ay_g); 
+      Serial.print(" az = "); Serial.print((int)1000*az_g); Serial.println(" mg");
+      Serial.print("gx = "); Serial.print( gx_degps, 2); 
+      Serial.print(" gy = "); Serial.print( gy_degps, 2); 
+      Serial.print(" gz = "); Serial.print( gz_degps, 2); Serial.println(" deg/s");
+      Serial.print("mx = "); Serial.print( (int)mx ); 
+      Serial.print(" my = "); Serial.print( (int)my ); 
+      Serial.print(" mz = "); Serial.print( (int)mz ); Serial.println(" mG");
+      
+      Serial.print("q0 = "); Serial.print(q[0]);
+      Serial.print(" qx = "); Serial.print(q[1]); 
+      Serial.print(" qy = "); Serial.print(q[2]); 
+      Serial.print(" qz = "); Serial.println(q[3]); 
+      Serial.print("Yaw, Pitch, Roll: ");
+      Serial.print(yaw*180.0f / PI, 2);
+      Serial.print(", ");
+      Serial.print(pitch*180.0f / PI, 2);
+      Serial.print(", ");
+      Serial.println(roll*180.0f / PI, 2);
+      
+      Serial.print("rate = "); Serial.print((float)1.0f/deltat, 2); Serial.println(" Hz");
+#endif
+      
+    
+      // With these settings the filter is updating at a ~145 Hz rate using the Madgwick scheme and 
+      // >200 Hz using the Mahony scheme even though the display refreshes at only 2 Hz.
+      // The filter update rate is determined mostly by the mathematical steps in the respective algorithms, 
+      // the processor speed (8 MHz for the 3.3V Pro Mini), and the magnetometer ODR:
+      // an ODR of 10 Hz for the magnetometer produce the above rates, maximum magnetometer ODR of 100 Hz produces
+      // filter update rates of 36 - 145 and ~38 Hz for the Madgwick and Mahony schemes, respectively. 
+      // This is presumably because the magnetometer read takes longer than the gyro or accelerometer reads.
+      // This filter update rate should be fast enough to maintain accurate platform orientation for 
+      // stabilization control of a fast-moving robot or quadcopter. Compare to the update rate of 200 Hz
+      // produced by the on-board Digital Motion Processor of Invensense's MPU6050 6 DoF and MPU9150 9DoF sensors.
+      // The 3.3 V 8 MHz Pro Mini is doing pretty well!
+  
+      count = millis();
     }
 }
 

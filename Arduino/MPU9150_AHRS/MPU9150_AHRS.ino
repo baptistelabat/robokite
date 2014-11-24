@@ -115,7 +115,7 @@ void setup()
 
 // Set up the accelerometer, gyro, and magnetometer for data output
 
-   mpu.setRate(7); // set gyro rate to 8 kHz/(1 * rate) shows 1 kHz, accelerometer ODR is fixed at 1 KHz
+   mpu.setRate(7); // set gyro rate to 8 kHz/(1 + rate) shows 1 kHz, accelerometer ODR is fixed at 1 KHz
 
    MagRate = 10; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are reasonable values
 
@@ -226,7 +226,7 @@ void loop()
     pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
     roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
     pitch *= 180.0f / PI;
-    yaw   *= 180.0f / PI - 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+    yaw   *= 180.0f / PI - 3; // Declination at Nantes, France is around 3 degrees in 2014
     roll  *= 180.0f / PI;
 
     Serial.print("Yaw, Pitch, Roll: ");

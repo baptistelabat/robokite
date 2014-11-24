@@ -63,6 +63,12 @@ Distributed as-is; no warranty is given.
 #include "I2Cdev.h"
 #include "MPU6050_9Axis_MotionApps41.h"
 
+// Define corrections/offsets for magnetometer
+#define LOCAL_DECLINATION_DEG -3 //at Nantes, France is around 3 degrees in 2014
+#define MAG_X_OFFSET 18.0f
+#define MAG_Y_OFFSET 70.0f
+#define MAG_Z_OFFSET 270.0f
+
 // Declare device MPU6050 class
 MPU6050 mpu(0x69);
 
@@ -173,9 +179,9 @@ void loop()
 //  compared to the gyro and accelerometer!
             if (mcount > 1000/MagRate) {  // this is a poor man's way of setting the magnetometer read rate (see below) 
             mpu.getMag  ( &m1, &m2, &m3 );
-            mx = m1*10.0f*1229.0f/4096.0f + 18.0f; // milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
-            my = m2*10.0f*1229.0f/4096.0f + 70.0f; // apply calibration offsets in mG that correspond to your environment and magnetometer
-            mz = m3*10.0f*1229.0f/4096.0f + 270.0f;
+            mx = m1*10.0f*1229.0f/4096.0f + MAG_X_OFFSET; // milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
+            my = m2*10.0f*1229.0f/4096.0f + MAG_Y_OFFSET; // apply calibration offsets in mG that correspond to your environment and magnetometer
+            mz = m3*10.0f*1229.0f/4096.0f + MAG_Z_OFFSET;
             mcount = 0;
             }           
          }
@@ -226,7 +232,7 @@ void loop()
     pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
     roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
     pitch *= 180.0f / PI;
-    yaw   *= 180.0f / PI - 3; // Declination at Nantes, France is around 3 degrees in 2014
+    yaw   *= 180.0f / PI + LOCAL_DECLINATION_DEG; // Declination is difference between magnetic and true north
     roll  *= 180.0f / PI;
 
     Serial.print("Yaw, Pitch, Roll: ");

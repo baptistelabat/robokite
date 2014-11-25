@@ -32,3 +32,5 @@ master = mavutil.mavlink_connection(args.device, baud=args.baudrate, source_syst
 # wait for the heartbeat msg to find the system ID
 while True:
   wait_heartbeat(master)
+  msg = master.recv_match(type='GPS_RAW_INT', blocking=False)
+  print msg

@@ -50,17 +50,20 @@ locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/t
 baudrate = 57600
 
 ORDER_SAMPLE_TIME = 0.01 #seconds Sample time to send order without overwhelming arduino
-# Define the NMEA message in use
-msg1 = NMEA("PW1", 0, "OR") # Order to first motor
-msg2 = NMEA("PW2", 0, "OR") # Order to second motor
-mfb  = NMEA("FBR", 0, "OR") # Feedback request
-
-power1 = 0
-power2 = 0
 
 MANUAL = 0
 AUTO   = 1
-mode = MANUAL
+global msg1, msg2, mfb, power1, power2
+def resetOrder():
+  global msg1, msg2, mfb, power1, power2, mode
+  # Define the NMEA message in use
+  msg1 = NMEA("PW1", 0, "OR") # Order to first motor
+  msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+  mfb  = NMEA("FBR", 0, "OR") # Feedback request
+
+  power1 = 0
+  power2 = 0
+  mode = 0
 
 # Use pygame for the joystick
 pygame.init()
@@ -78,7 +81,7 @@ while True:
     for device in locations:
       try:
         print "Trying...", device
-        
+        resetOrder()
         # This is necessary to unsure automatic reconnection after disconnection
         os.system("stty -F "+ device + " " + str(baudrate) + " cs8 cread clocal")
         
@@ -104,6 +107,7 @@ while True:
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
          print "No joystick event for x seconds, trying reconnection"
          last_event_time = time.time()
+         resetOrder()
          pygame.quit()
          pygame.init()
          pygame.joystick.init()

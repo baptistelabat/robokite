@@ -6,19 +6,24 @@
 # Licensed under the MIT License,
 # https://github.com/baptistelabat/robokite
 # Authors: Baptiste LABAT
+#
+# This script order from a USB joystick and send them to an arduino board
+# using NMEA messages for robustness
+# Press first button to switch to manual order
+# Press second button to switch to automatic order
+#
+# Warning: the joystick has to be in neutral position when plugged,
+# otherwise it might be badly initialized
+#
+# Supports automatic reconnection of joystick and serial connection
+# Only tested on ubuntu 14.04
+
 import time
 import serial
 import numpy as np
 import pygame
 from pygame.locals import *
-
-pygame.init()
-fenetre = pygame.display.set_mode((300,300))
-
-pygame.joystick.init()
-nb_joysticks = pygame.joystick.get_count()
-mon_joystick = pygame.joystick.Joystick(0)
-mon_joystick.init() #Initialisation
+import os
 
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -33,92 +38,134 @@ def computeXORChecksum(chksumdata):
         # and stores the new XOR value in csum
         csum ^= ord(c)
     h = hex(csum)    
-    return h[2:].zfill(2)#get hex data without 0x prefix
+    return h[2:].zfill(2)# Get hex data without 0x prefix
     
 def NMEA(message_type, value, talker_id= "OR"):
   msg = talker_id + message_type +","+ str(value)
-  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii')
+  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii') + chr(10).encode('ascii')
   return msg
-  
 
-    
+# Parameters for the serial connection
+locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
+baudrate = 57600
 
-dt = 0.01
-locations=['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
-msg1 = NMEA("PW1", 0.00, "OR")
-msg2 = NMEA("PW2", 0.00, "OR")
-mfb = NMEA("FBR", 0, "OR")
-alpha1 = 0
-alpha2 = 0
-MANUAL=0
-AUTO=1
+ORDER_SAMPLE_TIME = 0.01 #seconds Sample time to send order without overwhelming arduino
+# Define the NMEA message in use
+msg1 = NMEA("PW1", 0, "OR") # Order to first motor
+msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+mfb  = NMEA("FBR", 0, "OR") # Feedback request
+
+power1 = 0
+power2 = 0
+
+MANUAL = 0
+AUTO   = 1
 mode = MANUAL
+
+# Use pygame for the joystick
+pygame.init()
+"""pygame.joystick.init()
+nb_joysticks = pygame.joystick.get_count()
+if nb_joysticks > 0:
+  mon_joystick = pygame.joystick.Joystick(0)
+else:
+    raise Exception("No joystick detected")
+mon_joystick.init() #Initialisation
+"""
+JOY_RECONNECT_TIME = 2 #seconds
 
 while True:
     for device in locations:
       try:
         print "Trying...", device
-        ser = serial.Serial(device, baudrate=19200, timeout=1)
+        
+        # This is necessary to unsure automatic reconnection after disconnection
+        os.system("stty -F "+ device + " " + str(baudrate) + " cs8 cread clocal")
+        
+        # Note that by default arduino is restarting on serial connection
+        ser = serial.Serial(device, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
         print "Connected on ", device
         break
       except:
         print "Failed to connect on ", device
+    # Wait so that arduino is fully awoken
     time.sleep(1.5)
     try:
         ser.write('i1')
     except:
         print "Can not write i1"
-        ser.close()
+        
+    # Reset the timer    
     t0 = time.time()
-
+    last_event_time = 0
 
     while True:
+      # Deals with joystick deconnection and reconnection      
+      if time.time()-last_event_time > JOY_RECONNECT_TIME:
+         print "No joystick event for x seconds, trying reconnection"
+         last_event_time = time.time()
+         pygame.quit()
+         pygame.init()
+         pygame.joystick.init()
+         actual_nb_joysticks = pygame.joystick.get_count()
+         print actual_nb_joysticks
+         if actual_nb_joysticks > 0:
+            mon_joystick = pygame.joystick.Joystick(0)
+            mon_joystick.init()
+            nb_joysticks = actual_nb_joysticks
+            print "Joystick reinit"
+            
       for event in pygame.event.get():
+        last_event_time = time.time()
         if event.type == JOYBUTTONDOWN:
             if event.button == 0:
                 mode = MANUAL
                 print "MANUAL"
-                msg1 = NMEA("PW1", alpha1, "OR")
-                msg2 = NMEA("PW2", alpha2, "OR")
+                msg1 = NMEA("PW1", power1, "OR")
+                msg2 = NMEA("PW2", power2, "OR")
             if event.button == 1:
                 mode = AUTO
                 print "AUTO"
-                msg1 = NMEA("SP1", alpha1, "OR")
-                msg2 = NMEA("SP2", alpha2, "OR")
+                msg1 = NMEA("SP1", power1, "OR")
+                msg2 = NMEA("SP2", power2, "OR")
             
         if event.type == JOYAXISMOTION:
           if event.axis == 2:
             #print "power control ", event.value
-            alpha1 = np.round(event.value, 2)
+            power1 = int(event.value*127)
             if mode == MANUAL:
-                msg1 = NMEA("PW1", alpha1, "OR")
+                msg1 = NMEA("PW1", power1, "OR")
             if mode == AUTO:
-                msg1 = NMEA("SP1", alpha1, "OR")
+                msg1 = NMEA("SP1", power1, "OR")
           if event.axis == 3:
             #print "direction control ", event.value
-            alpha2 = np.round(event.value, 2)
+            power2 = int(event.value*127)
             if mode == MANUAL:
-                msg2 = NMEA("PW2", alpha2, "OR")
+                msg2 = NMEA("PW2", power2, "OR")
             if mode == AUTO:
-                msg2 = NMEA("SP2", alpha2, "OR")
-      if time.time()-t0 > dt:
+                msg2 = NMEA("SP2", power2, "OR")
+                
+      if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
             ser.write(msg1)
             #print msg1
             ser.write(msg2)
-            print msg2
-            t0 = time.time()
+            #print msg2
             ser.write(mfb)
             #print mfb
+            t0 = time.time()
         except:
             print "break"
+            ser.close()
             break
 
-      try: #The ressource can be temporarily unavailable
+      try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
             print "Received from arduino: ", line
       except Exception, e:
+        ser.close()
         print("Error reading from serial port" + str(e))
       
 ser.close()
+print "Closing"

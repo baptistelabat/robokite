@@ -5,6 +5,8 @@ The robokite project aims to provide an open source platform to control kites.
 
 This project started in 2013. It aims to provide tools or interface between existing tools to control big kites in a few years. Applications vary from ship propulsion to Airborne Wind Energy, through arstistic control.
 
+Watch the video below to understand the current state of the project!
+
 [![Joystick kite control](http://4.bp.blogspot.com/-ituEgWwpdzA/VHY0rxaLOUI/AAAAAAAAAmY/w92dK0EN41g/s1600/Screenshot%2Bfrom%2B2014-11-26%2B21%3A13%3A43.png)](https://www.youtube.com/watch?v=0MbRyefYqPsjA)
 
 

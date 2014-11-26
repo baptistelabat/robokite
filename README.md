@@ -7,7 +7,7 @@ This project started in 2013. It aims to provide tools or interface between exis
 
 Watch the video below to understand the current state of the project or have a look to the project blog http://robokite.blogspot.fr/
 
-[![Joystick kite control](http://4.bp.blogspot.com/-ituEgWwpdzA/VHY0rxaLOUI/AAAAAAAAAmY/w92dK0EN41g/s1600/Screenshot%2Bfrom%2B2014-11-26%2B21%3A13%3A43.png)](https://www.youtube.com/watch?v=0MbRyefYqPsjA)
+[![Joystick kite control](http://4.bp.blogspot.com/-ituEgWwpdzA/VHY0rxaLOUI/AAAAAAAAAmY/w92dK0EN41g/s1600/Screenshot%2Bfrom%2B2014-11-26%2B21%3A13%3A43.png)](https://www.youtube.com/watch?v=0MbRyefYqPs&index=1&list=UUa67hFWRqXyehBhyk3YfBnA)
 
 
 The first step is to design a simple kite control system:

@@ -180,7 +180,7 @@ class Kite:
       os.remove(recordFilename + '.csv')   
     except:
       print('Creating file ' + recordFilename + '.csv') 
-    recordFile = file(recordFilename + '.csv', 'a')
+    recordFile = file(os.path.join(os.getcwd(), 'log', recordFilename + '.csv'), 'a')
     csv_writer = csv.writer(recordFile)
     csv_writer.writerow(['Time (s)', 'x (px)', 'y (px)', 'Orientation (rad)', 'Elevation (rad)', 'Bearing (rad)', 'ROT (rad/s)'])
 

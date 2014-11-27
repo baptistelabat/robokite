@@ -171,7 +171,7 @@ class Kite:
     major: File accessability
     minor: Unable to open file"""
     h5py._errors.silence_errors()
-    recordFile = h5py.File(recordFilename + '.hdf5', 'a') 
+    recordFile = h5py.File(os.path.join(os.getcwd(), 'log', recordFilename + '.hdf5'), 'a') 
     hdfSize = 0    
     dset = recordFile.create_dataset('kite', (2,2), maxshape=(None,7))
     imset = recordFile.create_dataset('image', (2,img.width,img.height,3 ), maxshape=(None, img.width, img.height, 3))

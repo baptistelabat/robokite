@@ -130,6 +130,7 @@ void setup()
   
   // Initialize serial communications at 9600 bps:
   Serial.begin(19200);
+  Serial.println("Connected");
   
   // Initialize input and setpoint
   Input1 = 0;

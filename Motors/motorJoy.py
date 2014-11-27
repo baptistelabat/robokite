@@ -53,28 +53,25 @@ ORDER_SAMPLE_TIME = 0.01 #seconds Sample time to send order without overwhelming
 
 MANUAL = 0
 AUTO   = 1
-global msg1, msg2, mfb, power1, power2
+mode = MANUAL
+
+global msg1, msg2, mfb, power1, power2, mode
 def resetOrder():
   global msg1, msg2, mfb, power1, power2, mode
   # Define the NMEA message in use
-  msg1 = NMEA("PW1", 0, "OR") # Order to first motor
-  msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+  if mode==MANUAL:
+    msg1 = NMEA("PW1", 0, "OR") # Order to first motor
+    msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+  if mode==AUTO:
+    msg1 = NMEA("SP1", 0, "OR") # Order to first motor
+    msg2 = NMEA("SP2", 0, "OR") # Order to second motor
   mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
   power1 = 0
   power2 = 0
-  mode = 0
 
 # Use pygame for the joystick
 pygame.init()
-"""pygame.joystick.init()
-nb_joysticks = pygame.joystick.get_count()
-if nb_joysticks > 0:
-  mon_joystick = pygame.joystick.Joystick(0)
-else:
-    raise Exception("No joystick detected")
-mon_joystick.init() #Initialisation
-"""
 JOY_RECONNECT_TIME = 2 #seconds
 
 while True:
@@ -152,7 +149,7 @@ while True:
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
             ser.write(msg1)
-            #print msg1
+            print msg1
             ser.write(msg2)
             #print msg2
             ser.write(mfb)

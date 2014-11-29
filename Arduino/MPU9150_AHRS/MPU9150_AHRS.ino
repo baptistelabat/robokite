@@ -163,6 +163,18 @@ void setup()
 
   mpu.setIntDataReadyEnabled(true); // enable data ready interrupt
 }
+/*
+  SerialEvent occurs whenever a new data comes in the
+ hardware serial RX.  This routine is run between each
+ time loop() runs, so using delay inside loop can delay
+ response.  Multiple bytes of data may be available.
+ */
+void serialEvent() {
+  while (Serial.available()) {
+    // get the new byte:
+    char inChar = (char)Serial.read(); 
+  }
+}
 
 void loop()
 {
@@ -196,7 +208,7 @@ void loop()
          }
    
   now = micros();
-  time_boot_ms = now/1000;
+  time_boot_ms = millis();
   deltat = ((now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
   lastUpdate = now;
   // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
@@ -206,7 +218,7 @@ void loop()
   // in the LSM9DS0 sensor. This rotation can be modified to allow any convenient orientation convention.
   // This is ok by aircraft orientation standards!  
   // Pass gyro rate as rad/s
-   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f,  my,  mx, mz);
+   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 // MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 
     // Serial print and/or display at 0.05 s rate independent of data rates
@@ -239,11 +251,11 @@ void loop()
       // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
       mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);
       len = mavlink_msg_to_send_buffer(buf, &msg);
-      Serial.write(buf, len);
+      //Serial.write(buf, len);
       
       mavlink_msg_scaled_imu_pack(system_id, component_id, &msg, time_boot_ms, ax_g*1000, ay_g*1000, az_g*1000, gx_degps*PI/180.0f*1000, gy_degps*PI/180.0f*1000, gz_degps*PI/180.0f*1000, mx, my, mz);
       len = mavlink_msg_to_send_buffer(buf, &msg);
-      Serial.write(buf, len);
+      //Serial.write(buf, len);
       //static inline uint16_t mavlink_msg_attitude_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //  uint32_t time_boot_ms, float roll, float pitch, float yaw, float rollspeed, float pitchspeed, float yawspeed)
       mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);

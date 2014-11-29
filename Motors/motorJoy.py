@@ -24,6 +24,11 @@ import numpy as np
 import pygame
 from pygame.locals import *
 import os
+try:
+  from pymavlink import mavutil
+  isMavlinkInstalled = True
+except:
+  isMavlinkInstalled = False
 
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -51,20 +56,32 @@ baudrate = 57600
 
 ORDER_SAMPLE_TIME = 0.01 #seconds Sample time to send order without overwhelming arduino
 
-MANUAL = 0
-AUTO   = 1
-mode = MANUAL
+MANUAL    = 0 # Control lines are released to enable manual control
+JOY_OL    = 1 # Joystick controls voltage applied to motors (open loop control)
+JOY_CL    = 2 # Joystick controls kite bar position in closed loop
+AUTO      = 3 # Kite roll is stabilised thanks to IMU measurements, joystick controls the kite roll angle
+mode = JOY_OL
+
+joy_OL_offset_forward = 0
+joy_OL_offset_right    = 0
+joy_CL_offset_forward = 0
+joy_CL_offset_right   = 0
+auto_offset_forward   = 0
+auto_offset_right   = 0
 
 global msg1, msg2, mfb, power1, power2, mode
 def resetOrder():
   global msg1, msg2, mfb, power1, power2, mode
   # Define the NMEA message in use
-  if mode==MANUAL:
+  if mode==JOY_OL:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
-  if mode==AUTO:
+  if mode==JOY_CL:
     msg1 = NMEA("SP1", 0, "OR") # Order to first motor
     msg2 = NMEA("SP2", 0, "OR") # Order to second motor
+  if mode==AUTO:
+    msg1 = NMEA("PW1", 0, "OR") # Order to first motor
+    msg2 = NMEA("PW2", 0, "OR") # Order to second motor
   mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
   power1 = 0
@@ -73,6 +90,18 @@ def resetOrder():
 # Use pygame for the joystick
 pygame.init()
 JOY_RECONNECT_TIME = 2 #seconds
+FORWARD_BACKWARD = 2
+LEFT_RIGHT = 3
+RESET_OFFSET = 8
+
+# Read mavlink messages
+if isMavlinkInstalled:
+  try:
+    master = mavutil.mavlink_connection('/dev/ttyUSB0', baud=57600, source_system=255)
+  except:
+    isMavlinkInstalled = False
+rollspeed = 0
+roll = 0
 
 while True:
     for device in locations:
@@ -100,6 +129,7 @@ while True:
     last_event_time = 0
 
     while True:
+
       # Deals with joystick deconnection and reconnection      
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
          print "No joystick event for x seconds, trying reconnection"
@@ -117,39 +147,73 @@ while True:
             print "Joystick reinit"
             
       for event in pygame.event.get():
+        print event
         last_event_time = time.time()
         if event.type == JOYBUTTONDOWN:
-            if event.button == 0:
-                mode = MANUAL
-                print "MANUAL"
-                msg1 = NMEA("PW1", power1, "OR")
-                msg2 = NMEA("PW2", power2, "OR")
-            if event.button == 1:
+            if event.button == JOY_OL:
+                mode = JOY_OL
+                print "JOY_OL"
+            if event.button == JOY_CL:
+                mode = JOY_CL
+                print "JOY_CL"
+            if event.button == AUTO:
                 mode = AUTO
                 print "AUTO"
-                msg1 = NMEA("SP1", power1, "OR")
-                msg2 = NMEA("SP2", power2, "OR")
+            if event.button == RESET_OFFSET:
+                if mode == JOY_OL:
+                  joy_OL_offset_forward = 0
+                  joy_OL_offset_right   = 0
+                if mode == JOY_CL:
+                  joy_CL_offset_forward = 0
+                  joy_CL_offset_right   = 0
+                if mode == AUTO:
+                  auto_offset_forward   = 0
+                  auto_offset_bacward   = 0                  
             
         if event.type == JOYAXISMOTION:
-          if event.axis == 2:
+          if event.axis == FORWARD_BACKWARD:
             #print "power control ", event.value
-            power1 = int(event.value*127)
-            if mode == MANUAL:
-                msg1 = NMEA("PW1", power1, "OR")
-            if mode == AUTO:
-                msg1 = NMEA("SP1", power1, "OR")
-          if event.axis == 3:
+            power1 = event.value*127
+          if event.axis == LEFT_RIGHT :
             #print "direction control ", event.value
-            power2 = int(event.value*127)
-            if mode == MANUAL:
-                msg2 = NMEA("PW2", power2, "OR")
+            power2 = event.value*127
+        if event.type == JOYHATMOTION:
+            print event
+            if mode == JOY_OL:
+              joy_OL_offset_forward += -event.value[1]
+              joy_OL_offset_right    += event.value[0]
+            if mode == JOY_CL:
+              joy_CL_offset_forward += -event.value[1]
+              joy_CL_offset_right   += event.value[0]
             if mode == AUTO:
-                msg2 = NMEA("SP2", power2, "OR")
-                
+              auto_offset_forward   += -event.value[1]
+              auto_offset_right     += event.value[0]
+              
+        if mode == JOY_OL:
+            msg2 = NMEA("PW2", int(power2 + joy_OL_offset_forward), "OR")
+        if mode == JOY_CL:
+            msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
+        if mode == AUTO:
+            msg2 = NMEA("PW2", int(power2 + auto_offset_forward), "OR")  
+        if mode == JOY_OL:
+            msg1 = NMEA("PW1", int(power1 + joy_OL_offset_right), "OR")
+        if mode == JOY_CL:
+            msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right), "OR")
+        if mode == AUTO:
+            msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
+        # Mavlink messages
+      if isMavlinkInstalled:  
+        msg = master.recv_match(type='ATTITUDE', blocking=False)
+        if msg!=None:
+          rollspeed = msg.rollspeed
+          roll = msg.roll
+          if mode == AUTO:
+            msg1 = NMEA("PW1",  int(power1 + roll*180/np.pi), "OR")
+    
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
             ser.write(msg1)
-            print msg1
+            #print msg1
             ser.write(msg2)
             #print msg2
             ser.write(mfb)
@@ -163,7 +227,7 @@ while True:
       try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
-            print "Received from arduino: ", line
+            #print "Received from arduino: ", line
       except Exception, e:
         ser.close()
         print("Error reading from serial port" + str(e))

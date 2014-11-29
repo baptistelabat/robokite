@@ -103,6 +103,7 @@ if isMavlinkInstalled:
 rollspeed = 0
 roll = 0
 
+# This loop is here for robustness in case of deconnection
 while True:
     for device in locations:
       try:
@@ -128,6 +129,8 @@ while True:
     t0 = time.time()
     last_event_time = 0
 
+
+    # This is the main program loop
     while True:
 
       # Deals with joystick deconnection and reconnection      
@@ -145,10 +148,12 @@ while True:
             mon_joystick.init()
             nb_joysticks = actual_nb_joysticks
             print "Joystick reinit"
-            
+      
+      # Deals with gamepad events 
       for event in pygame.event.get():
-        print event
+
         last_event_time = time.time()
+        # Button events
         if event.type == JOYBUTTONDOWN:
             if event.button == JOY_OL:
                 mode = JOY_OL
@@ -169,7 +174,7 @@ while True:
                 if mode == AUTO:
                   auto_offset_forward   = 0
                   auto_offset_bacward   = 0                  
-            
+        # Joystick events  
         if event.type == JOYAXISMOTION:
           if event.axis == FORWARD_BACKWARD:
             #print "power control ", event.value
@@ -177,6 +182,8 @@ while True:
           if event.axis == LEFT_RIGHT :
             #print "direction control ", event.value
             power2 = event.value*127
+            
+        # Trim events
         if event.type == JOYHATMOTION:
             print event
             if mode == JOY_OL:
@@ -188,7 +195,8 @@ while True:
             if mode == AUTO:
               auto_offset_forward   += -event.value[1]
               auto_offset_right     += event.value[0]
-              
+        
+        # Create messages to be sent   
         if mode == JOY_OL:
             msg2 = NMEA("PW2", int(power2 + joy_OL_offset_forward), "OR")
         if mode == JOY_CL:
@@ -201,7 +209,8 @@ while True:
             msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right), "OR")
         if mode == AUTO:
             msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
-        # Mavlink messages
+            
+      # Mavlink messages
       if isMavlinkInstalled:  
         msg = master.recv_match(type='ATTITUDE', blocking=False)
         if msg!=None:
@@ -210,6 +219,7 @@ while True:
           if mode == AUTO:
             msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
     
+      # Send messages 
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
             ser.write(msg1)

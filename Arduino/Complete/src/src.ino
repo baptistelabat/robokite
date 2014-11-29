@@ -219,7 +219,7 @@ void computeFeedback()
   // Linear encoder position
   Input2 = halfSteps*LINEAR_RESOLUTION/2/LINEAR_USED_RANGE;
   // Correct for lever arm (potentiometer not on axis)
-  Input2+= Input1* POT_OFFSET;
+  Input2+= (rawAngle_deg - NEUTRAL_ANGLE_DEG)* POT_OFFSET*3.14/180;
   
   // Line tension
   Input3 = analogRead(LINE_TENSION_PIN)/512 - 1;
@@ -273,7 +273,7 @@ void sendOrder()
 {
   // Order in the range -127/127
    ST.motor(1, power1);
-   ST.motor(2, power2);
+   ST.motor(2, -power2);
 }
 
 void int0()

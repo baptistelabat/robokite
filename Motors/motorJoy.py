@@ -208,7 +208,7 @@ while True:
           rollspeed = msg.rollspeed
           roll = msg.roll
           if mode == AUTO:
-            msg1 = NMEA("PW1",  int(power1 + roll*180/np.pi), "OR")
+            msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
     
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:

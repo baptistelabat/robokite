@@ -24,13 +24,14 @@ The solutions which are tested:
 * Processing with OpenCV for Android then streaming to reduce latency, in a second step
 * A python tornado server
 * A browser with HTML5 as interface (websocket for real time, slider for controls, webgl for visualization, graphs, etc)
-* Serial NMEA communication
+* A common gamepad joystick to send orders
+* Serial NMEA or mavlink communication
 * Arduino as a DAC (Digital-Analog Converter)
 * Sabertooth as motor control card (to be replaced by open hardware)
 * Recycled cordless drill as motor, but scalable.
 
 
-The project host the documentation (on the wiki https://github.com/baptistelabat/robokite/wiki) and source code. Please use the following command to get the documentation offline:
+The project hosts the documentation (on the wiki https://github.com/baptistelabat/robokite/wiki) and source code. Please use the following command to get the documentation offline:
 
     git clone https://github.com/baptistelabat/robokite.wiki.git
 

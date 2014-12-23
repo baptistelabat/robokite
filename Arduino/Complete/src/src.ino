@@ -13,11 +13,11 @@
 
 // Includes
 #define NO_PORTB_PINCHANGES // PortB used for mySofwareSerial
-#include <mySoftwareSerial.h> // This is a modified version of SoftwareSerial to be able to use interrupt pin as well
-#include <SabertoothSimplified.h> // From http://www.dimensionengineering.com/software/SabertoothSimplifiedArduinoLibrary/html/_sabertooth_simplified_8h_source.html
+#include <mySoftwareSerial.h> // From https://github.com/baptistelabat/robokite/tree/master/Arduino/libraries/mySoftwareSerial  This is a modified version of SoftwareSerial to be able to use interrupt pin as well
+#include <SabertoothSimplified.h> // From http://www.dimensionengineering.com/software/SabertoothArduinoLibraries.zip
 #include <TinyGPS++.h>    // From https://github.com/mikalhart/TinyGPSPlus
 #include <PID_v1.h>       // From https://github.com/br3ttb/Arduino-PID-Library/tree/master/PID_v1
-#include <PinChangeInt.h> // From http://code.google.com/p/arduino-pinchangeint/
+#include <PinChangeInt.h> // From https://github.com/GreyGnome/PinChangeInt
 
 // Port definition
 #define   POT_PIN  1 // Potentiometer

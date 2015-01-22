@@ -61,12 +61,12 @@ Distributed as-is; no warranty is given.
 
 #define USE_MAVLINK //Uncomment this line to use mavlink
 #ifdef USE_MAVLINK
-  #include "/home/bat/sketchbook/libraries/mavlink/ardupilotmega/mavlink.h"        // Mavlink interface
+  #include "/home/baptiste/kites/c_library/ardupilotmega/mavlink.h"        // Mavlink interface
 #endif
 
 #include <Wire.h>
-#include "I2Cdev.h"
-#include "MPU6050_9Axis_MotionApps41.h"
+#include "I2Cdev.h" //from https://github.com/sparkfun/MPU-9150_Breakout.git
+#include "MPU6050_9Axis_MotionApps41.h"//from https://github.com/sparkfun/MPU-9150_Breakout.git
 
 // Define corrections/offsets for magnetometer
 #define LOCAL_DECLINATION_DEG -3 //at Nantes, France is around 3 degrees in 2014

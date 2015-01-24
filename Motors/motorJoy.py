@@ -7,16 +7,22 @@
 # https://github.com/baptistelabat/robokite
 # Authors: Baptiste LABAT
 #
-# This script order from a USB joystick and send them to an arduino board
+# This script receives order from a USB joystick and send them to an arduino board
 # using NMEA messages for robustness
 # Press first button to switch to manual order
-# Press second button to switch to automatic order
+# Press second button to switch to open loop control
+# Press third button to switch to closed loop control
+# Press fourth button to switch to fully automatic control
+# Use forward/backward motion to control one axis
+# Use left/right motion to control other axis
+# Use cross to trim joystick (independant for each mode)
+# Use reset button to reset trim
 #
 # Warning: the joystick has to be in neutral position when plugged,
 # otherwise it might be badly initialized
 #
 # Supports automatic reconnection of joystick and serial connection
-# Only tested on ubuntu 14.04
+# Tested on ubuntu 14.04
 
 import time
 import serial
@@ -63,11 +69,11 @@ AUTO      = 3 # Kite roll is stabilised thanks to IMU measurements, joystick con
 mode = JOY_OL
 
 joy_OL_offset_forward = 0
-joy_OL_offset_right    = 0
+joy_OL_offset_right   = 0
 joy_CL_offset_forward = 0
 joy_CL_offset_right   = 0
 auto_offset_forward   = 0
-auto_offset_right   = 0
+auto_offset_right     = 0
 
 global msg1, msg2, mfb, power1, power2, mode
 def resetOrder():
@@ -83,21 +89,24 @@ def resetOrder():
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
   mfb  = NMEA("FBR", 0, "OR") # Feedback request
-
   power1 = 0
   power2 = 0
 
 # Use pygame for the joystick
+
+JOY_RECONNECT_TIME = 2 #seconds. Time to reconnect if no joystick motion
+
+# Definition of gamepad button in use
+FORWARD_BACKWARD_BUTTON = 2
+LEFT_RIGHT_BUTTON = 3
+RESET_OFFSET_BUTTON = 8
+
 pygame.init()
-JOY_RECONNECT_TIME = 2 #seconds
-FORWARD_BACKWARD = 2
-LEFT_RIGHT = 3
-RESET_OFFSET = 8
 
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    master = mavutil.mavlink_connection('/dev/ttyUSB0', baud=57600, source_system=255)
+    master = mavutil.mavlink_connection('/dev/ttyUSB0', baud=57600, source_system=255) # 255 is ground station
   except:
     isMavlinkInstalled = False
 rollspeed = 0
@@ -120,10 +129,6 @@ while True:
         print "Failed to connect on ", device
     # Wait so that arduino is fully awoken
     time.sleep(1.5)
-    try:
-        ser.write('i1')
-    except:
-        print "Can not write i1"
         
     # Reset the timer    
     t0 = time.time()
@@ -144,8 +149,8 @@ while True:
          actual_nb_joysticks = pygame.joystick.get_count()
          print actual_nb_joysticks
          if actual_nb_joysticks > 0:
-            mon_joystick = pygame.joystick.Joystick(0)
-            mon_joystick.init()
+            my_joystick = pygame.joystick.Joystick(0)
+            my_joystick.init()
             nb_joysticks = actual_nb_joysticks
             print "Joystick reinit"
       
@@ -155,16 +160,19 @@ while True:
         last_event_time = time.time()
         # Button events
         if event.type == JOYBUTTONDOWN:
+            if event.button == MANUAL:
+                mode = MANUAL
+                print "MANUAL"
             if event.button == JOY_OL:
                 mode = JOY_OL
-                print "JOY_OL"
+                print "JOY_OL: JOYSTICK OPEN LOOP"
             if event.button == JOY_CL:
                 mode = JOY_CL
-                print "JOY_CL"
+                print "JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP"
             if event.button == AUTO:
                 mode = AUTO
-                print "AUTO"
-            if event.button == RESET_OFFSET:
+                print "AUTO: JOYSTICK to KITE ROLL CLOSE LOOP"
+            if event.button == RESET_OFFSET_BUTTON:
                 if mode == JOY_OL:
                   joy_OL_offset_forward = 0
                   joy_OL_offset_right   = 0
@@ -173,27 +181,26 @@ while True:
                   joy_CL_offset_right   = 0
                 if mode == AUTO:
                   auto_offset_forward   = 0
-                  auto_offset_bacward   = 0                  
+                  auto_offset_right   = 0                  
         # Joystick events  
         if event.type == JOYAXISMOTION:
-          if event.axis == FORWARD_BACKWARD:
+          if event.axis == FORWARD_BACKWARD_BUTTON:
             #print "power control ", event.value
             power1 = event.value*127
-          if event.axis == LEFT_RIGHT :
+          if event.axis == LEFT_RIGHT_BUTTON :
             #print "direction control ", event.value
             power2 = event.value*127
             
         # Trim events
         if event.type == JOYHATMOTION:
-            print event
             if mode == JOY_OL:
-              joy_OL_offset_forward += -event.value[1]
-              joy_OL_offset_right    += event.value[0]
+              joy_OL_offset_forward -= event.value[1]
+              joy_OL_offset_right   += event.value[0]
             if mode == JOY_CL:
-              joy_CL_offset_forward += -event.value[1]
+              joy_CL_offset_forward -= event.value[1]
               joy_CL_offset_right   += event.value[0]
             if mode == AUTO:
-              auto_offset_forward   += -event.value[1]
+              auto_offset_forward   -= event.value[1]
               auto_offset_right     += event.value[0]
         
         # Create messages to be sent   
@@ -202,13 +209,13 @@ while True:
         if mode == JOY_CL:
             msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
         if mode == AUTO:
-            msg2 = NMEA("PW2", int(power2 + auto_offset_forward), "OR")  
+            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?
         if mode == JOY_OL:
-            msg1 = NMEA("PW1", int(power1 + joy_OL_offset_right), "OR")
+            msg1 = NMEA("PW1", int(power1 + joy_OL_offset_right),   "OR")
         if mode == JOY_CL:
-            msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right), "OR")
+            msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right),   "OR")
         if mode == AUTO:
-            msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
+            msg1 = NMEA("PW1", int(power1 + auto_offset_right + roll*180/np.pi), "OR")
             
       # Mavlink messages
       if isMavlinkInstalled:  

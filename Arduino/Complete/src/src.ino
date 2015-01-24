@@ -43,7 +43,8 @@ int power1, power2;
 TinyGPSPlus nmea;
 // O stands for Opensource, R for Robokite
 // The index is the place of the field in the NMEA message
-TinyGPSCustom feedback_request      (nmea, "ORFBR", 1);  // Feedback request
+TinyGPSCustom feedback_request      (nmea, "ORFBR", 1);  // Feedback request. The feedback are normalized between 0 and 1023
+// The orders are normalized between -127 and 127
 TinyGPSCustom pwm1     (nmea, "ORPW1", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 1
 TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 2
 TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth output 1
@@ -60,7 +61,7 @@ PID myPID1(&Input1, &Output1, &Setpoint1, 1, 0, 0, DIRECT);
 PID myPID2(&Input2, &Output2, &Setpoint2, 1, 0, 0, DIRECT);
 
 // Define global variables to deal with encoder interrupt
-volatile unsigned long threshold = 1000;// 'threshold' is the De-bounce Adjustment factor for the Rotary Encoder. halfSteps
+volatile unsigned long threshold = 1000;// 'threshold' is the De-bounce Adjustment factor for the encoder. halfSteps
 volatile unsigned long int0time = 0;
 volatile unsigned long int1time = 0;
 volatile uint8_t int0signal = 0;
@@ -76,12 +77,12 @@ boolean isAbsoluteReferenceAvailable = false;
 // Hardware specific parameters
 // Potentiometer
 #define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
-#define POT_USED_RANGE_DEG  60 // To 
-#define POT_OFFSET        0.05 // Distance from rotation axis to lever arm
-#define NEUTRAL_ANGLE_DEG  225
+#define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
+#define POT_OFFSET        0.05 // Distance from rotation axis to lever arm (in m)
+#define NEUTRAL_ANGLE_DEG  225 // Zero of the potentiometer
 // Linear encoder
-#define LINEAR_RESOLUTION 0.005
-#define LINEAR_USED_RANGE 0.05
+#define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
+#define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
 
 void setup()
 {
@@ -107,18 +108,18 @@ void setup()
   // Turn the PID on
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
+  // Saturate the output to the maximum range (values are normalized between -1 and 1)
   myPID1.SetOutputLimits(-1, 1);
   myPID2.SetOutputLimits(-1, 1);
   
-    //*****************************************************
+  // Prepare interrupts for the linear encoder
   pinMode(A_PIN, INPUT);
   digitalWrite(A_PIN, HIGH);
   attachInterrupt(0, int0, CHANGE);
-  //PCintPort::attachInterrupt(pinA, &int0, CHANGE);
+
   pinMode(B_PIN, INPUT);
   digitalWrite(B_PIN, HIGH);
   attachInterrupt(1, int1, CHANGE);
-  //PCintPort::attachInterrupt(pinB, &int1, CHANGE);
   
   // Pin used to get absolute position
   pinMode(RESET_PIN, INPUT);
@@ -207,19 +208,20 @@ void processSerialInput()
 // Linear encoder
 #define LINEAR_RESOLUTION 0.005
 #define LINEAR_USED_RANGE 0.05
+#define PI 3.1415
 void computeFeedback()
 {
   
   // Feedbacks are normalized between -1 and 1
   
-  // Potentiomete angle
-  float rawAngle_deg = analogRead(POT_PIN)/1024.0*POT_RANGE_DEG;
+  // Potentiometer angle
+  float rawAngle_deg = analogRead(POT_PIN)/1023.0*POT_RANGE_DEG;
   Input1 = (rawAngle_deg - NEUTRAL_ANGLE_DEG)/POT_USED_RANGE_DEG;
   
   // Linear encoder position
   Input2 = halfSteps*LINEAR_RESOLUTION/2/LINEAR_USED_RANGE;
-  // Correct for lever arm (potentiometer not on axis)
-  Input2+= (rawAngle_deg - NEUTRAL_ANGLE_DEG)* POT_OFFSET*3.14/180;
+  // Correction for lever arm (potentiometer not on axis)
+  Input2+= (rawAngle_deg - NEUTRAL_ANGLE_DEG)* POT_OFFSET*PI/180;
   
   // Line tension
   Input3 = analogRead(LINE_TENSION_PIN)/512 - 1;
@@ -227,17 +229,18 @@ void computeFeedback()
 
 void sendFeedback()
 {
+  // All the feedback values are normalized in the range 0-1023 (10 bits resolution)
   if (isFeedbackRequested)
   {
-    Serial.print((power1+128)*4);
+    Serial.print((power1+127)*4);
     Serial.print(", ");
-    Serial.print((power2+128)*4);
+    Serial.print((power2+127)*4);
     Serial.print(", ");
-    Serial.print((Input1+1)*512);
+    Serial.print((Input1+1)/2*1023);
     Serial.print(", ");
-    Serial.print((Input2+1)*512);
+    Serial.print((Input2+1)/2*1023);
     Serial.print(", ");
-    Serial.print((Input3+1)*512);
+    Serial.print((Input3+1)/2*1023);
     Serial.println("");
     isFeedbackRequested = false;
   }
@@ -273,9 +276,10 @@ void sendOrder()
 {
   // Order in the range -127/127
    ST.motor(1, power1);
-   ST.motor(2, -power2);
+   ST.motor(2, power2);
 }
 
+// Taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
 void int0()
 {
   if ( micros() - int0time < threshold )
@@ -291,6 +295,7 @@ void int0()
     halfSteps--;
 }
 
+// Taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
 void int1()
 {
   if ( micros() - int1time < threshold )

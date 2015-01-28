@@ -54,6 +54,7 @@ class mobileState:
     [q, loss] = esoq2p1.esoq2p1( sp.array([[Gpx, Bpx], [Gpy, Bpy], [Gpz, Bpz]]), sp.array([[0, -17], [0, 0], [-9.8, -42]]), sp.array([1,1]))
     #print q
     self.q = q
+    self.isToUpdate = False
 
   def decodeMessageSensorUDP(self, msg):
     """ This is used to decode message from sensorUDP application from the android market.
@@ -132,6 +133,7 @@ class mobileState:
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     s.bind((host, port))
     self.socket = s
+    print("Socket opened")
     a = threading.Thread(None, self.checkUpdate, None, ())
     a.start()
     

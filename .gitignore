@@ -9,7 +9,7 @@ ObjectTracking/log/*
 ObjectTracking/blueRed
 ObjectTracking/newtree.yaml
 ObjectTracking/save.csv
-ObjectTracking/saveInput.txt
+ObjectTracking/test/saveInput.txt
 ObjectTracking/saveOrientation.txt
-ObjectTracking/saveOutput.txt
+ObjectTracking/test/saveOutput.txt
 

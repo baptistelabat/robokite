@@ -82,10 +82,10 @@ def resetOrder():
   if mode==JOY_OL:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
-  if mode==JOY_CL:
+  elif mode==JOY_CL:
     msg1 = NMEA("SP1", 0, "OR") # Order to first motor
     msg2 = NMEA("SP2", 0, "OR") # Order to second motor
-  if mode==AUTO:
+  elif mode==AUTO:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
   mfb  = NMEA("FBR", 0, "OR") # Feedback request
@@ -106,9 +106,10 @@ pygame.init()
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    master = mavutil.mavlink_connection('/dev/ttyUSB0', baud=57600, source_system=255) # 255 is ground station
+    master = mavutil.mavlink_connection('/dev/ttyUSB1', baud=57600, source_system=255) # 255 is ground station
   except:
     isMavlinkInstalled = False
+    print("Mavlink connection failed")
 rollspeed = 0
 roll = 0
 
@@ -163,23 +164,23 @@ while True:
             if event.button == MANUAL:
                 mode = MANUAL
                 print "MANUAL"
-            if event.button == JOY_OL:
+            elif event.button == JOY_OL:
                 mode = JOY_OL
                 print "JOY_OL: JOYSTICK OPEN LOOP"
-            if event.button == JOY_CL:
+            elif event.button == JOY_CL:
                 mode = JOY_CL
                 print "JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP"
-            if event.button == AUTO:
+            elif event.button == AUTO:
                 mode = AUTO
                 print "AUTO: JOYSTICK to KITE ROLL CLOSE LOOP"
-            if event.button == RESET_OFFSET_BUTTON:
+            elif event.button == RESET_OFFSET_BUTTON:
                 if mode == JOY_OL:
                   joy_OL_offset_forward = 0
                   joy_OL_offset_right   = 0
-                if mode == JOY_CL:
+                elif mode == JOY_CL:
                   joy_CL_offset_forward = 0
                   joy_CL_offset_right   = 0
-                if mode == AUTO:
+                elif mode == AUTO:
                   auto_offset_forward   = 0
                   auto_offset_right   = 0                  
         # Joystick events  
@@ -187,7 +188,7 @@ while True:
           if event.axis == FORWARD_BACKWARD_BUTTON:
             #print "power control ", event.value
             power1 = event.value*127
-          if event.axis == LEFT_RIGHT_BUTTON :
+          elif event.axis == LEFT_RIGHT_BUTTON :
             #print "direction control ", event.value
             power2 = event.value*127
             
@@ -196,26 +197,23 @@ while True:
             if mode == JOY_OL:
               joy_OL_offset_forward -= event.value[1]
               joy_OL_offset_right   += event.value[0]
-            if mode == JOY_CL:
+            elif mode == JOY_CL:
               joy_CL_offset_forward -= event.value[1]
               joy_CL_offset_right   += event.value[0]
-            if mode == AUTO:
+            elif mode == AUTO:
               auto_offset_forward   -= event.value[1]
               auto_offset_right     += event.value[0]
         
         # Create messages to be sent   
         if mode == JOY_OL:
-            msg2 = NMEA("PW2", int(power2 + joy_OL_offset_forward), "OR")
-        if mode == JOY_CL:
-            msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
-        if mode == AUTO:
-            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?
-        if mode == JOY_OL:
             msg1 = NMEA("PW1", int(power1 + joy_OL_offset_right),   "OR")
-        if mode == JOY_CL:
+            msg2 = NMEA("PW2", int(power2 + joy_OL_offset_forward), "OR")
+        elif mode == JOY_CL:
             msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right),   "OR")
-        if mode == AUTO:
+            msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
+        elif mode == AUTO:
             msg1 = NMEA("PW1", int(power1 + auto_offset_right + roll*180/np.pi), "OR")
+            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?          
             
       # Mavlink messages
       if isMavlinkInstalled:  
@@ -244,7 +242,7 @@ while True:
       try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
-            #print "Received from arduino: ", line
+            print "Received from arduino: ", line
       except Exception, e:
         ser.close()
         print("Error reading from serial port" + str(e))

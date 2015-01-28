@@ -1,7 +1,7 @@
 from SimpleCV import Display, Camera, Image, DrawingLayer, VirtualCamera
 disp = Display((600,800))
 #cam = Camera()
-cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteTest.avi','video')
+cam = VirtualCamera('../../Recording/Videos/kiteTest from Zenith Wind Power-fNMO3kAX0PE.mp4','video')
 isPaused = False
 updateSelection = False
 while(disp.isNotDone()):  

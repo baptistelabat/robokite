@@ -22,6 +22,7 @@ max_length = 0
 
 cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480
 mobile = mobileState.mobileState()
+mobile.open()
 while True:
         mobile.checkUpdate()
         if mobile.isToUpdate:

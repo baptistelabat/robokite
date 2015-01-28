@@ -2,11 +2,11 @@
 from SimpleCV import ColorSegmentation, Image, Camera, VirtualCamera, Display, Color
 
 # Open reference video
-cam=VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
+cam=VirtualCamera('../../Recording/Videos/kiteFlying from Zenith Wind Power-jn9RrUCiWKM.mp4','video')
 # Select reference image
 img=cam.getFrame(50)
 modelImage = img.crop(255, 180, 70, 20)
-modelImage = Image('kite_detail.jpg')
+modelImage = Image('../kite_detail.jpg')
 ts = []
 disp=Display()
 for i in range(0,50):
@@ -15,7 +15,7 @@ while (disp.isNotDone()):
         img = cam.getImage()
 	bb = (255, 180, 70, 20)
         ts = img.track("camshift",ts,modelImage,bb, num_frames = 1)
-	modelImage = Image('kite_detail.jpg')
+	modelImage = Image('../kite_detail.jpg')
         # now here in first loop iteration since ts is empty,
         # img0 and bb will be considered.
         # New tracking object will be created and added in ts (TrackSet)

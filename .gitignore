@@ -12,4 +12,7 @@ ObjectTracking/save.csv
 ObjectTracking/test/saveInput.txt
 ObjectTracking/saveOrientation.txt
 ObjectTracking/test/saveOutput.txt
+Sensors/mag.txt
+Sensors/acc.txt
+Communication/saveUDP.txt
 

@@ -265,9 +265,7 @@ void computeOrder()
   if (myPID2.GetMode() == AUTOMATIC)
   {
     Setpoint2 = atoi(setpos2.value())/127.;
-    Serial.println(Input2);
     myPID2.Compute();
-    Serial.println(Output2);
     power2 = Output2*127;
   }
 }

@@ -120,7 +120,7 @@ class Kite:
     #cam = VirtualCamera('../../zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')
     #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/robokite/ObjectTracking/00095.MTS', 'video')
     #cam = VirtualCamera('output.avi', 'video')
-    cam = VirtualCamera('../Recording/Videos/Flying kite images (for kite steering unit development)-YTMgX1bvrTo.flv','video')
+    cam = VirtualCamera('../Recording/Videos/Flying kite images (for kite steering unit development)-YTMgX1bvrTo.mp4','video')
     virtualCameraFPS = 25
   else:
     cam = JpegStreamCamera('http://192.168.43.1:8080/videofeed')#640 * 480

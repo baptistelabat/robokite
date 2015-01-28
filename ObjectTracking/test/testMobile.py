@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-sys.path.append(os.getcwd())
+sys.path.append(sys.path.append('../../Sensors'))
 
 import mobileState
 m = mobileState.mobileState()

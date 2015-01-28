@@ -5,7 +5,7 @@ import os
 import sys
 import threading
 sys.path.append(os.getcwd())
-sys.path.append('../Sensors')
+sys.path.append('../../Sensors')
 import mobileState
 # Open video to analyse or live stream
 #cam = VirtualCamera('/media/bat/DATA/Baptiste/Nautilab/kite_project/zenith-wind-power-read-only/KiteControl-Qt/videos/kiteFlying.avi','video')

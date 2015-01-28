@@ -53,7 +53,7 @@ def computeXORChecksum(chksumdata):
     
 def NMEA(message_type, value, talker_id= "OR"):
   msg = talker_id + message_type +","+ str(value)
-  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + chr(13).encode('ascii') + chr(10).encode('ascii')
+  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + str(chr(13).encode('ascii')) + str(chr(10).encode('ascii'))
   return msg
 
 # Parameters for the serial connection
@@ -227,11 +227,11 @@ while True:
       # Send messages 
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
-            ser.write(msg1)
+            ser.write(msg1.encode())
             #print(msg1)
-            ser.write(msg2)
+            ser.write(msg2.encode())
             #print(msg2)
-            ser.write(mfb)
+            ser.write(mfb.encode())
             #print(mfb)
             t0 = time.time()
         except:

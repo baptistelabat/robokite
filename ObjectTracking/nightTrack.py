@@ -12,7 +12,7 @@ from SimpleCV import Camera, Image, VirtualCamera, Display, DrawingLayer, Color,
 import scipy as sp
 import numpy as np
 
-cam = VirtualCamera('../Recording/Videos/Kite with leds in night - YouTube [360p].mp4','video')
+cam = VirtualCamera('../Recording/Videos/Kite with leds in night-LgvpmMt-SA0.mp4','video')
 img = cam.getImage()
 disp = Display((810,1080))
 display = True

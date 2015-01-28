@@ -117,17 +117,17 @@ roll = 0
 while True:
     for device in locations:
       try:
-        print "Trying...", device
+        print("Trying...", device)
         resetOrder()
         # This is necessary to unsure automatic reconnection after disconnection
         os.system("stty -F "+ device + " " + str(baudrate) + " cs8 cread clocal")
         
         # Note that by default arduino is restarting on serial connection
         ser = serial.Serial(device, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
-        print "Connected on ", device
+        print("Connected on ", device)
         break
       except:
-        print "Failed to connect on ", device
+        print("Failed to connect on ", device)
     # Wait so that arduino is fully awoken
     time.sleep(1.5)
         
@@ -141,19 +141,19 @@ while True:
 
       # Deals with joystick deconnection and reconnection      
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
-         print "No joystick event for x seconds, trying reconnection"
+         print("No joystick event for x seconds, trying reconnection")
          last_event_time = time.time()
          resetOrder()
          pygame.quit()
          pygame.init()
          pygame.joystick.init()
          actual_nb_joysticks = pygame.joystick.get_count()
-         print actual_nb_joysticks
+         print("Number of joystick: ", actual_nb_joysticks)
          if actual_nb_joysticks > 0:
             my_joystick = pygame.joystick.Joystick(0)
             my_joystick.init()
             nb_joysticks = actual_nb_joysticks
-            print "Joystick reinit"
+            print("Joystick reinit")
       
       # Deals with gamepad events 
       for event in pygame.event.get():
@@ -163,16 +163,16 @@ while True:
         if event.type == JOYBUTTONDOWN:
             if event.button == MANUAL:
                 mode = MANUAL
-                print "MANUAL"
+                print("MANUAL")
             elif event.button == JOY_OL:
                 mode = JOY_OL
-                print "JOY_OL: JOYSTICK OPEN LOOP"
+                print("JOY_OL: JOYSTICK OPEN LOOP")
             elif event.button == JOY_CL:
                 mode = JOY_CL
-                print "JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP"
+                print("JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP")
             elif event.button == AUTO:
                 mode = AUTO
-                print "AUTO: JOYSTICK to KITE ROLL CLOSE LOOP"
+                print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
             elif event.button == RESET_OFFSET_BUTTON:
                 if mode == JOY_OL:
                   joy_OL_offset_forward = 0
@@ -186,10 +186,10 @@ while True:
         # Joystick events  
         if event.type == JOYAXISMOTION:
           if event.axis == FORWARD_BACKWARD_BUTTON:
-            #print "power control ", event.value
+            #print("power control ", event.value)
             power1 = event.value*127
           elif event.axis == LEFT_RIGHT_BUTTON :
-            #print "direction control ", event.value
+            #print("direction control ", event.value)
             power2 = event.value*127
             
         # Trim events
@@ -228,24 +228,24 @@ while True:
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
             ser.write(msg1)
-            #print msg1
+            #print(msg1)
             ser.write(msg2)
-            #print msg2
+            #print(msg2)
             ser.write(mfb)
-            #print mfb
+            #print(mfb)
             t0 = time.time()
         except:
-            print "break"
+            print("break")
             ser.close()
             break
 
       try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
-            print "Received from arduino: ", line
-      except Exception, e:
+            print("Received from arduino: ", line)
+      except(Exception, e):
         ser.close()
         print("Error reading from serial port" + str(e))
       
 ser.close()
-print "Closing"
+print("Closing")

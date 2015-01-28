@@ -62,7 +62,7 @@ while True:
     ser.write(mfb.encode())
     line = ser.readline()
     print("Received from arduino: ", line)
-  except(Exception, e):
+  except Exception as e:
     print("Error reading from serial port" + str(e))
       
   time.sleep(dt)

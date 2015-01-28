@@ -213,7 +213,10 @@ while True:
             msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
         elif mode == AUTO:
             msg1 = NMEA("PW1", int(power1 + auto_offset_right + roll*180/np.pi), "OR")
-            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?          
+            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?
+        elif mode == MANUAL:
+            msg1 = NMEA("PW1", 0, "OR")
+            msg2 = NMEA("PW2", 0, "OR")     
             
       # Mavlink messages
       if isMavlinkInstalled:  
@@ -243,7 +246,7 @@ while True:
         if ser.inWaiting() > 0:
             line = ser.readline()
             print("Received from arduino: ", line)
-      except(Exception, e):
+      except Exception as e:
         ser.close()
         print("Error reading from serial port" + str(e))
       

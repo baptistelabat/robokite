@@ -58,8 +58,11 @@ git clone https://github.com/mavlink/c_library.git
 mv c_library/ardupilotmega ~/sketchbook/libraries
 sudo rm -R c_library
 
+# Download dependencies needed to visualize 3D models
+sudo apt-get install openscad
 
-# Download dependencies needed for software tests, post-treatment analysis, or new features development
+
+# Download dependencies needed for software tests, post-treatment analysis, or new/old features development
 
 sudo apt-get install youtube-dl
 # Download samples video
@@ -76,4 +79,6 @@ sudo pip install https://github.com/sightmachine/SimpleCV/zipball/develop
 
 # Basemap
 sudo apt-get install python-mpltoolkits.basemap
+
+git clone https://github.com/PaulStoffregen/RadioHead.git ~/sketchbook/libraries/RadioHead
 

@@ -30,6 +30,8 @@ The solutions which are tested:
 * Sabertooth as motor control card (to be replaced by open hardware)
 * Recycled cordless drill as motor, but scalable.
 
+You can access the source code with git
+    sudo apt-get install git
 
 The project hosts the documentation (on the wiki https://github.com/baptistelabat/robokite/wiki) and source code. Please use the following command to get the documentation offline:
 
@@ -40,6 +42,13 @@ To get more update news, you can follow the blog http://robokite.blogspot.fr/
 Please use the following command to get the code:
 
     git clone https://github.com/baptistelabat/robokite.git
+
+This will create a repertory robokite containing the source code
+
+# The following command will download the depencies (tested on ubuntu 14.04)
+	cd robokite
+	chmod 777 install.sh
+	./install.sh
 
 This project was initiated by Baptiste LABAT from Nautilabs (french maritime consultancy).
 We are currently looking for some beta testers and developers.

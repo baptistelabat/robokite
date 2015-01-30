@@ -58,9 +58,20 @@ git clone https://github.com/mavlink/c_library.git
 mv c_library/ardupilotmega ~/sketchbook/libraries
 sudo rm -R c_library
 
-# Download dependencies needed to visualize 3D models
+# Download dependencies needed to visualize, modify 3D models
+	# Openscad
 sudo apt-get install openscad
-
+	# Kokopelli
+sudo apt-get install python python-dev python-pip gcc g++ libpng12-dev make bash cmake
+sudo pip install numpy PyOpenGL PyOpenGL_accelerate
+git clone https://github.com/mkeeter/kokopelli.git
+cd kokopelli
+make
+sudo make install
+cd util
+./install_wxpython3.0.sh  
+cd ..
+cd .. 
 
 # Download dependencies needed for software tests, post-treatment analysis, or new/old features development
 

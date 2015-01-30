@@ -52,6 +52,11 @@ git clone https://github.com/sparkfun/MPU-9150_Breakout.git
 mv MPU-9150_Breakout/firmware/I2Cdev ~/sketchbook/libraries
 mv MPU-9150_Breakout/firmware/MPU6050 ~/sketchbook/libraries
 sudo rm  -R MPU-9150_Breakout/
+	# MS5611 library
+git clone https://github.com/Fabio-Varesano-Association/freeimu.git
+mv freeimu/libraries/MS561101BA/ ~/sketchbook/libraries/
+sudo rm -R freeimu
+
 
 	# Mavlink library
 git clone https://github.com/mavlink/c_library.git

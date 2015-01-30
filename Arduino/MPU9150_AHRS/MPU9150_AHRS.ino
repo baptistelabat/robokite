@@ -61,7 +61,7 @@ Distributed as-is; no warranty is given.
 
 #define USE_MAVLINK //Uncomment this line to use mavlink
 #ifdef USE_MAVLINK
-  #include "/home/baptiste/kites/c_library/ardupilotmega/mavlink.h"        // Mavlink interface
+  #include "MavlinkForArduino.h"        // Mavlink interface
 #endif
 
 #include <Wire.h>

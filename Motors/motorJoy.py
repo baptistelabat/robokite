@@ -119,9 +119,11 @@ while True:
       try:
         print("Trying...", device)
         resetOrder()
-        # This is necessary to unsure automatic reconnection after disconnection
-        os.system("stty -F "+ device + " " + str(baudrate) + " cs8 cread clocal")
         
+        # First open with  baudrate zero and close to enable reconnection after deconnection
+		# Thanks to Rémi Moncel for this trick http://robokite.blogspot.fr/2014/11/reconnexion-automatique-du-port-serie.html#comment-form
+		ser = serial.Serial(device, baudrate=0, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
+        ser.close()
         # Note that by default arduino is restarting on serial connection
         ser = serial.Serial(device, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
         print("Connected on ", device)

@@ -43,7 +43,7 @@ float press, temperature;
 
 void setup() {
   Wire.begin();
-  Serial.begin(115200);
+  Serial.begin(57600);
   delay(1000);
 
   // Suppose that the CSB pin is connected to GND.

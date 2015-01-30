@@ -1,6 +1,6 @@
 // Arduino MAVLink test code.
 
-#include "/home/baptiste/kites/c_library/ardupilotmega/mavlink.h"        // Mavlink interface
+#include "MavlinkForArduino.h"        // Mavlink interface
 long last_time = 0;
 int packet_drops;
 const int pi = 3.1415;

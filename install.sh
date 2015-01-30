@@ -56,12 +56,9 @@ sudo rm  -R MPU-9150_Breakout/
 git clone https://github.com/Fabio-Varesano-Association/freeimu.git
 mv freeimu/libraries/MS561101BA/ ~/sketchbook/libraries/
 sudo rm -R freeimu
-
-
 	# Mavlink library
-git clone https://github.com/mavlink/c_library.git
-mv c_library/ardupilotmega ~/sketchbook/libraries
-sudo rm -R c_library
+mv Arduino/libraries/MavlinkForArduino ~/sketchbook/libraries
+git clone https://github.com/mavlink/c_library.git ~/sketchbook/libraries/MavlinkForArduino
 
 # Download dependencies needed to visualize, modify 3D models
 	# Openscad

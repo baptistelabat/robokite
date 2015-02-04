@@ -95,3 +95,7 @@ sudo apt-get install python-mpltoolkits.basemap
 
 git clone https://github.com/PaulStoffregen/RadioHead.git ~/sketchbook/libraries/RadioHead
 
+# Qgroundcontrol
+wget http://latestfiasco.com/ftp/QGroundControl-Stable-V2.2.1.tar.bz2
+mkdir QGroundControl
+tar xvjf QGroundControl-Stable-V2.2.1.tar.bz2 -C QGroundControl 

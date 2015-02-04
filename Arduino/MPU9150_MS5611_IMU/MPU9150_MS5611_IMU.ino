@@ -83,7 +83,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-//#define USE_MAVLINK //Uncomment this line to use mavlink
+#define USE_MAVLINK //Uncomment this line to use mavlink
 #ifdef USE_MAVLINK
   #include "MavlinkForArduino.h"        // Mavlink interface
 #endif
@@ -128,8 +128,8 @@ uint8_t MagRate;     // read rate for magnetometer data
 
 float pitch, yaw, roll;
 float deltat = 0.0f;        // integration interval for both filter schemes
-uint16_t lastUpdate = 0; // used to calculate integration interval
-uint16_t time_boot_us = 0;        // used to calculate integration interval
+uint64_t lastUpdate = 0; // used to calculate integration interval
+uint64_t time_boot_us = 0;        // used to calculate integration interval
 
 float ax_g, ay_g, az_g, gx_degps, gy_degps, gz_degps, mx, my, mz; // variables to hold latest sensor data values 
 float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};    // vector to hold quaternion
@@ -297,27 +297,29 @@ void loop()
       uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
       
-      //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
-      // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
-      mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);
-      len = mavlink_msg_to_send_buffer(buf, &msg);
-      //Serial.write(buf, len);
-      
-      mavlink_msg_scaled_imu_pack(system_id, component_id, &msg, time_boot_ms, ax_g*1000, ay_g*1000, az_g*1000, gx_degps*PI/180.0f*1000, gy_degps*PI/180.0f*1000, gz_degps*PI/180.0f*1000, mx, my, mz);
-      len = mavlink_msg_to_send_buffer(buf, &msg);
-      //Serial.write(buf, len);
-      
-      //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
-      //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
-      mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
-      len = mavlink_msg_to_send_buffer(buf, &msg);
-      //Serial.write(buf, len);
-      
       //static inline uint16_t mavlink_msg_attitude_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //  uint32_t time_boot_ms, float roll, float pitch, float yaw, float rollspeed, float pitchspeed, float yawspeed)
       mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
+      
+      /*
+      //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+      //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
+      mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      
+      //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+      // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
+      mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      
+      mavlink_msg_scaled_imu_pack(system_id, component_id, &msg, time_boot_ms, ax_g*1000, ay_g*1000, az_g*1000, gx_degps*PI/180.0f*1000, gy_degps*PI/180.0f*1000, gz_degps*PI/180.0f*1000, mx, my, mz);
+      len = mavlink_msg_to_send_buffer(buf, &msg);
+      Serial.write(buf, len);
+      */
       
 #else
       Serial.print("ax = "); Serial.print((int)1000*ax_g);  

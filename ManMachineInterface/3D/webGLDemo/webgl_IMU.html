@@ -214,16 +214,22 @@
                 
                 // "Classical" roll, pitch, yaw euler angles
                 dae.rotation.order = 'ZYX';
-                //dae.rotation.x = obj.xrotation;
-                //dae.rotation.y = obj.yrotation;
-                //dae.rotation.z = obj.zrotation;
+                if (obj.coordinates == 'EulerAngles')
+                {
+					dae.rotation.x = obj.roll;
+					dae.rotation.y = obj.pitch;
+					dae.rotation.z = obj.yaw;
+				}
                 //dae.position.x = obj.x;
                 //dae.position.y = obj.y;
                 //dae.position.z = obj.z;
-                dae.quaternion.x = obj.q0/10000;
-                dae.quaternion.y = obj.q1/10000;
-                dae.quaternion.z = obj.q2/10000;
-                dae.quaternion.w = obj.q3/10000;
+                if (obj.coordinates == 'Quaternions')
+                {
+					dae.quaternion.x = obj.q0/10000;
+					dae.quaternion.y = obj.q1/10000;
+					dae.quaternion.z = obj.q2/10000;
+					dae.quaternion.w = obj.q3/10000;
+				}
                 dae.updateMatrix();
                 
                 // Plots the vector

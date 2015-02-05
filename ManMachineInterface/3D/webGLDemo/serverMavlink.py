@@ -23,48 +23,41 @@ import serial
 sys.path.append(os.getcwd())
 clients = []
 global t0
-global ser
+global master
 t0 = time.time()
 import serial
+from pymavlink import mavutil
 
 def openSerial():
-  global ser
+  global master
   
   # Loop over varying serial port till you find one (assume you have only one device connected)
-  locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
+  locations = ['/dev/ttyUSB0']#['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
   for device in locations:
     try:
       print "Trying...",device
-      ser = serial.Serial(device, baudrate=115200, timeout=1)
+      master = mavutil.mavlink_connection(device, baud=57600, source_system=255) # 255 is ground station
       print "Connected on ", device
-      time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
-      # An alternative would be to listen to a message from the arduino saying it is ready
-      ser.write('i1') # i to start serial control, 1 is the minimum expecting message frequency (in house protocol)
-
       break
     except:
       print "Failed to connect on ", device
       
 
 def checkSerial():
-    global ser
+    global master
     global serialPending
     global t0
     t = time.time()-t0 
     try:
-        s = ser.readline()
-        print "Received from arduino: " + s
+		msg = master.recv_match(type='HEARTBEAT', blocking=True)
+		print(msg)
+		msg = master.recv_match(type='ATTITUDE', blocking=False)
+		print(msg)
     except Exception, e:
         print("Error reading from serial port" + str(e))
-        openSerial()
-        
-        d = str(-512)   
-        s = d+', ' + d + ', ' + d + ', ' +d
-    if len(s):
-      a = s.split(',') 
-      print a     
-      for c in clients:
-        c.write_message( json.dumps({'x':t, 'q0':float(a[0]), 'q1':float(a[1]), 'q2':float(a[2]), 'q3':float(a[3]), 'coordinates':'Quaternions'}))
+        openSerial() 
+    for c in clients:
+        c.write_message( json.dumps({'t':t, 'roll':msg.roll, 'pitch':msg.pitch, 'yaw':msg.yaw, 'coordinates': 'EulerAngles'}))
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -93,24 +86,6 @@ settings = dict(
             static_path=os.path.join(os.path.dirname(__file__), "static"),
 )
 application = tornado.web.Application(handlers, **settings)
-
-def timer():
-    global mobile
-    for c in clients:
-        #c.write_message(datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%Mm_%Ss"))
-        t = time.time()
-        mobile.computeRPY()
-        #xrotation is through the screen by default, positive anticlockwise
-        #yrotation is up by default, positive anticlockwise
-        #z-axis is to the right
-        msg =  json.dumps({'x':0, 'y':0, 'z':0,\
-         'xrotation':mobile.roll, 'yrotation':mobile.pitch, 'zrotation':mobile.yaw,\
-          'q0':mobile.q[0], 'q1':mobile.q[1], 'q2':mobile.q[2], 'q3':mobile.q[3],\
-           'accx':mobile.acceleration_filtered[0], 'accy':mobile.acceleration_filtered[1], 'accz':mobile.acceleration_filtered[2],\
-           'magx':mobile.magnetic_filtered[0], 'magy':mobile.magnetic_filtered[1], 'magz':mobile.magnetic_filtered[2]\
-           })
-        #print msg
-        c.write_message(msg)
  
 if __name__ == "__main__":
 

@@ -97,9 +97,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Define corrections/offsets for magnetometer
 #define LOCAL_DECLINATION_DEG -3 //at Nantes, France is around 3 degrees in 2014
-#define MAG_X_OFFSET 18.0f
-#define MAG_Y_OFFSET 70.0f
-#define MAG_Z_OFFSET 270.0f
+#define MAG_X_OFFSET 0.0f
+#define MAG_Y_OFFSET 0.0f
+#define MAG_Z_OFFSET 0.0f
+#define ACC_X_OFFSET 0.0f
+#define ACC_Y_OFFSET 0.0f
+#define ACC_Z_OFFSET 0.0f
+#define GYRO_X_OFFSET 0.0f
+#define GYRO_Y_OFFSET 0.0f
+#define GYRO_Z_OFFSET 0.0f
 
 // Declare device MPU6050 class
 MPU6050 mpu(0x69);
@@ -232,11 +238,20 @@ void loop()
             mcount++;
            // read the raw sensor data
             mpu.getAcceleration  ( &a1, &a2, &a3  );
+            a2 = -a2;// Invert y to get NED classical convention
+            a1 = a1 + ACC_X_OFFSET;
+            a2 = a2 + ACC_Y_OFFSET;
+            a3 = a3 + ACC_Z_OFFSET;
             ax_g = a1*2.0f/32768.0f; // 2 g full range for accelerometer
-            ay_g = a2*2.0f/32768.0f;
+            ay_g = a2*2.0f/32768.0f; 
             az_g = a3*2.0f/32768.0f;
 
             mpu.getRotation  ( &g1, &g2, &g3  );
+            g1 = -g1;
+            g3 = -g3;
+            g1 = g1 + GYRO_X_OFFSET;
+            g2 = g2 + GYRO_Y_OFFSET;
+            g3 = g3 + GYRO_Z_OFFSET;
             gx_degps = g1*250.0f/32768.0f; // 250 deg/s full range for gyroscope
             gy_degps = g2*250.0f/32768.0f;
             gz_degps = g3*250.0f/32768.0f;
@@ -250,9 +265,14 @@ void loop()
 //  compared to the gyro and accelerometer!
             if (mcount > 1000/MagRate) {  // this is a poor man's way of setting the magnetometer read rate (see below) 
             mpu.getMag  ( &m1, &m2, &m3 );
-            mx = m1*10.0f*1229.0f/4096.0f + MAG_X_OFFSET; // milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
-            my = m2*10.0f*1229.0f/4096.0f + MAG_Y_OFFSET; // apply calibration offsets in mG that correspond to your environment and magnetometer
-            mz = m3*10.0f*1229.0f/4096.0f + MAG_Z_OFFSET;
+            m2 = -m2;
+            // Apply calibration offsets on raw measurements that correspond to your environment and magnetometer
+            m1 = m1 + MAG_X_OFFSET;
+            m2 = m2 + MAG_Y_OFFSET;
+            m3 = m3 + MAG_Z_OFFSET;
+            mx = m1*10.0f*1229.0f/4096.0f; // milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
+            my = m2*10.0f*1229.0f/4096.0f; 
+            mz = m3*10.0f*1229.0f/4096.0f;
             mcount = 0;
             }           
          }
@@ -303,13 +323,13 @@ void loop()
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
       
-      /*
+      
       //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
       mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
-      
+      /*
       //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
       mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);

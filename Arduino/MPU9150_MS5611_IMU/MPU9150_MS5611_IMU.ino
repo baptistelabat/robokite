@@ -106,7 +106,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GYRO_X_OFFSET 0.0f
 #define GYRO_Y_OFFSET 0.0f
 #define GYRO_Z_OFFSET 0.0f
-
+#define GYRO_RANGE_DEGPS 250.0f
+#define ACCEL_RANGE_G 2.0f
+#define MAG_RANGE_mG 12290.0f// milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
+/*
+#define MAG_X_OFFSET 123.0f
+#define MAG_Y_OFFSET -47.0f
+#define MAG_Z_OFFSET 119.0f
+*/
 // Declare device MPU6050 class
 MPU6050 mpu(0x69);
 
@@ -152,6 +159,11 @@ int movavg_i=0;
 
 const float sea_press = 1013.25;
 float press, temperature, altitude;
+
+short n_gyro_range = 0;
+short n_gyro_range_old = 0;
+short n_accel_range = 0;
+short n_accel_range_old = 0;
 
 void setup()
 {
@@ -234,6 +246,8 @@ void loop()
     pushAvg(press);
     press = getAvg(movavg_buff, MOVAVG_SIZE);
     altitude = getAltitude(press, temperature);
+    automaticGyroRangeSelection();
+    automaticAccelRangeSelection();
     if(mpu.getIntDataReadyStatus() == 1) { // wait for data ready status register to update all data registers
             mcount++;
            // read the raw sensor data
@@ -242,9 +256,9 @@ void loop()
             a1 = a1 + ACC_X_OFFSET;
             a2 = a2 + ACC_Y_OFFSET;
             a3 = a3 + ACC_Z_OFFSET;
-            ax_g = a1*2.0f/32768.0f; // 2 g full range for accelerometer
-            ay_g = a2*2.0f/32768.0f; 
-            az_g = a3*2.0f/32768.0f;
+            ax_g = a1*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15);
+            ay_g = a2*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15);
+            az_g = a3*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15); 
 
             mpu.getRotation  ( &g1, &g2, &g3  );
             g1 = -g1;
@@ -252,9 +266,9 @@ void loop()
             g1 = g1 + GYRO_X_OFFSET;
             g2 = g2 + GYRO_Y_OFFSET;
             g3 = g3 + GYRO_Z_OFFSET;
-            gx_degps = g1*250.0f/32768.0f; // 250 deg/s full range for gyroscope
-            gy_degps = g2*250.0f/32768.0f;
-            gz_degps = g3*250.0f/32768.0f;
+            gx_degps = g1*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
+            gy_degps = g2*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
+            gz_degps = g3*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
 //  The gyros and accelerometers can in principle be calibrated in addition to any factory calibration but they are generally
 //  pretty accurate. You can check the accelerometer by making sure the reading is +1 g in the positive direction for each axis.
 //  The gyro should read zero for each axis when the sensor is at rest. Small or zero adjustment should be needed for these sensors.
@@ -270,9 +284,9 @@ void loop()
             m1 = m1 + MAG_X_OFFSET;
             m2 = m2 + MAG_Y_OFFSET;
             m3 = m3 + MAG_Z_OFFSET;
-            mx = m1*10.0f*1229.0f/4096.0f; // milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
-            my = m2*10.0f*1229.0f/4096.0f; 
-            mz = m3*10.0f*1229.0f/4096.0f;
+            mx = m1*MAG_RANGE_mG/pow(2, 12); 
+            my = m2*MAG_RANGE_mG/pow(2, 12); 
+            mz = m3*MAG_RANGE_mG/pow(2, 12);
             mcount = 0;
             }           
          }
@@ -323,13 +337,13 @@ void loop()
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
       
-      
+      /*
       //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
       mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
-      /*
+      
       //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
       mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);
@@ -390,6 +404,62 @@ void loop()
       count = millis();
     }
 }
+void automaticGyroRangeSelection()
+{
+  if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS))
+  {
+    n_gyro_range = 0;
+  }
+  else   if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS*2)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS*2)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS*2))
+  {
+    n_gyro_range = 1;
+  }
+  else   if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS*4)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS*4)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS*4))
+  {
+    n_gyro_range = 2;
+  }
+  else
+  {
+    n_gyro_range = 3;
+  }
+  
+  
+  if (n_gyro_range!=n_gyro_range_old)
+  {
+    // Full-scale range of the gyro sensors:
+    // 0 = +/- 250 degrees/sec, 1 = +/- 500 degrees/sec, 2 = +/- 1000 degrees/sec, 3 = +/- 2000 degrees/sec
+    mpu.setFullScaleGyroRange(n_gyro_range); // set gyro range to 250 degrees/sec
+    n_gyro_range_old = n_gyro_range;
+  }
+}
+void automaticAccelRangeSelection()
+{
+  if ((fabs(ax_g)<0.2*ACCEL_RANGE_G)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G)&&(fabs(az_g)<0.2*ACCEL_RANGE_G))
+  {
+    n_accel_range = 0;
+  }
+  else   if ((fabs(ax_g)<0.2*ACCEL_RANGE_G*2)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G*2)&&(fabs(az_g)<0.2*ACCEL_RANGE_G*2))
+  {
+    n_accel_range = 1;
+  }
+  else   if ((fabs(ax_g)<0.2*ACCEL_RANGE_G*4)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G*4)&&(fabs(az_g)<0.2*ACCEL_RANGE_G*4))
+  {
+    n_accel_range = 2;
+  }
+  else
+  {
+    n_accel_range = 3;
+  }
+  
+  if (n_accel_range!=n_accel_range_old)
+  {
+  // Full-scale accelerometer range.
+// The full-scale range of the accelerometer: 0 = +/- 2g, 1 = +/- 4g, 2 = +/- 8g, 3 = +/- 16g
+    mpu.setFullScaleAccelRange(n_accel_range);
+    n_accel_range_old = n_accel_range;
+  }
+}
+
 
 float getAltitude(float press, float temp) {
   //return (1.0f - pow(press/101325.0f, 0.190295f)) * 4433000.0f;

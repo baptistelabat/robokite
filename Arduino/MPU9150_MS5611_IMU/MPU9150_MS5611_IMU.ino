@@ -143,7 +143,7 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for M
 
 uint8_t system_id = 100;
 uint8_t component_id = 200;
-long time_boot_ms;
+uint32_t time_boot_ms;
 
 //MS5611
 MS561101BA baro = MS561101BA();

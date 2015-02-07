@@ -32,7 +32,7 @@ def openSerial():
   global master
   
   # Loop over varying serial port till you find one (assume you have only one device connected)
-  locations = ['/dev/ttyUSB0']#['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
+  locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
   for device in locations:
     try:
       print "Trying...",device
@@ -55,8 +55,9 @@ def checkSerial():
 		print(msg)
     except Exception, e:
         print("Error reading from serial port" + str(e))
-        openSerial() 
-    for c in clients:
+        openSerial()
+    if msg is not None:
+      for c in clients:
         c.write_message( json.dumps({'t':t, 'roll':msg.roll, 'pitch':msg.pitch, 'yaw':msg.yaw, 'coordinates': 'EulerAngles'}))
 
 

@@ -33,11 +33,6 @@ invmap = e_eigenvecs; % inverse of above
 comp = invmap * scale * map;
 S = comp * S; % do compensation
 
-% output info
-fprintf( 'Ellipsoid center     :\n                   %.3g %.3g %.3g\n', e_center );
-fprintf( 'Ellipsoid radii      :\n                   %.3g %.3g %.3g\n', e_radii );
-fprintf( 'Ellipsoid evecs      :\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n', e_eigenvecs );
-fprintf( 'Ellpisoid comp evecs :\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n', comp);
 
 % draw data
 figure;
@@ -52,6 +47,12 @@ axis equal;
 figure;
 hold on;
 plot3( x, y, z, '.r' );
+% output info
+fprintf( 'Ellipsoid center     :\n                   %.3g %.3g %.3g\n', e_center );
+fprintf( 'Ellipsoid radii      :\n                   %.3g %.3g %.3g\n', e_radii );
+fprintf( 'Ellipsoid evecs      :\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n', e_eigenvecs );
+fprintf( 'Ellpisoid comp evecs :\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n                   %.6g %.6g %.6g\n', comp);
+
 maxd = max(e_radii);
 step = maxd / 50;
 [xp, yp, zp] = meshgrid(-maxd:step:maxd + e_center(1), -maxd:step:maxd + e_center(2), -maxd:step:maxd + e_center(3));

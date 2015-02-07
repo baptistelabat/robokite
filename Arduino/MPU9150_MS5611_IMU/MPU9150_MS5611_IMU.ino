@@ -84,7 +84,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #define USE_MAVLINK //Uncomment this line to use mavlink
-#define RAW_DATA //Uncomment this line to get raw data for sensor calibration
 #ifdef USE_MAVLINK
   #include "MavlinkForArduino.h"        // Mavlink interface
 #endif
@@ -135,6 +134,16 @@ MPU9150 accelGyroMag(0x69);
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
+#define RAW       0
+#define FUSION    1
+#define DEBUG     2
+short outputMode = FUSION;
+
+// String management
+String inputString = "";         // a string to hold incoming data
+boolean stringComplete = false;  // whether the string is complete
+
+
 int16_t a1, a2, a3, g1, g2, g3, m1, m2, m3;     // raw data arrays reading
 uint16_t last_output_ms = 0;  // used to control display output rate
 uint16_t delt_t_ms = 0; // used to control display output rate
@@ -172,6 +181,8 @@ void setup()
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
   Serial.begin(57600); // Start serial at 57600 bps
+  // Reserve bytes for the inputString:
+  inputString.reserve(200);
 
   delay(2000);            
 
@@ -234,16 +245,25 @@ void setup()
  time loop() runs, so using delay inside loop can delay
  response.  Multiple bytes of data may be available.
  */
-void serialEvent() {
+void serialEvent()
+{
   while (Serial.available()) {
-    // get the new byte:
+    // Get the new byte:
     char inChar = (char)Serial.read(); 
+    // Add it to the inputString:
+    inputString += inChar;
+    // If the incoming character is a newline, set a flag
+    // so the main loop can do something about it:
+    if (inChar == '\n') {
+      stringComplete = true;
+    } 
   }
 }
 
+
 void loop()
 {   
-    
+    processSerialInput();
     if (fabs(millis()-last_baro_read_ms)>1./BaroRate)
     {
       last_baro_read_ms = millis();
@@ -327,23 +347,32 @@ void loop()
       // Initialize the required buffers 
       mavlink_message_t msg; 
       uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-      mavlink_msg_heartbeat_pack(system_id, component_id, &msg, MAV_TYPE_KITE, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
-      uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-      Serial.write(buf, len);
+      uint16_t len;
       
-      //static inline uint16_t mavlink_msg_attitude_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
-      //  uint32_t time_boot_ms, float roll, float pitch, float yaw, float rollspeed, float pitchspeed, float yawspeed)
-      mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);
-      len = mavlink_msg_to_send_buffer(buf, &msg);
-      Serial.write(buf, len);
+      if ((outputMode == FUSION)||(outputMode == RAW))
+      {
+        mavlink_msg_heartbeat_pack(system_id, component_id, &msg, MAV_TYPE_KITE, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+        len = mavlink_msg_to_send_buffer(buf, &msg);
+        Serial.write(buf, len);
+      }
       
-  #ifdef RAW_DATA
-      //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
-      //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
-      mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz, press, press, altitude, temperature, a1);
-      len = mavlink_msg_to_send_buffer(buf, &msg);
-      Serial.write(buf, len);
-  #endif
+      if (outputMode == FUSION)
+      {
+        //static inline uint16_t mavlink_msg_attitude_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+        //  uint32_t time_boot_ms, float roll, float pitch, float yaw, float rollspeed, float pitchspeed, float yawspeed)
+        mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);
+        len = mavlink_msg_to_send_buffer(buf, &msg);
+        Serial.write(buf, len);
+      }
+      
+      if (outputMode == RAW)
+      {
+        //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
+        //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
+        mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz, press, press, altitude, temperature, a1);
+        len = mavlink_msg_to_send_buffer(buf, &msg);
+        Serial.write(buf, len);
+      }
       /*
       //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
@@ -356,39 +385,40 @@ void loop()
       Serial.write(buf, len);
       */
       
-#else
-      Serial.print("ax = "); Serial.print((int)1000*ax_g);  
-      Serial.print(" ay = "); Serial.print((int)1000*ay_g); 
-      Serial.print(" az = "); Serial.print((int)1000*az_g); Serial.println(" mg");
-      Serial.print("gx = "); Serial.print( gx_degps, 2); 
-      Serial.print(" gy = "); Serial.print( gy_degps, 2); 
-      Serial.print(" gz = "); Serial.print( gz_degps, 2); Serial.println(" deg/s");
-      Serial.print("mx = "); Serial.print( (int)mx ); 
-      Serial.print(" my = "); Serial.print( (int)my ); 
-      Serial.print(" mz = "); Serial.print( (int)mz ); Serial.println(" mG");
-      
-      Serial.print("q0 = "); Serial.print(q[0]);
-      Serial.print(" qx = "); Serial.print(q[1]); 
-      Serial.print(" qy = "); Serial.print(q[2]); 
-      Serial.print(" qz = "); Serial.println(q[3]); 
-      Serial.print("Yaw, Pitch, Roll: ");
-      Serial.print(yaw*180.0f / PI, 2);
-      Serial.print(", ");
-      Serial.print(pitch*180.0f / PI, 2);
-      Serial.print(", ");
-      Serial.println(roll*180.0f / PI, 2);
-      
-      Serial.print("rate = "); Serial.print((float)1.0f/deltat_s, 2); Serial.println(" Hz");
-      
-      Serial.print(" temp: ");
-      Serial.print(temperature);
-      Serial.print(" degC pres: ");
-      Serial.print(press);
-      Serial.print(" mbar altitude: ");
-      Serial.print(altitude);
-      Serial.println(" m");
 #endif
-      
+      if (outputMode == DEBUG)
+      {
+        Serial.print("ax = "); Serial.print((int)1000*ax_g);  
+        Serial.print(" ay = "); Serial.print((int)1000*ay_g); 
+        Serial.print(" az = "); Serial.print((int)1000*az_g); Serial.println(" mg");
+        Serial.print("gx = "); Serial.print( gx_degps, 2); 
+        Serial.print(" gy = "); Serial.print( gy_degps, 2); 
+        Serial.print(" gz = "); Serial.print( gz_degps, 2); Serial.println(" deg/s");
+        Serial.print("mx = "); Serial.print( (int)mx ); 
+        Serial.print(" my = "); Serial.print( (int)my ); 
+        Serial.print(" mz = "); Serial.print( (int)mz ); Serial.println(" mG");
+        
+        Serial.print("q0 = "); Serial.print(q[0]);
+        Serial.print(" qx = "); Serial.print(q[1]); 
+        Serial.print(" qy = "); Serial.print(q[2]); 
+        Serial.print(" qz = "); Serial.println(q[3]); 
+        Serial.print("Yaw, Pitch, Roll: ");
+        Serial.print(yaw*180.0f / PI, 2);
+        Serial.print(", ");
+        Serial.print(pitch*180.0f / PI, 2);
+        Serial.print(", ");
+        Serial.println(roll*180.0f / PI, 2);
+        
+        Serial.print("rate = "); Serial.print((float)1.0f/deltat_s, 2); Serial.println(" Hz");
+        
+        Serial.print(" temp: ");
+        Serial.print(temperature);
+        Serial.print(" degC pres: ");
+        Serial.print(press);
+        Serial.print(" mbar altitude: ");
+        Serial.print(altitude);
+        Serial.println(" m");
+      }
     
       // With these settings the filter is updating at a ~145 Hz rate using the Madgwick scheme and 
       // >200 Hz using the Mahony scheme even though the display refreshes at only 2 Hz.
@@ -402,6 +432,29 @@ void loop()
       // produced by the on-board Digital Motion Processor of Invensense's MPU6050 6 DoF and MPU9150 9DoF sensors.
       // The 3.3 V 8 MHz Pro Mini is doing pretty well!
     }
+}
+void processSerialInput()
+{
+  // Print the string when a newline arrives:
+  if (stringComplete)
+  {   
+    if (inputString.startsWith("r"))
+    {
+      outputMode = RAW;
+    }
+    else if (inputString.startsWith("f"))
+    {
+      outputMode = FUSION;
+    }
+    else if (inputString.startsWith("d"))
+    {
+      outputMode = DEBUG;
+    }
+    
+    // Clear the string:
+    inputString = "";
+    stringComplete = false;
+  }
 }
 void getBaroData()
 {

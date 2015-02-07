@@ -84,6 +84,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #define USE_MAVLINK //Uncomment this line to use mavlink
+#define RAW_DATA //Uncomment this line to get raw data for sensor calibration
 #ifdef USE_MAVLINK
   #include "MavlinkForArduino.h"        // Mavlink interface
 #endif
@@ -339,13 +340,14 @@ void loop()
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
       
-      /*
+  #ifdef RAW_DATA
       //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
       mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
-      
+  #endif
+      /*
       //mavlink_msg_scaled_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       // uint32_t time_boot_ms, int16_t xacc, int16_t yacc, int16_t zacc, int16_t xgyro, int16_t ygyro, int16_t zgyro, int16_t xmag, int16_t ymag, int16_t zmag)
       mavlink_msg_raw_imu_pack(system_id, component_id, &msg, time_boot_ms, a1, a2, a3, g1, g2, g3, m1, m2, m3);

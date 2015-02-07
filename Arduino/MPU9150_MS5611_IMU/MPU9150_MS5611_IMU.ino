@@ -93,6 +93,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "MPU6050_9Axis_MotionApps41.h"//from https://github.com/sparkfun/MPU-9150_Breakout.git
 #include <MS561101BA.h>
 
+#define OUTPUT_RATE_ms 50 // 20Hz
+
 #define MOVAVG_SIZE 32
 
 // Define corrections/offsets for magnetometer
@@ -185,7 +187,7 @@ void setup()
 
    mpu.setRate(7); // set gyro rate to 8 kHz/(1 + rate) shows 1 kHz, accelerometer ODR is fixed at 1 KHz
 
-   MagRate = 10; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are reasonable values
+   MagRate = 100; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are reasonable values
 
 // Digital low pass filter configuration. 
 // It also determines the internal sampling rate used by the device as shown in the table below.
@@ -305,9 +307,9 @@ void loop()
    MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 // MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 
-    // Serial print and/or display at 0.05 s rate independent of data rates
+    // Serial print and/or display at output rate independent of data rates
     delt_t = millis() - count;
-    if (delt_t > 50) { //update at 20Hz
+    if (delt_t > OUTPUT_RATE_ms) {
 
     // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
     // In this coordinate system, the positive z-axis is down toward Earth. 

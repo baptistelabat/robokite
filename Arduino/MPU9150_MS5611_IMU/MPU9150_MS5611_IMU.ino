@@ -91,10 +91,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Wire.h>
 #include "I2Cdev.h" //from https://github.com/sparkfun/MPU-9150_Breakout.git
-#include "MPU6050_9Axis_MotionApps41.h"//from https://github.com/sparkfun/MPU-9150_Breakout.git
+#include "MPU9150.h"
 #include <MS561101BA.h>
 
-#define OUTPUT_RATE_ms 50 // 20Hz
+#define OUTPUT_RATE_ms 100 // 20Hz
 
 #define MOVAVG_SIZE 32
 
@@ -113,8 +113,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ACCEL_RANGE_G 2.0f
 #define MAG_RANGE_mG 12290.0f// milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
 
-// Declare device MPU6050 class
-MPU6050 mpu(0x69);
+// class default I2C address is 0x68
+// specific I2C addresses may be passed as a parameter here
+// AD0 low = 0x68 (default for InvenSense evaluation board)
+// AD0 high = 0x69
+MPU9150 accelGyroMag(0x69);
 
 // global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
 #define GyroMeasError PI * (40.0f / 180.0f)       // gyroscope measurement error in rads/s (shown as 3 deg/s)
@@ -133,13 +136,13 @@ MPU6050 mpu(0x69);
 #define Ki 0.0f
 
 int16_t a1, a2, a3, g1, g2, g3, m1, m2, m3;     // raw data arrays reading
-uint16_t count = 0;  // used to control display output rate
-uint16_t delt_t = 0; // used to control display output rate
-uint8_t MagRate;     // read rate for magnetometer data
+uint16_t last_output_ms = 0;  // used to control display output rate
+uint16_t delt_t_ms = 0; // used to control display output rate
+uint8_t BaroRate;     // read rate for magnetometer data
 
 float pitch, yaw, roll;
-float deltat = 0.0f;        // integration interval for both filter schemes
-uint64_t lastUpdate = 0; // used to calculate integration interval
+float deltat_s = 0.0f;        // integration interval for both filter schemes
+uint64_t lastUpdate_us = 0; // used to calculate integration interval
 uint64_t time_boot_us = 0;        // used to calculate integration interval
 
 float ax_g, ay_g, az_g, gx_degps, gy_degps, gz_degps, mx, my, mz; // variables to hold latest sensor data values 
@@ -149,7 +152,7 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for M
 uint8_t system_id = 100;
 uint8_t component_id = 200;
 uint32_t time_boot_ms;
-uint32_t last_mag_read_ms;
+uint32_t last_baro_read_ms;
 
 //MS5611
 MS561101BA baro = MS561101BA();
@@ -174,17 +177,17 @@ void setup()
 
   // initialize MPU6050 device
   Serial.println(F("Initializing I2C devices..."));
-  mpu.initialize();
+  accelGyroMag.initialize();
 
   // verify connection
   Serial.println(F("Testing device connections..."));
-  Serial.println(mpu.testConnection() ? F("MPU9150 connection successful") : F("MPU9150 connection failed"));
+  Serial.println(accelGyroMag.testConnection() ? F("MPU9150 connection successful") : F("MPU9150 connection failed"));
 
 // Set up the accelerometer, gyro, and magnetometer for data output
 
-   mpu.setRate(7); // set gyro rate to 8 kHz/(1 + rate) shows 1 kHz, accelerometer ODR is fixed at 1 KHz
+   accelGyroMag.setRate(7); // set gyro rate to 8 kHz/(1 + rate) shows 1 kHz, accelerometer ODR is fixed at 1 KHz
 
-   MagRate = 100; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are reasonable values
+   BaroRate = 100;
 
 // Digital low pass filter configuration. 
 // It also determines the internal sampling rate used by the device as shown in the table below.
@@ -203,17 +206,17 @@ void setup()
  * 5        | 10Hz      | 13.8ms | 10Hz      | 13.4ms | 1kHz
  * 6        | 5Hz       | 19.0ms | 5Hz       | 18.6ms | 1kHz
  */
-  mpu.setDLPFMode(4); // set bandwidth of both gyro and accelerometer to ~20 Hz
+  accelGyroMag.setDLPFMode(4); // set bandwidth of both gyro and accelerometer to ~20 Hz
 
 // Full-scale range of the gyro sensors:
 // 0 = +/- 250 degrees/sec, 1 = +/- 500 degrees/sec, 2 = +/- 1000 degrees/sec, 3 = +/- 2000 degrees/sec
-  mpu.setFullScaleGyroRange(0); // set gyro range to 250 degrees/sec
+  accelGyroMag.setFullScaleGyroRange(0); // set gyro range to 250 degrees/sec
 
 // Full-scale accelerometer range.
 // The full-scale range of the accelerometer: 0 = +/- 2g, 1 = +/- 4g, 2 = +/- 8g, 3 = +/- 16g
-  mpu.setFullScaleAccelRange(0); // set accelerometer to 2 g range
+  accelGyroMag.setFullScaleAccelRange(0); // set accelerometer to 2 g range
 
-  mpu.setIntDataReadyEnabled(true); // enable data ready interrupt
+  //accelGyroMag.setIntDataReadyEnabled(true); // enable data ready interrupt
   
   // Suppose that the CSB pin is connected to GND.
   // You'll have to check this on your breakout schematics
@@ -239,73 +242,73 @@ void serialEvent() {
 }
 
 void loop()
-{
-    temperature = baro.getTemperature(MS561101BA_OSR_4096);
-    press = baro.getPressure(MS561101BA_OSR_4096);
-    pushAvg(press);
-    press = getAvg(movavg_buff, MOVAVG_SIZE);
-    altitude = getAltitude(press, temperature);
+{   
+    
+    if (fabs(millis()-last_baro_read_ms)>1./BaroRate)
+    {
+      last_baro_read_ms = millis();
+      getBaroData();  
+    }
     automaticGyroRangeSelection();
     automaticAccelRangeSelection();
-    if(mpu.getIntDataReadyStatus() == 1) { // wait for data ready status register to update all data registers
-           // read the raw sensor data
-            mpu.getAcceleration  ( &a1, &a2, &a3  );
-            a2 = -a2;// Invert y to get NED classical convention
-            a1 = a1 + ACC_1_OFFSET;
-            a2 = a2 + ACC_2_OFFSET;
-            a3 = a3 + ACC_3_OFFSET;
-            ax_g = a1*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
-            ay_g = a2*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
-            az_g = a3*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15); 
 
-            mpu.getRotation  ( &g1, &g2, &g3  );
-            g1 = -g1;
-            g3 = -g3;
-            g1 = g1 + GYRO_1_OFFSET;
-            g2 = g2 + GYRO_2_OFFSET;
-            g3 = g3 + GYRO_3_OFFSET;
-            gx_degps = g1*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
-            gy_degps = g2*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
-            gz_degps = g3*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
-//  The gyros and accelerometers can in principle be calibrated in addition to any factory calibration but they are generally
-//  pretty accurate. You can check the accelerometer by making sure the reading is +1 g in the positive direction for each axis.
-//  The gyro should read zero for each axis when the sensor is at rest. Small or zero adjustment should be needed for these sensors.
-//  The magnetometer is a different thing. Most magnetometers will be sensitive to circuit currents, computers, and 
-//  other both man-made and natural sources of magnetic field. The rough way to calibrate the magnetometer is to record
-//  the maximum and minimum readings (generally achieved at the North magnetic direction). The average of the sum divided by two
-//  should provide a pretty good calibration offset. Don't forget that for the MPU9150, the magnetometer x- and y-axes are switched 
-//  compared to the gyro and accelerometer!
-        if (fabs(last_mag_read_ms-millis())>1./MagRate) 
-            {  
-            mpu.getMag  ( &m1, &m2, &m3 );
-            last_mag_read_ms = millis();
-            m2 = -m2;
-            // Apply calibration offsets on raw measurements that correspond to your environment and magnetometer
-            m1 = m1 + MAG_1_OFFSET;
-            m2 = m2 + MAG_2_OFFSET;
-            m3 = m3 + MAG_3_OFFSET;
-            // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
-            // the magnetometer z-axis (+ down) is opposite to z-axis (+ up) of accelerometer and gyro!
-            // We have to make some allowance for this orientationmismatch in feeding the output to the quaternion filter.
-            mx = m2*MAG_RANGE_mG/pow(2, 12); //Warning!!
-            my = m1*MAG_RANGE_mG/pow(2, 12); 
-            mz = m3*MAG_RANGE_mG/pow(2, 12);
-            }           
-         }
+    if(accelGyroMag.getIntDataReadyStatus() == 1)// wait for data ready status register to update all data registers
+    { 
+      // read the raw sensor data
+        accelGyroMag.getMotion9(&a1, &a1, &a3, &g1, &g2, &g3, &m1, &m2, &m3);
+
+        a2 = -a2;// Invert y to get NED classical convention
+        a1 = a1 + ACC_1_OFFSET;
+        a2 = a2 + ACC_2_OFFSET;
+        a3 = a3 + ACC_3_OFFSET;
+        ax_g = a1*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
+        ay_g = a2*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
+        az_g = a3*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15); 
+        
+        g1 = -g1;
+        g3 = -g3;
+        g1 = g1 + GYRO_1_OFFSET;
+        g2 = g2 + GYRO_2_OFFSET;
+        g3 = g3 + GYRO_3_OFFSET;
+        gx_degps = g1*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
+        gy_degps = g2*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
+        gz_degps = g3*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
+        //  The gyros and accelerometers can in principle be calibrated in addition to any factory calibration but they are generally
+        //  pretty accurate. You can check the accelerometer by making sure the reading is +1 g in the positive direction for each axis.
+        //  The gyro should read zero for each axis when the sensor is at rest. Small or zero adjustment should be needed for these sensors.
+        //  The magnetometer is a different thing. Most magnetometers will be sensitive to circuit currents, computers, and 
+        //  other both man-made and natural sources of magnetic field. The rough way to calibrate the magnetometer is to record
+        //  the maximum and minimum readings (generally achieved at the North magnetic direction). The average of the sum divided by two
+        //  should provide a pretty good calibration offset. Don't forget that for the MPU9150, the magnetometer x- and y-axes are switched 
+        //  compared to the gyro and accelerometer!
+
+        m2 = -m2;
+        // Apply calibration offsets on raw measurements that correspond to your environment and magnetometer
+        m1 = m1 + MAG_1_OFFSET;
+        m2 = m2 + MAG_2_OFFSET;
+        m3 = m3 + MAG_3_OFFSET;
+        // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
+        // the magnetometer z-axis (+ down) is opposite to z-axis (+ up) of accelerometer and gyro!
+        // We have to make some allowance for this orientationmismatch in feeding the output to the quaternion filter.
+        mx = m2*MAG_RANGE_mG/pow(2, 12); //Warning x and y are inverted!!
+        my = m1*MAG_RANGE_mG/pow(2, 12); 
+        mz = m3*MAG_RANGE_mG/pow(2, 12);
+                 
+    }
    
-  time_boot_us = micros();
-  time_boot_ms = millis();
-  deltat = ((time_boot_us - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
-  lastUpdate = time_boot_us;
+    time_boot_us = micros();
+    time_boot_ms = millis();
+    deltat_s = ((time_boot_us - lastUpdate_us)/1000000.0f); // set integration time by time elapsed since last filter update
+    lastUpdate_us = time_boot_us;
 
-  // Pass gyro rate as rad/s
-   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz);
-// MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
-
+    // Pass gyro rate as rad/s
+    MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz);
+    // MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
+    
     // Serial print and/or display at output rate independent of data rates
-    delt_t = millis() - count;
-    if (delt_t > OUTPUT_RATE_ms) {
-
+    delt_t_ms = fabs(millis() - last_output_ms);
+    if (delt_t_ms > OUTPUT_RATE_ms) {
+       last_output_ms = millis();
     // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
     // In this coordinate system, the positive z-axis is down toward Earth. 
     // Yaw is the angle between Sensor x-axis and Earth magnetic North (or true North if corrected for local declination, looking down on the sensor positive yaw is counterclockwise.
@@ -375,7 +378,7 @@ void loop()
       Serial.print(", ");
       Serial.println(roll*180.0f / PI, 2);
       
-      Serial.print("rate = "); Serial.print((float)1.0f/deltat, 2); Serial.println(" Hz");
+      Serial.print("rate = "); Serial.print((float)1.0f/deltat_s, 2); Serial.println(" Hz");
       
       Serial.print(" temp: ");
       Serial.print(temperature);
@@ -398,62 +401,57 @@ void loop()
       // stabilization control of a fast-moving robot or quadcopter. Compare to the update rate of 200 Hz
       // produced by the on-board Digital Motion Processor of Invensense's MPU6050 6 DoF and MPU9150 9DoF sensors.
       // The 3.3 V 8 MHz Pro Mini is doing pretty well!
-  
-      count = millis();
     }
+}
+void getBaroData()
+{
+    temperature = baro.getTemperature(MS561101BA_OSR_4096);
+    press = baro.getPressure(MS561101BA_OSR_4096);
+    pushAvg(press);
+    press = getAvg(movavg_buff, MOVAVG_SIZE);
+    altitude = getAltitude(press, temperature);
 }
 void automaticGyroRangeSelection()
 {
-  if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS))
-  {
-    n_gyro_range = 0;
+  for (int i =0; i<=2; i++)
+  {  
+    if (max(max(fabs(gx_degps),fabs(gy_degps)),fabs(gz_degps)) <0.2*GYRO_RANGE_DEGPS*pow(2, i))
+    {
+      n_gyro_range = i;
+    }
+    else
+    {
+      n_gyro_range = i+1;
+    }
   }
-  else   if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS*2)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS*2)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS*2))
-  {
-    n_gyro_range = 1;
-  }
-  else   if ((fabs(gx_degps)<0.2*GYRO_RANGE_DEGPS*4)&&(fabs(gy_degps)<0.2*GYRO_RANGE_DEGPS*4)&&(fabs(gz_degps)<0.2*GYRO_RANGE_DEGPS*4))
-  {
-    n_gyro_range = 2;
-  }
-  else
-  {
-    n_gyro_range = 3;
-  }
-  
   
   if (n_gyro_range!=n_gyro_range_old)
   {
     // Full-scale range of the gyro sensors:
     // 0 = +/- 250 degrees/sec, 1 = +/- 500 degrees/sec, 2 = +/- 1000 degrees/sec, 3 = +/- 2000 degrees/sec
-    mpu.setFullScaleGyroRange(n_gyro_range); // set gyro range to 250 degrees/sec
+    accelGyroMag.setFullScaleGyroRange(n_gyro_range); // set gyro range to 250 degrees/sec
     n_gyro_range_old = n_gyro_range;
   }
 }
 void automaticAccelRangeSelection()
 {
-  if ((fabs(ax_g)<0.2*ACCEL_RANGE_G)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G)&&(fabs(az_g)<0.2*ACCEL_RANGE_G))
-  {
-    n_accel_range = 0;
-  }
-  else   if ((fabs(ax_g)<0.2*ACCEL_RANGE_G*2)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G*2)&&(fabs(az_g)<0.2*ACCEL_RANGE_G*2))
-  {
-    n_accel_range = 1;
-  }
-  else   if ((fabs(ax_g)<0.2*ACCEL_RANGE_G*4)&&(fabs(ay_g)<0.2*ACCEL_RANGE_G*4)&&(fabs(az_g)<0.2*ACCEL_RANGE_G*4))
-  {
-    n_accel_range = 2;
-  }
-  else
-  {
-    n_accel_range = 3;
+  for (int i =0; i<=2; i++)
+  {  
+    if (max(max(fabs(ax_g),fabs(ay_g)),fabs(az_g)) <0.2*ACCEL_RANGE_G*pow(2, i))
+    {
+      n_accel_range = i;
+    }
+    else
+    {
+      n_accel_range = i+1;
+    }
   }
   
   if (n_accel_range!=n_accel_range_old)
   {
   // Full-scale accelerometer range.
 // The full-scale range of the accelerometer: 0 = +/- 2g, 1 = +/- 4g, 2 = +/- 8g, 3 = +/- 16g
-    mpu.setFullScaleAccelRange(n_accel_range);
+    accelGyroMag.setFullScaleAccelRange(n_accel_range);
     n_accel_range_old = n_accel_range;
   }
 }
@@ -563,10 +561,10 @@ float getAvg(float * buff, int size) {
             qDot4 = 0.5f * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
 
             // Integrate to yield quaternion
-            q1 += qDot1 * deltat;
-            q2 += qDot2 * deltat;
-            q3 += qDot3 * deltat;
-            q4 += qDot4 * deltat;
+            q1 += qDot1 * deltat_s;
+            q2 += qDot2 * deltat_s;
+            q3 += qDot3 * deltat_s;
+            q4 += qDot4 * deltat_s;
             norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);    // normalise quaternion
             norm = 1.0f/norm;
             q[0] = q1 * norm;
@@ -657,10 +655,10 @@ float getAvg(float * buff, int size) {
             pa = q2;
             pb = q3;
             pc = q4;
-            q1 = q1 + (-q2 * gx - q3 * gy - q4 * gz) * (0.5f * deltat);
-            q2 = pa + (q1 * gx + pb * gz - pc * gy) * (0.5f * deltat);
-            q3 = pb + (q1 * gy - pa * gz + pc * gx) * (0.5f * deltat);
-            q4 = pc + (q1 * gz + pa * gy - pb * gx) * (0.5f * deltat);
+            q1 = q1 + (-q2 * gx - q3 * gy - q4 * gz) * (0.5f * deltat_s);
+            q2 = pa + (q1 * gx + pb * gz - pc * gy) * (0.5f * deltat_s);
+            q3 = pb + (q1 * gy - pa * gz + pc * gx) * (0.5f * deltat_s);
+            q4 = pc + (q1 * gz + pa * gy - pb * gx) * (0.5f * deltat_s);
 
             // Normalise quaternion
             norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);

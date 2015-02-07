@@ -100,23 +100,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Define corrections/offsets for magnetometer
 #define LOCAL_DECLINATION_DEG -3 //at Nantes, France is around 3 degrees in 2014
-#define MAG_X_OFFSET 0.0f
-#define MAG_Y_OFFSET 0.0f
-#define MAG_Z_OFFSET 0.0f
-#define ACC_X_OFFSET 0.0f
-#define ACC_Y_OFFSET 0.0f
-#define ACC_Z_OFFSET 0.0f
-#define GYRO_X_OFFSET 0.0f
-#define GYRO_Y_OFFSET 0.0f
-#define GYRO_Z_OFFSET 0.0f
+#define MAG_1_OFFSET -7.0f
+#define MAG_2_OFFSET 75.0f
+#define MAG_3_OFFSET 117.0f
+#define ACC_1_OFFSET 0.0f
+#define ACC_2_OFFSET 0.0f
+#define ACC_3_OFFSET 0.0f
+#define GYRO_1_OFFSET -284.8f
+#define GYRO_2_OFFSET -161.0f
+#define GYRO_3_OFFSET 12.7f
 #define GYRO_RANGE_DEGPS 250.0f
 #define ACCEL_RANGE_G 2.0f
 #define MAG_RANGE_mG 12290.0f// milliGauss (1229 microTesla per 2^12 bits, 10 mG per microTesla)
-/*
-#define MAG_X_OFFSET 123.0f
-#define MAG_Y_OFFSET -47.0f
-#define MAG_Z_OFFSET 119.0f
-*/
+
 // Declare device MPU6050 class
 MPU6050 mpu(0x69);
 
@@ -139,7 +135,6 @@ MPU6050 mpu(0x69);
 int16_t a1, a2, a3, g1, g2, g3, m1, m2, m3;     // raw data arrays reading
 uint16_t count = 0;  // used to control display output rate
 uint16_t delt_t = 0; // used to control display output rate
-uint16_t mcount = 0; // used to control display output rate
 uint8_t MagRate;     // read rate for magnetometer data
 
 float pitch, yaw, roll;
@@ -154,6 +149,7 @@ float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for M
 uint8_t system_id = 100;
 uint8_t component_id = 200;
 uint32_t time_boot_ms;
+uint32_t last_mag_read_ms;
 
 //MS5611
 MS561101BA baro = MS561101BA();
@@ -252,26 +248,25 @@ void loop()
     automaticGyroRangeSelection();
     automaticAccelRangeSelection();
     if(mpu.getIntDataReadyStatus() == 1) { // wait for data ready status register to update all data registers
-            mcount++;
            // read the raw sensor data
             mpu.getAcceleration  ( &a1, &a2, &a3  );
             a2 = -a2;// Invert y to get NED classical convention
-            a1 = a1 + ACC_X_OFFSET;
-            a2 = a2 + ACC_Y_OFFSET;
-            a3 = a3 + ACC_Z_OFFSET;
-            ax_g = a1*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15);
-            ay_g = a2*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15);
-            az_g = a3*ACCEL_RANGE_G*pow(2, n_accel_range)/pow(2, 15); 
+            a1 = a1 + ACC_1_OFFSET;
+            a2 = a2 + ACC_2_OFFSET;
+            a3 = a3 + ACC_3_OFFSET;
+            ax_g = a1*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
+            ay_g = a2*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15);
+            az_g = a3*ACCEL_RANGE_G*pow(2.0, n_accel_range)/pow(2.0, 15); 
 
             mpu.getRotation  ( &g1, &g2, &g3  );
             g1 = -g1;
             g3 = -g3;
-            g1 = g1 + GYRO_X_OFFSET;
-            g2 = g2 + GYRO_Y_OFFSET;
-            g3 = g3 + GYRO_Z_OFFSET;
-            gx_degps = g1*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
-            gy_degps = g2*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
-            gz_degps = g3*GYRO_RANGE_DEGPS*pow(2, n_gyro_range)/pow(2, 15);
+            g1 = g1 + GYRO_1_OFFSET;
+            g2 = g2 + GYRO_2_OFFSET;
+            g3 = g3 + GYRO_3_OFFSET;
+            gx_degps = g1*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
+            gy_degps = g2*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
+            gz_degps = g3*GYRO_RANGE_DEGPS*pow(2.0, n_gyro_range)/pow(2.0, 15);
 //  The gyros and accelerometers can in principle be calibrated in addition to any factory calibration but they are generally
 //  pretty accurate. You can check the accelerometer by making sure the reading is +1 g in the positive direction for each axis.
 //  The gyro should read zero for each axis when the sensor is at rest. Small or zero adjustment should be needed for these sensors.
@@ -280,17 +275,21 @@ void loop()
 //  the maximum and minimum readings (generally achieved at the North magnetic direction). The average of the sum divided by two
 //  should provide a pretty good calibration offset. Don't forget that for the MPU9150, the magnetometer x- and y-axes are switched 
 //  compared to the gyro and accelerometer!
-            if (mcount > 1000/MagRate) {  // this is a poor man's way of setting the magnetometer read rate (see below) 
+        if (fabs(last_mag_read_ms-millis())>1./MagRate) 
+            {  
             mpu.getMag  ( &m1, &m2, &m3 );
+            last_mag_read_ms = millis();
             m2 = -m2;
             // Apply calibration offsets on raw measurements that correspond to your environment and magnetometer
-            m1 = m1 + MAG_X_OFFSET;
-            m2 = m2 + MAG_Y_OFFSET;
-            m3 = m3 + MAG_Z_OFFSET;
-            mx = m1*MAG_RANGE_mG/pow(2, 12); 
-            my = m2*MAG_RANGE_mG/pow(2, 12); 
+            m1 = m1 + MAG_1_OFFSET;
+            m2 = m2 + MAG_2_OFFSET;
+            m3 = m3 + MAG_3_OFFSET;
+            // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
+            // the magnetometer z-axis (+ down) is opposite to z-axis (+ up) of accelerometer and gyro!
+            // We have to make some allowance for this orientationmismatch in feeding the output to the quaternion filter.
+            mx = m2*MAG_RANGE_mG/pow(2, 12); //Warning!!
+            my = m1*MAG_RANGE_mG/pow(2, 12); 
             mz = m3*MAG_RANGE_mG/pow(2, 12);
-            mcount = 0;
             }           
          }
    
@@ -298,14 +297,9 @@ void loop()
   time_boot_ms = millis();
   deltat = ((time_boot_us - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
   lastUpdate = time_boot_us;
-  // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
-  // the magnetometer z-axis (+ down) is opposite to z-axis (+ up) of accelerometer and gyro!
-  // We have to make some allowance for this orientationmismatch in feeding the output to the quaternion filter.
-  // For the MPU-9150, we have chosen a magnetic rotation that keeps the sensor forward along the x-axis just like
-  // in the LSM9DS0 sensor. This rotation can be modified to allow any convenient orientation convention.
-  // This is ok by aircraft orientation standards!  
+
   // Pass gyro rate as rad/s
-   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
+   MadgwickQuaternionUpdate(ax_g, ay_g, az_g, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz);
 // MahonyQuaternionUpdate(ax_g, ay, az, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz);
 
     // Serial print and/or display at output rate independent of data rates
@@ -343,7 +337,7 @@ void loop()
   #ifdef RAW_DATA
       //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
       //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
-      mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, my, mx, mz, press, press, altitude, temperature, a1);
+      mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz, press, press, altitude, temperature, a1);
       len = mavlink_msg_to_send_buffer(buf, &msg);
       Serial.write(buf, len);
   #endif

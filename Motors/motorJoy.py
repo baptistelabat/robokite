@@ -62,7 +62,7 @@ def NMEA(message_type, value, talker_id= "OR"):
 locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
 baudrate = 57600
 
-ORDER_SAMPLE_TIME = 0.01 #seconds Sample time to send order without overwhelming arduino
+ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
 
 MANUAL    = 0 # Control lines are released to enable manual control
 JOY_OL    = 1 # Joystick controls voltage applied to motors (open loop control)

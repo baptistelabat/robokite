@@ -36,6 +36,8 @@ try:
 except:
   isMavlinkInstalled = False
 
+global msg1, msg2, mfb, power1, power2, mode
+
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
@@ -75,7 +77,6 @@ joy_CL_offset_right   = 0
 auto_offset_forward   = 0
 auto_offset_right     = 0
 
-global msg1, msg2, mfb, power1, power2, mode
 def resetOrder():
   global msg1, msg2, mfb, power1, power2, mode
   # Define the NMEA message in use

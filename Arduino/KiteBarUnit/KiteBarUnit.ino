@@ -7,33 +7,133 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define USE_MAVLINK //Uncomment this line to use mavlink
-#ifdef USE_MAVLINK
-  #include "MavlinkForArduino.h"        // Mavlink interface
-#endif
+// Includes
+#define NO_PORTB_PINCHANGES // PortB used for mySofwareSerial
+#include <PinChangeInt.h> // From https://github.com/GreyGnome/PinChangeInt
+
+// Port definition
+
+#define     A_PIN  2 // Linear encoder one
+#define     B_PIN  3 // Linear encoder other one
+#define RESET_PIN  4 // Linear encoder absolute reference
+#define   LED_PIN 13 // Built-in led
+const int   POT_PIN = A0; // Potentiometer
+const int LINE_TENSION_PIN = A1; // For line tension measurement
+
 
 RH_ASK driver(4800, 11, 12);
 //Transmitter : ATAD D12
 
-uint8_t system_id = 100;
-uint8_t component_id = 200;
+uint8_t data[4];  // 2 element array of unsigned 8-bit type, holding Joystick readings
+
+// Define global variables to deal with encoder interrupt
+volatile unsigned long threshold = 1000;// 'threshold' is the De-bounce Adjustment factor for the encoder. halfSteps
+volatile unsigned long int0time = 0;
+volatile unsigned long int1time = 0;
+volatile uint8_t int0signal = 0;
+volatile uint8_t int1signal = 0;
+volatile uint8_t int0history = 0;
+volatile uint8_t int1history = 0;
+// 'halfSteps' is the counter of half-steps. The actual
+// number of steps will be equal to halfSteps / 2
+volatile long halfSteps = 0;
+long halfStepsCorrection = -127; //to get out of range value
+boolean isAbsoluteReferenceAvailable = false;
+
+#define FEEDBACK_RATE_ms 50
+long last_sent_ms = 0;
+
 void setup()
 {
     Serial.begin(9600);	  // Debugging only
     if (!driver.init())
          Serial.println("init failed");
+    data[0] = 127;
+    data[1] = 127;
+    data[2] = 0;
+    data[3] = 127;
+ 
+   // Prepare interrupts for the linear encoder
+  pinMode(A_PIN, INPUT);
+  digitalWrite(A_PIN, HIGH);
+  attachInterrupt(0, int0, CHANGE);
+
+  pinMode(B_PIN, INPUT);
+  digitalWrite(B_PIN, HIGH);
+  attachInterrupt(1, int1, CHANGE);
+  
+  // Pin used to get absolute position
+  pinMode(RESET_PIN, INPUT);
+  digitalWrite(RESET_PIN, HIGH);
+  PCintPort::attachInterrupt(RESET_PIN, &reset, CHANGE);   
+    
 }
 
 void loop()
 {
-    mavlink_message_t msg; 
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-    uint16_t len;
-    
-    mavlink_msg_heartbeat_pack(system_id, component_id, &msg, MAV_TYPE_KITE, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
-    len = mavlink_msg_to_send_buffer(buf, &msg);
-    
-    driver.send(buf, len);
-    driver.waitPacketSent();
-    delay(200);
+    computeFeedback();
+    sendFeedback();
+    delay(10);
 }
+
+void computeFeedback()
+{
+  
+  // Feedbacks are normalized between -1 and 1
+  
+  // Potentiometer angle
+  data[0] = map(analogRead(POT_PIN), 0, 1023, 0, 255);
+  data[1] = map(halfSteps + 127, 0, 255, 0, 255); //Map for clean saturation
+  if (isAbsoluteReferenceAvailable)
+  {
+    data[2] = map(halfStepsCorrection + 127, 0, 255, 0, 255); //Map for clean saturation
+  }
+  else
+  {
+    data[2] = 0;
+  }
+  data[3] = map(analogRead(LINE_TENSION_PIN), 0, 1023, 0, 255);
+
+}
+void sendFeedback()
+{
+  // All the feedback values are normalized in the range 0-1023 (10 bits resolution)
+  if (fabs(millis()-last_sent_ms)>FEEDBACK_RATE_ms)
+  {
+    driver.send(data, sizeof(data));
+    driver.waitPacketSent();
+  }
+}
+// Taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
+void int0()
+{
+  if ( micros() - int0time < threshold )
+    return;
+  int0history = int0signal;
+  int0signal = bitRead(PIND, A_PIN);
+  if ( int0history==int0signal )
+    return;
+  int0time = micros();
+  if ( int0signal == int1signal )
+    halfSteps++;
+  else
+    halfSteps--;
+}
+
+// Taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)
+void int1()
+{
+  if ( micros() - int1time < threshold )
+    return;
+  int1history = int1signal;
+  int1signal = bitRead(PIND, B_PIN);
+  if ( int1history==int1signal )
+    return;
+  int1time = micros();
+}
+void reset()
+{
+  halfStepsCorrection = halfSteps;
+  isAbsoluteReferenceAvailable = true;
+ }
+ 

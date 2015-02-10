@@ -7,11 +7,9 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actualy used but needed to compile
 
-RH_ASK driver(4800, 11, 12);
+#define RF_DATA_PIN 11
+RH_ASK driver(4800, RF_DATA_PIN, 12);
 // RECEPTEUR : DATA D11
-// Sensors 
-unsigned int SensorData1;
-char SensorMsg1[10]; 
 
 void setup()
 {
@@ -27,8 +25,6 @@ void loop()
 
     if (driver.recv(buf, &buflen)) // Non-blocking
     {
-	int i;
-
 	// Message with a good checksum received, dump it.
 	//driver.printBuffer("Got:", buf, buflen);
         for (byte i = 0; i < buflen; i++) // Si il n'est pas corrompu on l'affiche via Serial

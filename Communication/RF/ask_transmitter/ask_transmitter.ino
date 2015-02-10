@@ -9,19 +9,27 @@
 
 RH_ASK driver(4800, 11, 12);
 //Transmitter : ATAD D12
+
+uint8_t data[3];  // 2 element array of unsigned 8-bit type, holding Joystick readings
 void setup()
 {
     Serial.begin(9600);	  // Debugging only
     if (!driver.init())
          Serial.println("init failed");
+    data[0] = 0;//map(584, 0, 1023, 0, 255);
+    data[1] = 0;//map(212, 0, 1023, 0, 255);
+    data[2] = 0;//map(212, 0, 1023, 0, 255);    
+    
 }
 
 void loop()
 {
-    const char *msg = "hello";
-
-    driver.send((uint8_t *)msg, strlen(msg));
+    data[0] = data[0] + 1 ;//map(584, 0, 1023, 0, 255);
+    data[1] = data[0]*2;
+    data[2] = data[0]+data[1];
+  
+    driver.send(data, sizeof(data));
     driver.waitPacketSent();
     Serial.println("msg sent");
-    delay(200);
+    delay(20);
 }

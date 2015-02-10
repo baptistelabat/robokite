@@ -72,7 +72,6 @@ void setup()
 
 void loop()
 {
-    computeFeedback();
     sendFeedback();
     delay(10);
 }
@@ -101,6 +100,8 @@ void sendFeedback()
   // All the feedback values are normalized in the range 0-1023 (10 bits resolution)
   if (fabs(millis()-last_sent_ms)>FEEDBACK_RATE_ms)
   {
+    last_sent_ms = millis();
+    computeFeedback();
     driver.send(data, sizeof(data));
     driver.waitPacketSent();
   }

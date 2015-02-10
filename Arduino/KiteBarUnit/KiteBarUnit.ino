@@ -13,15 +13,16 @@
 
 // Port definition
 
-#define     A_PIN  2 // Linear encoder one
-#define     B_PIN  3 // Linear encoder other one
-#define RESET_PIN  4 // Linear encoder absolute reference
+#define         A_PIN  2 // Linear encoder one
+#define         B_PIN  3 // Linear encoder other one
+#define     RESET_PIN  4 // Linear encoder absolute reference
+#define  DATA_OUT_PIN  5 // RF module ATAD pin
 #define   LED_PIN 13 // Built-in led
-const int   POT_PIN = A0; // Potentiometer
-const int LINE_TENSION_PIN = A1; // For line tension measurement
+const int   POT_PIN = A7; // Potentiometer
+const int LINE_TENSION_PIN = A6; // For line tension measurement
 
 
-RH_ASK driver(4800, 11, 12);
+RH_ASK driver(4800, 11, DATA_OUT_PIN);
 //Transmitter : ATAD D12
 
 uint8_t data[4];  // 2 element array of unsigned 8-bit type, holding Joystick readings

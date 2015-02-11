@@ -10,6 +10,8 @@
 #define RF_DATA_PIN 11
 RH_ASK driver(4800, RF_DATA_PIN, 12);
 // RECEPTEUR : DATA D11
+int counter = 0;
+long lastResetCounter_ms = 0;
 
 void setup()
 {
@@ -30,6 +32,15 @@ void loop()
         for (byte i = 0; i < buflen; i++) // Si il n'est pas corrompu on l'affiche via Serial
 	    Serial.println(buf[i]);
         Serial.println("");
+        counter++;
+    }
+    
+    if (fabs(millis()-lastResetCounter_ms)>2000)
+    {
+      lastResetCounter_ms = millis();
+      Serial.print("        ");
+      Serial.println(counter/2.);
+      counter = 0;
     }
 
 }

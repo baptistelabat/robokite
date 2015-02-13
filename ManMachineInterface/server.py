@@ -46,7 +46,7 @@ except:
   print "No kite sensors"
 
 def computeXORChecksum(chksumdata):
-	# Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
+    # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
     csum = 0
     
@@ -58,17 +58,26 @@ def computeXORChecksum(chksumdata):
         # and stores the new XOR value in csum
         csum ^= ord(c)
     h = hex(csum)    
-    return h[2:].zfill(2) # Get hex data without 0x prefix
+    return h[2:].zfill(2)# Get hex data without 0x prefix
+    
+def NMEA(message_type, value, talker_id= "OR"):
+  msg = talker_id + message_type +","+ str(value)
+  msg = "$"+ msg +"*"+ computeXORChecksum(msg) + str(chr(13).encode('ascii')) + str(chr(10).encode('ascii'))
+  return msg
     
 def openSerial():
   global ser
   
   # Loop over varying serial port till you find one (assume you have only one device connected)
-  locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3']
-  for device in locations:
+ # Parameters for the serial connection
+    locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
+    baudrate = 57600
+    for device in locations:
     try:
       print "Trying...",device
-      ser = serial.Serial(device, baudrate=19200, timeout=1)
+      ser = serial.Serial(device, baudrate=0, timeout=1)
+      ser.close()
+      ser = serial.Serial(device, baudrate=baudrate, timeout=1)
       print "Connected on ", device
       break
     except:
@@ -76,7 +85,6 @@ def openSerial():
       
   time.sleep(1.5) # Arduino is reset when opening port so wait before communicating
   # An alternative would be to listen to a message from the arduino saying it is ready
-  ser.write('i1') # i to start serial control, 1 is the minimum expecting message frequency (in house protocol)
 
 def updateSerial():
     global alpha1
@@ -88,13 +96,11 @@ def updateSerial():
 		# 0: stands for open-source (by contradiction to P, which stands for proprietary!)
 		# R: stands for robokite, the name of the project
 		# PWM: stands for Pulse Width Modulation, the way the motor is controlled.
-		msg = "ORPW1" + "," + str(alpha1)
-		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+		msg = NMEA("PW1", alpha1,   "OR")
 		print "Send " + msg
 		ser.write(msg)
 		
-		msg = "ORPW2" + "," + str(alpha2)
-		msg = "$" + msg + "*" + computeXORChecksum(msg) + chr(13).encode('ascii')
+        msg = NMEA("PW2", alpha2,   "OR")
 		print "Send " + msg
 		ser.write(msg)
     except Exception, e:
@@ -168,13 +174,14 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
           print "controlMode" 
         if msg.get('id')=='pwm1':       
           alpha1 = float(msg.get('value'))/100.0
-          msge = "ORPW1" + "," + str(alpha1)
+          msge = NMEA("PW1", alpha1, "OR")
         if msg.get('id')=='pwm2':
           alpha2 = float(msg.get('value'))/100.0
-          msge = "ORPW2" + "," + str(alpha2)
+          msge = NMEA("PW2", alpha2, "OR")
         if msg.get('id')=='kp1':
           data = float(msg.get('value'))/100.0
           msge = "ORKP1" + "," + str(data)
+          msge = NMEA("PW1", alpha1, "OR")
         if msg.get('id')=='ki1':
           data = float(msg.get('value'))/100.0
           msge = "ORKI1" + "," + str(data)

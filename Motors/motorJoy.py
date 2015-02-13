@@ -29,6 +29,7 @@ import serial
 import numpy as np
 import pygame
 from pygame.locals import *
+from scipy.interpolate import interp1d
 import os
 try:
   from pymavlink import mavutil
@@ -36,7 +37,12 @@ try:
 except:
   isMavlinkInstalled = False
 
-global msg1, msg2, mfb, power1, power2, mode
+global msg1, msg2, mfb, power1, power2, mode, add_deadband
+
+# Define a linear interpolation function to create a deadband
+xi = [-1000, -127, -80, 80, 127, 1000]
+yi = [-127, -127, 0, 0, 127, 127]
+add_deadband = interp1d(xi, yi, kind='linear')
 
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -193,7 +199,7 @@ while True:
             power1 = event.value*127
           elif event.axis == LEFT_RIGHT_BUTTON :
             #print("direction control ", event.value)
-            power2 = event.value*127
+            power2 = add_deadband(event.value*127)
             
         # Trim events
         if event.type == JOYHATMOTION:

@@ -9,7 +9,6 @@
 # Click on OK, then click on Connect
 
 from pymavlink import mavutil
-from  pymavlink.dialects.v10.ardupilotmega import *
 import time
 
 freq_out  = 10#Hz

@@ -169,6 +169,7 @@ float movavg_buff[MOVAVG_SIZE];
 int movavg_i=0;
 
 const float sea_press = 1013.25;
+float ground_press;
 float press, temperature, altitude;
 
 short n_gyro_range = 0;
@@ -263,6 +264,7 @@ void serialEvent()
 
 void loop()
 {   
+  //ground_press = baro.getPressure(MS561101BA_OSR_4096);
     processSerialInput();
     if (fabs(millis()-last_baro_read_ms)>1./BaroRate)
     {
@@ -363,13 +365,16 @@ void loop()
         mavlink_msg_attitude_pack(system_id, component_id, &msg, time_boot_ms, roll, pitch, yaw, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f);
         len = mavlink_msg_to_send_buffer(buf, &msg);
         Serial.write(buf, len);
+        mavlink_msg_scaled_pressure_pack(system_id, component_id, &msg, time_boot_ms, press, press-ground_press, temperature);
+        len = mavlink_msg_to_send_buffer(buf, &msg);
+        Serial.write(buf, len);
       }
       
       if (outputMode == RAW)
       {
         //static inline uint16_t mavlink_msg_highres_imu_pack(uint8_t system_id, uint8_t component_id, mavlink_message_t* msg,
         //						       uint64_t time_usec, float xacc, float yacc, float zacc, float xgyro, float ygyro, float zgyro, float xmag, float ymag, float zmag, float abs_pressure, float diff_pressure, float pressure_alt, float temperature, uint16_t fields_updated)
-        mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz, press, press, altitude, temperature, a1);
+        mavlink_msg_highres_imu_pack(system_id, component_id, &msg, (uint64_t)time_boot_us, ax_g*9.81, ay_g*9.81, az_g*9.81, gx_degps*PI/180.0f, gy_degps*PI/180.0f, gz_degps*PI/180.0f, mx, my, mz, press, press-ground_press, altitude, temperature, a1);
         len = mavlink_msg_to_send_buffer(buf, &msg);
         Serial.write(buf, len);
       }
@@ -462,6 +467,8 @@ void getBaroData()
     press = baro.getPressure(MS561101BA_OSR_4096);
     pushAvg(press);
     press = getAvg(movavg_buff, MOVAVG_SIZE);
+    if (millis()<5000)
+      ground_press = press;
     altitude = getAltitude(press, temperature);
 }
 void automaticGyroRangeSelection()

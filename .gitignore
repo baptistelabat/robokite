@@ -5,6 +5,8 @@
 *.avi
 *.mp4
 *.jpg
+*~
+octave-workspace
 ObjectTracking/log/*
 ObjectTracking/blueRed
 ObjectTracking/newtree.yaml

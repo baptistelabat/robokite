@@ -37,7 +37,8 @@ try:
 except:
   isMavlinkInstalled = False
 
-global msg1, msg2, mfb, power1, power2, mode, add_deadband
+global msg1, msg2, mfb, power1, power2, mode, add_deadband, line
+line="0, 0, 0, 0, 0"
 
 # Define a linear interpolation function to create a deadband
 xi = [-1000, -127, -80, 80, 127, 1000]
@@ -83,6 +84,10 @@ joy_CL_offset_right   = 0
 auto_offset_forward   = 0
 auto_offset_right     = 0
 
+ROBOKITE_SYSTEM = 0
+GROUND_UNIT = 0
+FLYING_UNIT = 1
+
 def resetOrder():
   global msg1, msg2, mfb, power1, power2, mode
   # Define the NMEA message in use
@@ -113,7 +118,10 @@ pygame.init()
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    master = mavutil.mavlink_connection('/dev/ttyUSB1', baud=57600, source_system=255) # 255 is ground station
+    embedded_device = '/dev/ttyUSB0'
+    master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
+    master_forward = mavutil.mavlink_connection('localhost:14555', baud=57600, source_system=254) # 255 is ground station
+    print("Connected to embbeded device on", embedded_device)
   except:
     isMavlinkInstalled = False
     print("Mavlink connection failed")
@@ -133,7 +141,7 @@ while True:
         ser.close()
         # Note that by default arduino is restarting on serial connection
         ser = serial.Serial(device, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
-        print("Connected on ", device)
+        print("Connected to ground device on ", device)
         break
       except:
         print("Failed to connect on ", device)
@@ -231,33 +239,56 @@ while True:
       if isMavlinkInstalled:  
         msg = master.recv_match(type='ATTITUDE', blocking=False)
         if msg!=None:
+          master_forward.mav.send(msg)
           rollspeed = msg.rollspeed
           roll = msg.roll
           if mode == AUTO:
             msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
-    
+        msg = master_forward.recv_match(type='SCALED_PRESSURE', blocking=False)
+        if msg!=None:
+          master_forward.mav.send(msg)
+        master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
       # Send messages 
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
+            t0 = time.time()
+
             ser.write(msg1.encode())
             #print(msg1)
             ser.write(msg2.encode())
             #print(msg2)
             ser.write(mfb.encode())
             #print(mfb)
-            t0 = time.time()
-        except:
-            print("break")
+
+            fdbk = line.split(',')
+            time_us = int(time.time()*1e6)
+            time_ms = int(time_us/1000)
+            group_mlx = 0
+            press_abs = 1025#hpa
+            press_diff = 0 #hpa
+            temperature = 20# Celsius deg
+            if isMavlinkInstalled:
+	      master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                  0, 0, 0)
+
+	      master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+              master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+        except Exception as e:
+            print("Error sending order: " + str(e))
             ser.close()
             break
 
       try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
+            fdbk = line.split(',') 
+            print fdbk[2]	
+	    msg_mav = master_forward.mav.actuator_control_target_encode(10, 10, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+	    master_forward.mav.send(msg_mav)
             print("Received from arduino: ", line)
       except Exception as e:
         ser.close()
-        print("Error reading from serial port" + str(e))
+        print("Error reading from serial port: " + str(e))
       
 ser.close()
 print("Closing")

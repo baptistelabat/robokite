@@ -93,7 +93,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "MPU9150.h"
 #include <MS561101BA.h>
 
-#define OUTPUT_RATE_ms 100 // 20Hz
+#define OUTPUT_RATE_ms 50 // 20Hz
 
 #define MOVAVG_SIZE 32
 

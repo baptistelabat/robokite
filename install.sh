@@ -74,6 +74,20 @@ cd util
 ./install_wxpython3.0.sh  
 cd ..
 cd .. 
+	# Openscam
+# 32 bit http://openscam.org/releases/beta/release/openscam/debian-testing-32bit/v0.2/openscam_0.2.5_i386.deb
+wget http://openscam.org/releases/beta/release/openscam/debian-testing-64bit/v0.2/openscam_0.2.5_amd64.deb
+sudo dpkg -i openscam_0.2.5_amd64.deb
+	# Inkscape
+sudo apt-get install inkscape
+	# Meshlab
+sudo apt-get install meshlab
+	# Laser en graver
+git clone https://git.gitorious.org/laserengraver_smoothie/laserengraver_smoothie.git
+cp laserengraver_smoothie/src/* ~/.config/inkscape/extensions
+	#dxf2gcode
+wget http://sourceforge.net/projects/dxf2gcode/files/2015-02-04-DXF2GCODE_PyQt4_beta_source.zip/download
+unzip 2015-02-04-DXF2GCODE_PyQt4_beta_source.zip
 
 # Download dependencies needed for software tests, post-treatment analysis, or new/old features development
 

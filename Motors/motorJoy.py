@@ -281,10 +281,6 @@ while True:
       try: # The ressource can be temporarily unavailable
         if ser.inWaiting() > 0:
             line = ser.readline()
-            fdbk = line.split(',') 
-            print fdbk[2]	
-	    msg_mav = master_forward.mav.actuator_control_target_encode(10, 10, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
-	    master_forward.mav.send(msg_mav)
             print("Received from arduino: ", line)
       except Exception as e:
         ser.close()

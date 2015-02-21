@@ -275,7 +275,7 @@ while True:
               master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
         except Exception as e:
             print("Error sending order: " + str(e))
-            ser.close()
+            #ser.close()
             break
 
       try: # The ressource can be temporarily unavailable
@@ -283,7 +283,7 @@ while True:
             line = ser.readline()
             print("Received from arduino: ", line)
       except Exception as e:
-        ser.close()
+        #ser.close()
         print("Error reading from serial port: " + str(e))
       
 ser.close()

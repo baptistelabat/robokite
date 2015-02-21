@@ -18,9 +18,10 @@ The first step is to design a simple kite control system:
 
 The solutions which are tested:
     
-* Mobile phone (webcam, accelerometer, magnetometer, and gyro if available) for kite position sensing
-* Wifi streaming to a computer (might be raspberry) and processing whith python (simplecv) in a first step
+* Mobile phone (webcam, accelerometer, magnetometer, and gyro if available) for kite position sensing from ground
+* Wifi streaming to a computer (might be raspberry) and processing with python (simplecv) in a first step
 * Processing with OpenCV for Android then streaming to reduce latency, in a second step
+* IMU embedded on kite with radio link to ground
 * A webserver (python tornado)
 * A browser with HTML5 as interface (websocket for real time, slider for controls, webgl for visualization, graphs, etc)
 * A common gamepad joystick to send orders
@@ -36,9 +37,9 @@ Please use the following command to get the code (you need to have git installed
 
     git clone https://github.com/baptistelabat/robokite.git
 
-This will create a repertory robokite containing the source code
+This will create a repertory robokite containing the source code.
 
-The following command will download the depencies (tested on ubuntu 14.04)
+The following command will download the depencies (tests on ubuntu 14.04, work in progress):
 
     cd robokite
     chmod 777 install.sh
@@ -77,7 +78,7 @@ Acknowledgments
 
 The robokite project is based on many open source or open hardware parts and was possible thanks to the support of several individuals and structures.
 
-See [acknowlegement page in wiki] (https://github.com/baptistelabat/robokite/wiki/Acknowledgment)
+See [acknowlegement page in wiki] (https://github.com/baptistelabat/robokite/wiki/Acknowledgment).
 
 License
 -------

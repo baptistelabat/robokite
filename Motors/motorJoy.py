@@ -24,13 +24,17 @@
 # Supports automatic reconnection of joystick and serial connection
 # Tested on ubuntu 14.04
 
+import os
 import time
 import serial
 import numpy as np
 import pygame
 from pygame.locals import *
-from scipy.interpolate import interp1d
-import os
+try:
+    from scipy.interpolate import interp1d
+    isScipyInstalled = True
+except:
+    isScipyInstalled = False
 try:
   from pymavlink import mavutil
   isMavlinkInstalled = True
@@ -43,7 +47,8 @@ line="0, 0, 0, 0, 0"
 # Define a linear interpolation function to create a deadband
 xi = [-1000, -127, -80, 80, 127, 1000]
 yi = [-127, -127, 0, 0, 127, 127]
-add_deadband = interp1d(xi, yi, kind='linear')
+if isScipyInstalled:
+    add_deadband = interp1d(xi, yi, kind='linear')
 
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -207,7 +212,9 @@ while True:
             power1 = event.value*127
           elif event.axis == LEFT_RIGHT_BUTTON :
             #print("direction control ", event.value)
-            power2 = add_deadband(event.value*127)
+            power2 = event.value*127
+            if isScipyInstalled:
+                power2 = add_deadband(power2)
             
         # Trim events
         if event.type == JOYHATMOTION:

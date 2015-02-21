@@ -42,6 +42,12 @@ TinyGPSCustom pwm1     (nmea, "ORPW1", 1);  // Dimentionless voltage setpoint (P
 TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 2
 TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth output 1
 TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth output 2
+TinyGPSCustom kpm1 (nmea, "ORKP1", 1); // Proportional coefficient multiplicator
+TinyGPSCustom kim1 (nmea, "ORKI1", 1); // Integral coefficient multiplicator
+TinyGPSCustom kdm1 (nmea, "ORKD1", 1); // Derivative coefficient multiplicator
+TinyGPSCustom kpm2 (nmea, "ORKP2", 1); // Proportional coefficient multiplicator
+TinyGPSCustom kim2 (nmea, "ORKI2", 1); // Integral coefficient multiplicator
+TinyGPSCustom kdm2 (nmea, "ORKD2", 1); // Derivative coefficient multiplicator
 boolean isFeedbackRequested = false;
 
 uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
@@ -56,8 +62,14 @@ double Setpoint1, Input1, Output1;
 double Setpoint2, Input2, Output2;
 double Input3;
 // Specify the links and initial tuning parameters (Kp, Ki, Kd)
-PID myPID1(&Input1, &Output1, &Setpoint1, 1, 0, 0, DIRECT);
-PID myPID2(&Input2, &Output2, &Setpoint2, 1, 0, 0, DIRECT);
+float Kp1 = 1;
+float Ki1 = 0.001;
+float Kd1 = 0.001;
+float Kp2 = 1;
+float Ki2 = 0.001;
+float Kd2 = 0.001;
+PID myPID1(&Input1, &Output1, &Setpoint1, Kp1, Ki1, Kd1, DIRECT);
+PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 
 // Hardware specific parameters
 // Potentiometer
@@ -182,7 +194,11 @@ void processSerialInput()
         {
           isFeedbackRequested = true;
           digitalWrite(LED_PIN, HIGH);
-        }    
+        }
+        if (kpm1.isUpdated()||kim1.isUpdated()||kdm1.isUpdated()||kpm2.isUpdated()||kim2.isUpdated()||kdm2.isUpdated())
+        {
+          computePIDTuning();
+        }   
       }
     }
     // Clear the string:
@@ -270,5 +286,10 @@ void sendOrder()
    ST.motor(1, power1);
    ST.motor(2, power2);
   }
+}
+void computePIDTuning()
+{
+ myPID1.SetTunings(atof(kpm1.value())*Kp1, atof(kim1.value())*Ki1, atof(kdm1.value())*Kd1);
+ myPID2.SetTunings(atof(kpm2.value())*Kp2, atof(kim2.value())*Ki2, atof(kdm2.value())*Kd2);
 }
  

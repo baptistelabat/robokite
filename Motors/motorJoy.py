@@ -41,12 +41,12 @@ try:
 except:
   isMavlinkInstalled = False
 
-global msg1, msg2, mfb, power1, power2, mode, add_deadband, line
+global msg1, msg2, mfb, cmd1, cmd2, mode, add_deadband, line
 line="0, 0, 0, 0, 0"
 
 # Define a linear interpolation function to create a deadband
-xi = [-1000, -127, -80, 80, 127, 1000]
-yi = [-127, -127, 0, 0, 127, 127]
+xi = [-2, -1, -0.75, 0.75, 1, 2]
+yi = [-1, -1, 0, 0, 1, 1]
 if isScipyInstalled:
     add_deadband = interp1d(xi, yi, kind='linear')
 
@@ -98,6 +98,7 @@ joy_CL_offset_forward = 0
 joy_CL_offset_right   = 0
 auto_offset_forward   = 0
 auto_offset_right     = 0
+inc                   = 0.05 # Increment normalized
 
 ROBOKITE_SYSTEM = 0
 GROUND_UNIT = 0
@@ -105,8 +106,12 @@ FLYING_UNIT = 1
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
+Kp = 1
+Kd = 1
+inc_factor = 2
+
 def resetOrder():
-  global msg1, msg2, mfb, power1, power2, mode
+  global msg1, msg2, mfb, cmd1, cmd2, mode
   # Define the NMEA message in use
   if mode==JOY_OL:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
@@ -118,8 +123,8 @@ def resetOrder():
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
 
-  power1 = 0
-  power2 = 0
+  cmd1 = 0
+  cmd2 = 0
 
 # Use pygame for the joystick
 
@@ -202,6 +207,18 @@ while True:
             elif event.button == AUTO:
                 mode = AUTO
                 print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
+            elif event.button == INC_BUTTON_LEFT:
+                Kd = Kd * inc_factor
+                print("Kd: ", Kd)
+            elif event.button == INC_BUTTON_RIGHT:
+                Kp = Kp * inc_factor
+                print("Kp: ", Kp)
+            elif event.button == DEC_BUTTON_LEFT:
+                Kd = Kd / inc_factor
+                print("Kd: ", Kd)
+            elif event.button == DEC_BUTTON_RIGHT:
+                Kp = Kp / inc_factor
+                print("Kp: ", Kp)
             elif event.button == RESET_OFFSET_BUTTON:
                 if mode == JOY_OL:
                   joy_OL_offset_forward = 0
@@ -211,40 +228,40 @@ while True:
                   joy_CL_offset_right   = 0
                 elif mode == AUTO:
                   auto_offset_forward   = 0
-                  auto_offset_right   = 0                  
+                  auto_offset_right     = 0                  
         # Joystick events  
         if event.type == JOYAXISMOTION:
           if event.axis == FORWARD_BACKWARD_AXIS:
             #print("power control ", event.value)
-            power1 = event.value*127
+            cmd1 = event.value
           elif event.axis == LEFT_RIGHT_AXIS :
             #print("direction control ", event.value)
-            power2 = event.value*127
+            cmd2 = event.value
             if isScipyInstalled:
-                power2 = add_deadband(power2)
+                cmd2 = add_deadband(cmd2)
             
         # Trim events
         if event.type == JOYHATMOTION:
             if mode == JOY_OL:
-              joy_OL_offset_forward -= event.value[1]
-              joy_OL_offset_right   += event.value[0]
+              joy_OL_offset_forward -= event.value[1]*inc
+              joy_OL_offset_right   += event.value[0]*inc
             elif mode == JOY_CL:
-              joy_CL_offset_forward -= event.value[1]
-              joy_CL_offset_right   += event.value[0]
+              joy_CL_offset_forward -= event.value[1]*inc
+              joy_CL_offset_right   += event.value[0]*inc
             elif mode == AUTO:
-              auto_offset_forward   -= event.value[1]
-              auto_offset_right     += event.value[0]
+              auto_offset_forward   -= event.value[1]*inc
+              auto_offset_right     += event.value[0]*inc
         
         # Create messages to be sent   
         if mode == JOY_OL:
-            msg1 = NMEA("PW1", int(power1 + joy_OL_offset_right),   "OR")
-            msg2 = NMEA("PW2", int(power2 + joy_OL_offset_forward), "OR")
+            msg1 = NMEA("PW1", int((cmd1 + joy_OL_offset_right)  *127), "OR")
+            msg2 = NMEA("PW2", int((cmd2 + joy_OL_offset_forward)*127), "OR")
         elif mode == JOY_CL:
-            msg1 = NMEA("SP1", int(power1 + joy_CL_offset_right),   "OR")
-            msg2 = NMEA("SP2", int(power2 + joy_CL_offset_forward), "OR")
+            msg1 = NMEA("SP1", int((cmd1 + joy_CL_offset_right)  *127), "OR")
+            msg2 = NMEA("SP2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
         elif mode == AUTO:
-            msg1 = NMEA("PW1", int(power1 + auto_offset_right + roll*180/np.pi), "OR")
-            msg2 = NMEA("PW2", int(power2 + auto_offset_forward),   "OR")  # \todo: add regulation based on line tension?
+            msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
+            msg2 = NMEA("PW2", int((cmd2 + auto_offset_forward)*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
             msg1 = NMEA("PW1", 0, "OR")
             msg2 = NMEA("PW2", 0, "OR")     
@@ -257,7 +274,7 @@ while True:
           rollspeed = msg.rollspeed
           roll = msg.roll
           if mode == AUTO:
-            msg1 = NMEA("PW1",  int(power1 + auto_offset_right + roll*180/np.pi), "OR")
+            msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
         msg = master_forward.recv_match(type='SCALED_PRESSURE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)

@@ -106,9 +106,10 @@ FLYING_UNIT = 1
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
-Kp = 1
-Kd = 1
-inc_factor = 2
+Kp = 1.
+Kd = 1.
+inc_factor = 2.
+roll_max_excursion = 45*np.pi/180
 
 def resetOrder():
   global msg1, msg2, mfb, cmd1, cmd2, mode

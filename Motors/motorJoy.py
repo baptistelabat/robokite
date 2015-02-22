@@ -93,6 +93,8 @@ ROBOKITE_SYSTEM = 0
 GROUND_UNIT = 0
 FLYING_UNIT = 1
 
+mfb  = NMEA("FBR", 0, "OR") # Feedback request
+
 def resetOrder():
   global msg1, msg2, mfb, power1, power2, mode
   # Define the NMEA message in use
@@ -105,7 +107,7 @@ def resetOrder():
   elif mode==AUTO:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
     msg2 = NMEA("PW2", 0, "OR") # Order to second motor
-  mfb  = NMEA("FBR", 0, "OR") # Feedback request
+
   power1 = 0
   power2 = 0
 
@@ -275,11 +277,11 @@ while True:
             press_diff = 0 #hpa
             temperature = 20# Celsius deg
             if isMavlinkInstalled:
-	      master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
 
-	      master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
-              master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+                master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+                master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
         except Exception as e:
             print("Error sending order: " + str(e))
             #ser.close()

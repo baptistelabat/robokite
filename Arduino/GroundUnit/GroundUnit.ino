@@ -14,6 +14,7 @@
 #include <PID_v1.h>       // From https://github.com/br3ttb/Arduino-PID-Library/tree/master/PID_v1
 #include <RH_ASK.h>
 #include <SPI.h> // Not actualy used but needed to compile
+#include <MavlinkForArduino.h>
 
 // Port definition
 #define      TX_PIN 8 // Plug to Sabertooth RX
@@ -54,6 +55,7 @@ uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
 uint8_t buflen = sizeof(buf);
 uint8_t data[4];  // 2 element array of unsigned 8-bit type, holding Joystick readings
 RH_ASK driver(4800, RF_DATA_PIN, 6);
+boolean isRFUpdated = false;
 // RECEPTEUR : DATA D11
 
 // PID for robust control
@@ -156,7 +158,7 @@ void processRFInput()
 	{ 
           data[i] = buf[i];
         }
-        
+        isRFUpdated = true;       
     }
 }
 
@@ -192,6 +194,7 @@ void processSerialInput()
         }
         if (feedback_request.isUpdated())
         {
+          // $ORFBR,0*57
           isFeedbackRequested = true;
           digitalWrite(LED_PIN, HIGH);
         }
@@ -235,9 +238,40 @@ void computeFeedback()
 
 void sendFeedback()
 {
+  mavlink_message_t msg; 
+  uint8_t bufout[MAVLINK_MAX_PACKET_LEN];
+  uint16_t len;
+  uint64_t time_us = micros();
+  int group_mlx = 0;
+  uint8_t system_id = 100;
+  uint8_t target_system = system_id;
+  uint8_t component_id = 1;
+  uint8_t target_component = 2;// Sabertooth
+  
   // All the feedback values are normalized in the range 0-1023 (10 bits resolution)
   if (isFeedbackRequested)
   {
+    
+    if (isRFUpdated)
+    {
+      float fdbk[8];//fdbk
+      fdbk[0] = float(Input1);
+      fdbk[1] = float(Input2);
+      fdbk[2] = float(Input3);
+
+      isRFUpdated = false;
+
+      //mavlink_msg_actuator_control_target_pack(system_id, component_id, &msg, time_us, group_mlx, fdbk);
+      //len = mavlink_msg_to_send_buffer(bufout, &msg);
+      //Serial.write(bufout, len);
+    }
+    float orders[8];
+    orders[0] = float(power1/127.);
+    orders[1] = float(power2/127.);
+    //mavlink_msg_set_actuator_control_target_pack(system_id, component_id, &msg, time_us, group_mlx, target_system, target_component, orders);
+    //len = mavlink_msg_to_send_buffer(bufout, &msg);
+    //Serial.write(bufout, len);
+    
     Serial.print((power1+127)*4);
     Serial.print(", ");
     Serial.print((power2+127)*4);

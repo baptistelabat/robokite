@@ -76,12 +76,22 @@ baudrate = 57600
 
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
 
-MANUAL    = 0 # Control lines are released to enable manual control
-JOY_OL    = 1 # Joystick controls voltage applied to motors (open loop control)
-JOY_CL    = 2 # Joystick controls kite bar position in closed loop
-AUTO      = 3 # Kite roll is stabilised thanks to IMU measurements, joystick controls the kite roll angle
+# Definition of gamepad button in use
+MANUAL              = 0 # Control lines are released to enable manual control
+JOY_OL              = 1 # Joystick controls voltage applied to motors (open loop control)
+JOY_CL              = 2 # Joystick controls kite bar position in closed loop
+AUTO                = 3 # Kite roll is stabilised thanks to IMU measurements, joystick controls the kite roll angle
+INC_BUTTON_LEFT     = 4 # Increase derivative gain
+INC_BUTTON_RIGHT    = 5 # Increase proportional gain
+DEC_BUTTON_LEFT     = 6 # Decrease derivative gain
+DEC_BUTTON_RIGHT    = 7 # Decrease proportional gain
+RESET_OFFSET_BUTTON = 8 # Reset offet
 mode = JOY_OL
 
+FORWARD_BACKWARD_AXIS = 2
+LEFT_RIGHT_AXIS       = 3
+
+# Variables to save offset
 joy_OL_offset_forward = 0
 joy_OL_offset_right   = 0
 joy_CL_offset_forward = 0
@@ -114,11 +124,6 @@ def resetOrder():
 # Use pygame for the joystick
 
 JOY_RECONNECT_TIME = 2 #seconds. Time to reconnect if no joystick motion
-
-# Definition of gamepad button in use
-FORWARD_BACKWARD_BUTTON = 2
-LEFT_RIGHT_BUTTON = 3
-RESET_OFFSET_BUTTON = 8
 
 pygame.init()
 
@@ -209,10 +214,10 @@ while True:
                   auto_offset_right   = 0                  
         # Joystick events  
         if event.type == JOYAXISMOTION:
-          if event.axis == FORWARD_BACKWARD_BUTTON:
+          if event.axis == FORWARD_BACKWARD_AXIS:
             #print("power control ", event.value)
             power1 = event.value*127
-          elif event.axis == LEFT_RIGHT_BUTTON :
+          elif event.axis == LEFT_RIGHT_AXIS :
             #print("direction control ", event.value)
             power2 = event.value*127
             if isScipyInstalled:

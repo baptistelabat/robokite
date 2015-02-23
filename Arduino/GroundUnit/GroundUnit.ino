@@ -78,10 +78,11 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 #define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
 #define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
 #define POT_OFFSET        0.05 // Distance from rotation axis to lever arm (in m)
-#define NEUTRAL_ANGLE_DEG  225 // Zero of the potentiometer
+#define NEUTRAL_ANGLE_DEG    90 // Zero of the potentiometer
 // Linear encoder
 #define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
 #define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
+#define PI 3.1415
 
 #define ORDER_RATE_ms 100
 long last_order_ms = 0;
@@ -115,6 +116,12 @@ void setup()
   // Saturate the output to the maximum range (values are normalized between -1 and 1)
   myPID1.SetOutputLimits(-1, 1);
   myPID2.SetOutputLimits(-1, 1);
+  
+  for (int i=0;i<4;i++)
+  {
+    data[i] = 127;
+  }
+  data[0] = NEUTRAL_ANGLE_DEG*255./POT_RANGE_DEG+127;
 }
 
 /*
@@ -210,22 +217,14 @@ void processSerialInput()
   }
 }
 
-#define POT_RANGE_DEG      300
-#define POT_USED_RANGE_DEG  60
-#define POT_OFFSET        0.05 //Distance from rotation axis to lever arm
-
-// Linear encoder
-#define LINEAR_RESOLUTION 0.005
-#define LINEAR_USED_RANGE 0.05
-#define PI 3.1415
 void computeFeedback()
 {
   
   // Feedbacks are normalized between -1 and 1
   
   // Potentiometer angle
-  float rawAngle_deg = data[0]/255.0*POT_RANGE_DEG;
-  Input1 = (rawAngle_deg - NEUTRAL_ANGLE_DEG)/POT_USED_RANGE_DEG;
+  float rawAngle_deg = (data[0]-127)/255.0*POT_RANGE_DEG;
+  Input1 = (rawAngle_deg - NEUTRAL_ANGLE_DEG)*1.0/POT_USED_RANGE_DEG;
   
   // Linear encoder position
   Input2 = (data[1]-127);//*LINEAR_RESOLUTION/2./LINEAR_USED_RANGE;
@@ -276,11 +275,11 @@ void sendFeedback()
     Serial.print(", ");
     Serial.print((power2+127)*4);
     Serial.print(", ");
-    Serial.print((Input1+1)/2*1023);
+    Serial.print((Input1+1)/2.*1023);
     Serial.print(", ");
-    Serial.print((Input2/127+1)/2*1023);
+    Serial.print((Input2/127.+1)/2.*1023);
     Serial.print(", ");
-    Serial.print((Input3+1)/2*1023);
+    Serial.print((Input3+1)/2.*1023);
     Serial.println("");
     isFeedbackRequested = false;
   }

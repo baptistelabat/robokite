@@ -229,10 +229,15 @@ while True:
                 elif mode == AUTO:
                   auto_offset_forward   = 0
                   auto_offset_right     = 0
-        if (event.type == JOYBUTTONDOWN) or (event.type == JOYBUTTONUP):
+        if (event.type == JOYBUTTONDOWN) or (event.type == JOYBUTTONUP) or event.type == JOYHATMOTION:
             buttons_state = 0
             for i in range(my_joystick.get_numbuttons()):
               buttons_state +=my_joystick.get_button(i)*2**i
+            for i in range(my_joystick.get_numhats()):
+              buttons_state +=(my_joystick.get_hat(i)[0]==-1)*2**(my_joystick.get_numbuttons()+4*i)
+              buttons_state +=(my_joystick.get_hat(i)[1]==-1)*2**(my_joystick.get_numbuttons()+4*i+1)
+              buttons_state +=(my_joystick.get_hat(i)[0]== 1)*2**(my_joystick.get_numbuttons()+4*i+2)
+              buttons_state +=(my_joystick.get_hat(i)[1]== 1)*2**(my_joystick.get_numbuttons()+4*i+3)
             print buttons_state
             if isMavlinkInstalled:
               master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)

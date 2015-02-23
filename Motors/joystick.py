@@ -43,7 +43,7 @@ def resetOrder():
 if isMavlinkInstalled:
   try:
     ground_station = 'udpout:localhost:14556'
-    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
+    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=253) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected to ground station on ", ground_station)
   except:

@@ -137,11 +137,19 @@ if isMavlinkInstalled:
   try:
     embedded_device = '/dev/ttyUSB0'
     master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
-    master_forward = mavutil.mavlink_connection('localhost:14555', baud=57600, source_system=254) # 255 is ground station
+    isConnectedToEmbeddedDevice = True
     print("Connected to embbeded device on", embedded_device)
   except:
-    isMavlinkInstalled = False
-    print("Mavlink connection failed")
+    isConnectedToEmbeddedDevice = False
+    print("Mavlink connection to embbed device failed")
+  try:
+    ground_station = 'localhost:14555'
+    master_forward = mavutil.mavlink_connection('localhost:14555', baud=57600, source_system=254) # 255 is ground station
+    isConnectedToGroundStation = True
+    print("Connected to ground station on ", ground_station)
+  except:
+    isConnectedToGroundStation = False
+    print("Mavlink connection to ground station failed")
 rollspeed = 0
 roll = 0
 
@@ -239,7 +247,7 @@ while True:
               buttons_state +=(my_joystick.get_hat(i)[0]== 1)*2**(my_joystick.get_numbuttons()+4*i+2)
               buttons_state +=(my_joystick.get_hat(i)[1]== 1)*2**(my_joystick.get_numbuttons()+4*i+3)
             print buttons_state
-            if isMavlinkInstalled:
+            if isConnectedToGroundStation:
               master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
         # Joystick events  
         if event.type == JOYAXISMOTION:
@@ -279,7 +287,7 @@ while True:
             msg2 = NMEA("PW2", 0, "OR")     
             
       # Mavlink messages
-      if isMavlinkInstalled:  
+      if isConnectedToEmbeddedDevice:  
         msg = master.recv_match(type='ATTITUDE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)
@@ -310,7 +318,7 @@ while True:
             press_abs = 1025#hpa
             press_diff = 0 #hpa
             temperature = 20# Celsius deg
-            if isMavlinkInstalled:
+            if isConnectedToGroundStation:
                 master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
 

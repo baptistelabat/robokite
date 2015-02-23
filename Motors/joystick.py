@@ -4,7 +4,7 @@ from pygame.locals import *
 import serial
 
 #try:
-if True:
+try:
   from pymavlink import mavutil
   isMavlinkInstalled = True
 except:

@@ -115,14 +115,12 @@ def resetOrder():
   global msg1, msg2, mfb, cmd1, cmd2, mode
   # Define the NMEA message in use
   if mode==JOY_OL:
-    msg1 = NMEA("PW1", 0, "OR") # Order to first motor
-    msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+    msg1 = NMEA("PW1", 0, "OR") # Order to first motor    
   elif mode==JOY_CL:
     msg1 = NMEA("SP1", 0, "OR") # Order to first motor
-    msg2 = NMEA("SP2", 0, "OR") # Order to second motor
   elif mode==AUTO:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor
-    msg2 = NMEA("PW2", 0, "OR") # Order to second motor
+  msg2 = NMEA("PW2", 0, "OR") # Order to second motor
 
   cmd1 = 0
   cmd2 = 0
@@ -259,7 +257,7 @@ while True:
             msg2 = NMEA("PW2", int((cmd2 + joy_OL_offset_forward)*127), "OR")
         elif mode == JOY_CL:
             msg1 = NMEA("SP1", int((cmd1 + joy_CL_offset_right)  *127), "OR")
-            msg2 = NMEA("SP2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
+            msg2 = NMEA("PW2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
         elif mode == AUTO:
             msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
             msg2 = NMEA("PW2", int((cmd2 + auto_offset_forward)*127),   "OR")  # \todo: add regulation based on line tension?

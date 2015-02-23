@@ -31,7 +31,7 @@ def resetOrder():
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    ground_station = 'localhost:14555'
+    ground_station = 'udpout:localhost:14556'
     master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected to ground station on ", ground_station)
@@ -54,7 +54,7 @@ while True:
       if time.time()-t_last_order > ORDER_SAMPLE_TIME:
           t_last_order = time.time()
           if isConnectedToGroundStation:
-            master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
+            #master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
      # Deals with joystick deconnection and reconnection      
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
          print("No joystick event for x seconds, trying reconnection")
@@ -87,6 +87,7 @@ while True:
               buttons_state +=(my_joystick.get_hat(i)[1]== 1)*2**(my_joystick.get_numbuttons()+4*i+3)
             if isConnectedToGroundStation:
               master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
+              print buttons_state
         # Joystick events  
         if event.type == JOYAXISMOTION:
           if event.axis == FORWARD_BACKWARD_AXIS:
@@ -95,4 +96,7 @@ while True:
           elif event.axis == LEFT_RIGHT_AXIS :
             #print("direction control ", event.value)
             cmd2 = event.value
+          if isConnectedToGroundStation:
+            print cmd1,cmd2
+            master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
         

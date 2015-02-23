@@ -30,11 +30,6 @@ import serial
 import numpy as np
 
 try:
-  from scipy.interpolate import interp1d
-  isScipyInstalled = True
-except:
-  isScipyInstalled = False
-try:
   from pymavlink import mavutil
   isMavlinkInstalled = True
 except:
@@ -75,12 +70,6 @@ def NMEA(message_type, value, talker_id= "OR"):
   msg = talker_id + message_type +","+ str(value)
   msg = "$"+ msg +"*"+ computeXORChecksum(msg) + str(chr(13).encode('ascii')) + str(chr(10).encode('ascii'))
   return msg
-
-# Define a linear interpolation function to create a deadband
-xi = [-2, -1, -0.75, 0.75, 1, 2]
-yi = [-1, -1, 0, 0, 1, 1]
-if isScipyInstalled:
-  add_deadband = interp1d(xi, yi, kind='linear')
 
 # Parameters for the serial connection
 locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
@@ -216,13 +205,9 @@ while True:
         mustUpdateOrder = True
         cmd1 = msg.x/1000.
         cmd2 = msg.y/1000.
-        print cmd1
-        if isScipyInstalled:
-          cmd2 = add_deadband(cmd2)
-        buttons_state_number = msg.buttons
         buttons_state = bitfield16(msg.buttons)
         if isConnectedToGroundStation:
-          master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, msg.buttons)
+          master_forward.mav.send(msg)
 
         # Button events
         if buttons_state[MANUAL]:

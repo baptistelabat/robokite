@@ -3,12 +3,23 @@ import pygame
 from pygame.locals import *
 import serial
 
-#try:
+try:
+  from scipy.interpolate import interp1d
+  isScipyInstalled = True
+except:
+  isScipyInstalled = False
 try:
   from pymavlink import mavutil
   isMavlinkInstalled = True
 except:
   isMavlinkInstalled = False
+  
+# Define a linear interpolation function to create a deadband
+xi = [-2, -1, -0.75, 0.75, 1, 2]
+yi = [-1, -1, 0, 0, 1, 1]
+if isScipyInstalled:
+  add_deadband = interp1d(xi, yi, kind='linear')
+
 HEARTBEAT_SAMPLE_TIME = 1
 ORDER_SAMPLE_TIME = 0.05
   
@@ -53,7 +64,7 @@ while True:
                                   0, 0, 0)
       if time.time()-t_last_order > ORDER_SAMPLE_TIME:
           t_last_order = time.time()
-          if isConnectedToGroundStation:
+          #if isConnectedToGroundStation:
             #master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
      # Deals with joystick deconnection and reconnection      
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
@@ -98,5 +109,6 @@ while True:
             cmd2 = event.value
           if isConnectedToGroundStation:
             print cmd1,cmd2
+            cmd2 = add_deadband(cmd2)
             master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
         

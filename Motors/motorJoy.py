@@ -287,7 +287,8 @@ while True:
             msg2 = NMEA("PW2", 0, "OR")     
             
       # Mavlink messages
-      if isConnectedToEmbeddedDevice:  
+      if isConnectedToEmbeddedDevice:
+        msg = master.recv_match(type='HEARTBEAT', blocking=False) 
         msg = master.recv_match(type='ATTITUDE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)
@@ -296,9 +297,12 @@ while True:
           roll = msg.roll
           if mode == AUTO:
             msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
-        msg = master_forward.recv_match(type='SCALED_PRESSURE', blocking=False)
+        msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)
+      if isConnectedToGroundStation:
+        msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+        
       # Send messages 
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:

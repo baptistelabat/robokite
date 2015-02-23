@@ -86,6 +86,7 @@ INC_BUTTON_RIGHT    = 5 # Increase proportional gain
 DEC_BUTTON_LEFT     = 6 # Decrease derivative gain
 DEC_BUTTON_RIGHT    = 7 # Decrease proportional gain
 RESET_OFFSET_BUTTON = 8 # Reset offet
+buttons_state             = 0 # Variable to store buttons state
 mode = JOY_OL
 
 FORWARD_BACKWARD_AXIS = 2
@@ -227,7 +228,14 @@ while True:
                   joy_CL_offset_right   = 0
                 elif mode == AUTO:
                   auto_offset_forward   = 0
-                  auto_offset_right     = 0                  
+                  auto_offset_right     = 0
+        if (event.type == JOYBUTTONDOWN) or (event.type == JOYBUTTONUP):
+            buttons_state = 0
+            for i in range(my_joystick.get_numbuttons()):
+              buttons_state +=my_joystick.get_button(i)*2**i
+            print buttons_state
+            if isMavlinkInstalled:
+              master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
         # Joystick events  
         if event.type == JOYAXISMOTION:
           if event.axis == FORWARD_BACKWARD_AXIS:
@@ -270,6 +278,7 @@ while True:
         msg = master.recv_match(type='ATTITUDE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)
+          master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
           rollspeed = msg.rollspeed
           roll = msg.roll
           if mode == AUTO:
@@ -277,7 +286,6 @@ while True:
         msg = master_forward.recv_match(type='SCALED_PRESSURE', blocking=False)
         if msg!=None:
           master_forward.mav.send(msg)
-        master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
       # Send messages 
       if time.time()-t0 > ORDER_SAMPLE_TIME:
         try:
@@ -303,6 +311,7 @@ while True:
 
                 master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
                 master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+                master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
         except Exception as e:
             print("Error sending order: " + str(e))
             #ser.close()

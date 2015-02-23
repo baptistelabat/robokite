@@ -76,7 +76,7 @@ locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/t
 baudrate = 57600
 
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
-
+HEARTBEAT_SAMPLE_TIME = 1
 # Definition of gamepad button in use
 MANUAL              = 0 # Control lines are released to enable manual control
 JOY_OL              = 1 # Joystick controls voltage applied to motors (open loop control)
@@ -107,13 +107,13 @@ ROBOKITE_SYSTEM = 0
 GROUND_UNIT     = 0
 FLYING_UNIT     = 1
 embedded_device  = '/dev/ttyUSB0'
-ground_station   = 'localhost:14555'
+ground_station   = 'udpout:localhost:14550'
 joystick_address = 'udpin:localhost:14556'
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
 Kp = 1.
-Kd = 1.
+Kd = 0.1
 inc_factor = 2.
 roll_max_excursion = 45*np.pi/180
 
@@ -141,7 +141,7 @@ if isMavlinkInstalled:
     isConnectedToEmbeddedDevice = False
     print("Connected (mavlink) to embbed device failed")
   try:
-    master_forward = mavutil.mavlink_connection('localhost:14555', baud=57600, source_system=254) # 255 is ground station
+    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected (mavlink) to ground station on ", ground_station)
   except:
@@ -179,25 +179,32 @@ while True:
   # Reset the timers    
   t0 = 0
   last_event_time = 0
-
+  thb = 0
     # This is the main program loop
   while True:
     # Mavlink messages
+    if isConnectedToGroundStation:
+      if time.time()-thb > HEARTBEAT_SAMPLE_TIME:
+        thb = time.time()
+        print "Sending heartbeat"
+        master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                  0, 0, 0)
+      msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+
     if isConnectedToEmbeddedDevice:
       msg = master.recv_match(type='ATTITUDE', blocking=False)
       if msg!=None:
-        master_forward.mav.send(msg)
-        master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
+        if isConnectedToGroundStation:
+          master_forward.mav.send(msg)
+          master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
         rollspeed = msg.rollspeed
         roll = msg.roll
         if mode == AUTO:
           mustUpdateOrder = True
       msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
       if msg!=None:
-        master_forward.mav.send(msg)
-        
-    if isConnectedToGroundStation:
-      msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+        if isConnectedToGroundStation:
+          master_forward.mav.send(msg)      
       
     if isConnectedToJoystick:
       msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
@@ -312,8 +319,9 @@ while True:
           time_us = int(time.time()*1e6)
           time_ms = int(time_us/1000)
           group_mlx = 0
-          master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
-          master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+          if len(fdbk) == 5:
+            master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+            master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
     except Exception as e:
       #ser.close()
       print("Error reading from serial port: " + str(e))

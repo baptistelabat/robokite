@@ -21,7 +21,6 @@ print("Connected to joystick on ", joystick_address)
     
 
 while True:
-  msg = mav_joystick.recv_match(type='HEARTBEAT', blocking=False)
   msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
   if msg is not None:
     print msg.x, msg.y, bitfield16(msg.buttons)

@@ -313,7 +313,7 @@ while True:
     try: # The ressource can be temporarily unavailable
       if ser.inWaiting() > 0:
         line = ser.readline()
-        #print("Received from arduino: ", line)
+        print("Received from arduino: ", line)
         if isConnectedToGroundStation:
           fdbk = line.split(',')
           time_us = int(time.time()*1e6)

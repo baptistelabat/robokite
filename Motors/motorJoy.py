@@ -28,28 +28,34 @@ import os
 import time
 import serial
 import numpy as np
-import pygame
-from pygame.locals import *
+
 try:
-    from scipy.interpolate import interp1d
-    isScipyInstalled = True
+  from scipy.interpolate import interp1d
+  isScipyInstalled = True
 except:
-    isScipyInstalled = False
+  isScipyInstalled = False
 try:
   from pymavlink import mavutil
   isMavlinkInstalled = True
 except:
   isMavlinkInstalled = False
 
-global msg1, msg2, mfb, cmd1, cmd2, mode, add_deadband, line
+global msg1, msg2, mfb, cmd1, cmd2, mode
+cmd1 = 0
+cmd2 = 0
+
 line="0, 0, 0, 0, 0"
+rollspeed = 0
+roll = 0
+mustUpdateOrder = False
 
-# Define a linear interpolation function to create a deadband
-xi = [-2, -1, -0.75, 0.75, 1, 2]
-yi = [-1, -1, 0, 0, 1, 1]
-if isScipyInstalled:
-    add_deadband = interp1d(xi, yi, kind='linear')
-
+def bitfield16(n):
+  a = [0 for i in range(16)]
+  b = [1 if digit=='1' else 0 for digit in bin(n)[2:]]
+  for i in range(len(b)):
+    a[i] = b[-i-1]
+  return a
+  
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
     # Initializing XOR counter
@@ -70,6 +76,12 @@ def NMEA(message_type, value, talker_id= "OR"):
   msg = "$"+ msg +"*"+ computeXORChecksum(msg) + str(chr(13).encode('ascii')) + str(chr(10).encode('ascii'))
   return msg
 
+# Define a linear interpolation function to create a deadband
+xi = [-2, -1, -0.75, 0.75, 1, 2]
+yi = [-1, -1, 0, 0, 1, 1]
+if isScipyInstalled:
+  add_deadband = interp1d(xi, yi, kind='linear')
+
 # Parameters for the serial connection
 locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
 baudrate = 57600
@@ -85,12 +97,13 @@ INC_BUTTON_LEFT     = 4 # Increase derivative gain
 INC_BUTTON_RIGHT    = 5 # Increase proportional gain
 DEC_BUTTON_LEFT     = 6 # Decrease derivative gain
 DEC_BUTTON_RIGHT    = 7 # Decrease proportional gain
-RESET_OFFSET_BUTTON = 8 # Reset offet
-buttons_state             = 0 # Variable to store buttons state
+RESET_OFFSET_BUTTON = 8 # Reset offset
+HAT_LEFT            = 12
+HAT_BACKWARD        = 13
+HAT_RIGHT           = 14
+HAT_FORWARD         = 15
+buttons_state = bitfield16(0)
 mode = JOY_OL
-
-FORWARD_BACKWARD_AXIS = 2
-LEFT_RIGHT_AXIS       = 3
 
 # Variables to save offset
 joy_OL_offset_forward = 0
@@ -102,8 +115,11 @@ auto_offset_right     = 0
 inc                   = 0.05 # Increment normalized
 
 ROBOKITE_SYSTEM = 0
-GROUND_UNIT = 0
-FLYING_UNIT = 1
+GROUND_UNIT     = 0
+FLYING_UNIT     = 1
+embedded_device  = '/dev/ttyUSB0'
+ground_station   = 'localhost:14555'
+joystick_address = 'udpin:localhost:14556'
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
@@ -126,221 +142,196 @@ def resetOrder():
   cmd1 = 0
   cmd2 = 0
 
-# Use pygame for the joystick
-
-JOY_RECONNECT_TIME = 2 #seconds. Time to reconnect if no joystick motion
-
-pygame.init()
-
-# Read mavlink messages
+# Open mavlink connection
 if isMavlinkInstalled:
   try:
-    embedded_device = '/dev/ttyUSB0'
     master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
     isConnectedToEmbeddedDevice = True
-    print("Connected to embbeded device on", embedded_device)
+    print("Mavlink connection to embbeded device on", embedded_device)
   except:
     isConnectedToEmbeddedDevice = False
-    print("Mavlink connection to embbed device failed")
+    print("Connected (mavlink) to embbed device failed")
   try:
-    ground_station = 'localhost:14555'
     master_forward = mavutil.mavlink_connection('localhost:14555', baud=57600, source_system=254) # 255 is ground station
     isConnectedToGroundStation = True
-    print("Connected to ground station on ", ground_station)
+    print("Connected (mavlink) to ground station on ", ground_station)
   except:
     isConnectedToGroundStation = False
     print("Mavlink connection to ground station failed")
-rollspeed = 0
-roll = 0
+  try:
+    mav_joystick = mavutil.mavlink_connection(joystick_address, baud=57600, source_system=254) # 255 is ground station
+    isConnectedToJoystick = True
+    print("Connected (mavlink) to joystick on ", joystick_address)
+  except:
+    isConnectedToJoystick = False
+    print("Mavlink connection to joystick failed")
+
 
 # This loop is here for robustness in case of deconnection
 while True:
-    for device in locations:
-      try:
-        print("Trying...", device)
-        resetOrder()
-        
-        # First open with  baudrate zero and close to enable reconnection after deconnection
-		# Thanks to Rémi Moncel for this trick http://robokite.blogspot.fr/2014/11/reconnexion-automatique-du-port-serie.html#comment-form
-        ser = serial.Serial(device, baudrate=0, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
-        ser.close()
-        # Note that by default arduino is restarting on serial connection
-        ser = serial.Serial(device, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
-        print("Connected to ground device on ", device)
-        break
-      except:
-        print("Failed to connect on ", device)
+  for device in locations:
+    try:
+      print("Trying...", device)
+      resetOrder()
+      
+      # First open with  baudrate zero and close to enable reconnection after deconnection
+      # Thanks to Rémi Moncel for this trick http://robokite.blogspot.fr/2014/11/reconnexion-automatique-du-port-serie.html#comment-form
+      ser = serial.Serial(device, baudrate=0)#, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
+      ser.close()
+      # Note that by default arduino is restarting on serial connection
+      ser = serial.Serial(device, baudrate=baudrate)#, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=2, xonxoff=0, rtscts=0, interCharTimeout=None)   
+      print("Connected (serial) to ground device on ", device)
+      break
+    except:
+      print("Failed to connect on ", device)
     # Wait so that arduino is fully awoken
     time.sleep(1.5)
         
-    # Reset the timer    
-    t0 = time.time()
-    last_event_time = 0
-
+  # Reset the timers    
+  t0 = 0
+  last_event_time = 0
 
     # This is the main program loop
-    while True:
-
-      # Deals with joystick deconnection and reconnection      
-      if time.time()-last_event_time > JOY_RECONNECT_TIME:
-         print("No joystick event for x seconds, trying reconnection")
-         last_event_time = time.time()
-         resetOrder()
-         pygame.quit()
-         pygame.init()
-         pygame.joystick.init()
-         actual_nb_joysticks = pygame.joystick.get_count()
-         print("Number of joystick: ", actual_nb_joysticks)
-         if actual_nb_joysticks > 0:
-            my_joystick = pygame.joystick.Joystick(0)
-            my_joystick.init()
-            nb_joysticks = actual_nb_joysticks
-            print("Joystick reinit")
-      
-      # Deals with gamepad events 
-      for event in pygame.event.get():
-
-        last_event_time = time.time()
-        # Button events
-        if event.type == JOYBUTTONDOWN:
-            if event.button == MANUAL:
-                mode = MANUAL
-                print("MANUAL")
-            elif event.button == JOY_OL:
-                mode = JOY_OL
-                print("JOY_OL: JOYSTICK OPEN LOOP")
-            elif event.button == JOY_CL:
-                mode = JOY_CL
-                print("JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP")
-            elif event.button == AUTO:
-                mode = AUTO
-                print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
-            elif event.button == INC_BUTTON_LEFT:
-                Kd = Kd * inc_factor
-                print("Kd: ", Kd)
-            elif event.button == INC_BUTTON_RIGHT:
-                Kp = Kp * inc_factor
-                print("Kp: ", Kp)
-            elif event.button == DEC_BUTTON_LEFT:
-                Kd = Kd / inc_factor
-                print("Kd: ", Kd)
-            elif event.button == DEC_BUTTON_RIGHT:
-                Kp = Kp / inc_factor
-                print("Kp: ", Kp)
-            elif event.button == RESET_OFFSET_BUTTON:
-                if mode == JOY_OL:
-                  joy_OL_offset_forward = 0
-                  joy_OL_offset_right   = 0
-                elif mode == JOY_CL:
-                  joy_CL_offset_forward = 0
-                  joy_CL_offset_right   = 0
-                elif mode == AUTO:
-                  auto_offset_forward   = 0
-                  auto_offset_right     = 0
-        if (event.type == JOYBUTTONDOWN) or (event.type == JOYBUTTONUP) or event.type == JOYHATMOTION:
-            buttons_state = 0
-            for i in range(my_joystick.get_numbuttons()):
-              buttons_state +=my_joystick.get_button(i)*2**i
-            for i in range(my_joystick.get_numhats()):
-              buttons_state +=(my_joystick.get_hat(i)[0]==-1)*2**(my_joystick.get_numbuttons()+4*i)
-              buttons_state +=(my_joystick.get_hat(i)[1]==-1)*2**(my_joystick.get_numbuttons()+4*i+1)
-              buttons_state +=(my_joystick.get_hat(i)[0]== 1)*2**(my_joystick.get_numbuttons()+4*i+2)
-              buttons_state +=(my_joystick.get_hat(i)[1]== 1)*2**(my_joystick.get_numbuttons()+4*i+3)
-            print buttons_state
-            if isConnectedToGroundStation:
-              master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
-        # Joystick events  
-        if event.type == JOYAXISMOTION:
-          if event.axis == FORWARD_BACKWARD_AXIS:
-            #print("power control ", event.value)
-            cmd1 = event.value
-          elif event.axis == LEFT_RIGHT_AXIS :
-            #print("direction control ", event.value)
-            cmd2 = event.value
-            if isScipyInstalled:
-                cmd2 = add_deadband(cmd2)
-            
-        # Trim events
-        if event.type == JOYHATMOTION:
-            if mode == JOY_OL:
-              joy_OL_offset_forward -= event.value[1]*inc
-              joy_OL_offset_right   += event.value[0]*inc
-            elif mode == JOY_CL:
-              joy_CL_offset_forward -= event.value[1]*inc
-              joy_CL_offset_right   += event.value[0]*inc
-            elif mode == AUTO:
-              auto_offset_forward   -= event.value[1]*inc
-              auto_offset_right     += event.value[0]*inc
+  while True:
+    # Mavlink messages
+    if isConnectedToEmbeddedDevice:
+      msg = master.recv_match(type='ATTITUDE', blocking=False)
+      if msg!=None:
+        master_forward.mav.send(msg)
+        master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
+        rollspeed = msg.rollspeed
+        roll = msg.roll
+        if mode == AUTO:
+          mustUpdateOrder = True
+      msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
+      if msg!=None:
+        master_forward.mav.send(msg)
         
+    if isConnectedToGroundStation:
+      msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+      
+    if isConnectedToJoystick:
+      msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
+      if msg is not None:
+        mustUpdateOrder = True
+        cmd1 = msg.x/1000.
+        cmd2 = msg.y/1000.
+        print cmd1
+        if isScipyInstalled:
+          cmd2 = add_deadband(cmd2)
+        buttons_state_number = msg.buttons
+        buttons_state = bitfield16(msg.buttons)
+        if isConnectedToGroundStation:
+          master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, msg.buttons)
+
+        # Button events
+        if buttons_state[MANUAL]:
+          mode = MANUAL
+          print("MANUAL")
+        elif buttons_state[JOY_OL]:
+          mode = JOY_OL
+          print("JOY_OL: JOYSTICK OPEN LOOP")
+        elif buttons_state[JOY_CL]:
+          mode = JOY_CL
+          print("JOY_CL: JOYSTICK to BAR POSITION CLOSE LOOP")
+        elif buttons_state[AUTO]:
+          mode = AUTO
+          print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
+        elif buttons_state[INC_BUTTON_LEFT]:
+          Kd = Kd * inc_factor
+          print("Kd: ", Kd)
+        elif buttons_state[INC_BUTTON_RIGHT]:
+          Kp = Kp * inc_factor
+          print("Kp: ", Kp)
+        elif buttons_state[DEC_BUTTON_LEFT]:
+          Kd = Kd / inc_factor
+          print("Kd: ", Kd)
+        elif buttons_state[DEC_BUTTON_RIGHT]:
+          Kp = Kp / inc_factor
+          print("Kp: ", Kp)
+        elif buttons_state[RESET_OFFSET_BUTTON]:
+          if mode == JOY_OL:
+            joy_OL_offset_forward = 0
+            joy_OL_offset_right   = 0
+          elif mode == JOY_CL:
+            joy_CL_offset_forward = 0
+            joy_CL_offset_right   = 0
+          elif mode == AUTO:
+            auto_offset_forward   = 0
+            auto_offset_right     = 0
+        elif buttons_state[HAT_LEFT]:
+          if mode == JOY_OL:
+            joy_OL_offset_right   -= inc
+          elif mode == JOY_CL:
+            joy_CL_offset_right   -= inc
+          elif mode == AUTO:
+            auto_offset_right     -= inc
+        elif buttons_state[HAT_RIGHT]:
+          if mode == JOY_OL:
+            joy_OL_offset_right   += inc
+          elif mode == JOY_CL:
+            joy_CL_offset_right   += inc
+          elif mode == AUTO:
+            auto_offset_right     += inc
+        elif buttons_state[HAT_FORWARD]:        
+          if mode == JOY_OL:
+            joy_OL_offset_forward -= inc
+          elif mode == JOY_CL:
+            joy_CL_offset_forward -= inc
+          elif mode == AUTO:
+            auto_offset_forward   -= inc
+        elif buttons_state[HAT_BACKWARD]:        
+          if mode == JOY_OL:
+            joy_OL_offset_forward += inc
+          elif mode == JOY_CL:
+            joy_CL_offset_forward += inc
+          elif mode == AUTO:
+            auto_offset_forward   += inc
+          
+    # Send messages 
+    if (time.time()-t0 > ORDER_SAMPLE_TIME) or (mustUpdateOrder):
+      t0 = time.time()
+      try:
         # Create messages to be sent   
         if mode == JOY_OL:
-            msg1 = NMEA("PW1", int((cmd1 + joy_OL_offset_right)  *127), "OR")
-            msg2 = NMEA("PW2", int((cmd2 + joy_OL_offset_forward)*127), "OR")
+          msg1 = NMEA("PW1", int((cmd1 + joy_OL_offset_right)  *127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_OL_offset_forward)*127), "OR")
         elif mode == JOY_CL:
-            msg1 = NMEA("SP1", int((cmd1 + joy_CL_offset_right)  *127), "OR")
-            msg2 = NMEA("PW2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
+          msg1 = NMEA("SP1", int((cmd1 + joy_CL_offset_right)  *127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
         elif mode == AUTO:
-            msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
-            msg2 = NMEA("PW2", int((cmd2 + auto_offset_forward)*127),   "OR")  # \todo: add regulation based on line tension?
+          msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + auto_offset_forward)*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
-            msg1 = NMEA("PW1", 0, "OR")
-            msg2 = NMEA("PW2", 0, "OR")     
-            
-      # Mavlink messages
-      if isConnectedToEmbeddedDevice:
-        msg = master.recv_match(type='HEARTBEAT', blocking=False) 
-        msg = master.recv_match(type='ATTITUDE', blocking=False)
-        if msg!=None:
-          master_forward.mav.send(msg)
-          master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
-          rollspeed = msg.rollspeed
-          roll = msg.roll
-          if mode == AUTO:
-            msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
-        msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
-        if msg!=None:
-          master_forward.mav.send(msg)
-      if isConnectedToGroundStation:
-        msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
-        
-      # Send messages 
-      if time.time()-t0 > ORDER_SAMPLE_TIME:
-        try:
-            t0 = time.time()
+          msg1 = NMEA("PW1", 0, "OR")
+          msg2 = NMEA("PW2", 0, "OR") 
 
-            ser.write(msg1.encode())
-            #print(msg1)
-            ser.write(msg2.encode())
-            #print(msg2)
-            ser.write(mfb.encode())
-            #print(mfb)
-
-            fdbk = line.split(',')
-            time_us = int(time.time()*1e6)
-            time_ms = int(time_us/1000)
-            group_mlx = 0
-            press_abs = 1025#hpa
-            press_diff = 0 #hpa
-            temperature = 20# Celsius deg
-            if isConnectedToGroundStation:
-                master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
-                                  0, 0, 0)
-
-                master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
-                master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
-                master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
-        except Exception as e:
-            print("Error sending order: " + str(e))
-            #ser.close()
-            break
-
-      try: # The ressource can be temporarily unavailable
-        if ser.inWaiting() > 0:
-            line = ser.readline()
-            print("Received from arduino: ", line)
+        ser.write(msg1.encode())
+        #print(msg1)
+        ser.write(msg2.encode())
+        #print(msg2)
+        ser.write(mfb.encode())
+        #print(mfb)
+        mustUpdateOrder = False
       except Exception as e:
+        print("Error sending order: " + str(e))
         #ser.close()
-        print("Error reading from serial port: " + str(e))
+        break
+
+    try: # The ressource can be temporarily unavailable
+      if ser.inWaiting() > 0:
+        line = ser.readline()
+        #print("Received from arduino: ", line)
+        if isConnectedToGroundStation:
+          fdbk = line.split(',')
+          time_us = int(time.time()*1e6)
+          time_ms = int(time_us/1000)
+          group_mlx = 0
+          master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+          master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+    except Exception as e:
+      #ser.close()
+      print("Error reading from serial port: " + str(e))
       
 ser.close()
 print("Closing")

@@ -90,7 +90,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Wire.h>
 #include "I2Cdev.h" //from https://github.com/sparkfun/MPU-9150_Breakout.git
-#include "MPU9150.h"
+#include "MPU6050_9Axis_MotionApps41.h"
 #include <MS561101BA.h>
 
 #define OUTPUT_RATE_ms 50 // 20Hz
@@ -116,7 +116,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // specific I2C addresses may be passed as a parameter here
 // AD0 low = 0x68 (default for InvenSense evaluation board)
 // AD0 high = 0x69
-MPU9150 accelGyroMag(0x69);
+MPU6050 accelGyroMag(0x69);
 
 // global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
 #define GyroMeasError PI * (40.0f / 180.0f)       // gyroscope measurement error in rads/s (shown as 3 deg/s)
@@ -277,8 +277,11 @@ void loop()
     if(accelGyroMag.getIntDataReadyStatus() == 1)// wait for data ready status register to update all data registers
     { 
       // read the raw sensor data
-        accelGyroMag.getMotion9(&a1, &a1, &a3, &g1, &g2, &g3, &m1, &m2, &m3);
-
+        //getMotion9 is not working properly for unknown reason
+        //accelGyroMag.getMotion9(&a1, &a1, &a3, &g1, &g2, &g3, &m1, &m2, &m3);
+        accelGyroMag.getAcceleration  ( &a1, &a2, &a3  );
+        accelGyroMag.getRotation  ( &g1, &g2, &g3  );
+        accelGyroMag.getMag  ( &m1, &m2, &m3 );
         a2 = -a2;// Invert y to get NED classical convention
         a1 = a1 + ACC_1_OFFSET;
         a2 = a2 + ACC_2_OFFSET;

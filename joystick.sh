@@ -19,8 +19,8 @@
 
 # Change the next 3 lines to suit where you install your script and what you want to call it
 DIR=/home/baptiste/kites/robokite/Motors
-DAEMON=$DIR/motorJoy.py
-DAEMON_NAME=motorJoy
+DAEMON=$DIR/joystick.py
+DAEMON_NAME=joystick
 
 # Add any command line options for your daemon here
 DAEMON_OPTS=""

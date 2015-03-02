@@ -149,7 +149,9 @@ if isMavlinkInstalled:
     isConnectedToEmbeddedDevice = False
     print("Connected (mavlink) to embbed device failed")
   try:
-    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
+    master_forward_ground = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
+    master_forward_embedded = mavutil.mavlink_connection(ground_station, baud=57600, source_system=100) # 255 is ground station
+    master_forward_joystick = mavutil.mavlink_connection(ground_station, baud=57600, source_system=253) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected (mavlink) to ground station on ", ground_station)
   except:
@@ -195,9 +197,13 @@ while True:
       if time.time()-thb > HEARTBEAT_SAMPLE_TIME:
         thb = time.time()
         print "Sending heartbeat"
-        master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+        master_forward_ground.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
-      msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+        master_forward_embedded.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_KITE, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                  0, 0, 0)
+        master_forward_joystick.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                  0, 0, 0)
+      #msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
 
     if isConnectedToEmbeddedDevice:
       msg = master.recv_match(type='ATTITUDE', blocking=False)
@@ -208,8 +214,8 @@ while True:
         azimuth = atan2(pos.y, pos.x)
         elevation = atan2(pos.z, hypot(pos.x, pos.y))
         if isConnectedToGroundStation:
-          master_forward.mav.send(msg)
-          master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )
+          master_forward_embedded.mav.send(msg)
+          master_forward_embedded.mav.local_position_ned_send(10, pos.x, pos.y, pos.z, 0, 0, 0 )
         rollspeed = msg.rollspeed
         roll = msg.roll
         if mode == AUTO:
@@ -217,7 +223,7 @@ while True:
       msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
       if msg!=None:
         if isConnectedToGroundStation:
-          master_forward.mav.send(msg)      
+          master_forward_embedded.mav.send(msg)      
       
     if isConnectedToJoystick:
       msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
@@ -227,7 +233,7 @@ while True:
         cmd2 = msg.y/1000.
         buttons_state = bitfield16(msg.buttons)
         if isConnectedToGroundStation:
-          master_forward.mav.send(msg)
+          master_forward_joystick.mav.send(msg)
 
         # Button events
         if buttons_state[MANUAL]:
@@ -333,8 +339,8 @@ while True:
           time_ms = int(time_us/1000)
           group_mlx = 0
           if len(fdbk) == 5:
-            master_forward.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
-            master_forward.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
+            master_forward_ground.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+            master_forward_ground.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
     except Exception as e:
       #ser.close()
       print("Error reading from serial port: " + str(e))

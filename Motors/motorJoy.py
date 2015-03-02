@@ -25,9 +25,17 @@
 # Tested on ubuntu 14.04
 
 import os
+import sys
 import time
 import serial
 import numpy as np
+sys.path.append('../../mavlink/pymavlink')
+
+import rotmat
+from math import radians, atan2, hypot, pi
+
+m = rotmat.Matrix3()
+v = rotmat.Vector3(0,0,-1)
 
 try:
   from pymavlink import mavutil
@@ -194,6 +202,11 @@ while True:
     if isConnectedToEmbeddedDevice:
       msg = master.recv_match(type='ATTITUDE', blocking=False)
       if msg!=None:
+        print msg
+        m.from_euler(msg.roll, msg.pitch, msg.yaw)
+        pos = m*v
+        azimuth = atan2(pos.y, pos.x)
+        elevation = atan2(pos.z, hypot(pos.x, pos.y))
         if isConnectedToGroundStation:
           master_forward.mav.send(msg)
           master_forward.mav.local_position_ned_send(10, 0, 0, 0, 0, 0, 0 )

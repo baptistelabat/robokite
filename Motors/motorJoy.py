@@ -36,6 +36,7 @@ from math import radians, atan2, hypot, pi
 
 m = rotmat.Matrix3()
 v = rotmat.Vector3(0,0,-1)
+f = rotmat.Vector3(1,0,0)
 
 try:
   from pymavlink import mavutil
@@ -58,6 +59,9 @@ def bitfield16(n):
   for i in range(len(b)):
     a[i] = b[-i-1]
   return a
+
+def saturation(mini, x, maxi):
+  return min(max(mini, x), maxi)
   
 def computeXORChecksum(chksumdata):
     # Inspired from http://doschman.blogspot.fr/2013/01/calculating-nmea-sentence-checksums.html
@@ -86,6 +90,7 @@ baudrate = 57600
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
 HEARTBEAT_SAMPLE_TIME = 1
 # Definition of gamepad button in use
+Nmode = 4  
 MANUAL              = 0 # Control lines are released to enable manual control
 JOY_OL              = 1 # Joystick controls voltage applied to motors (open loop control)
 JOY_CL              = 2 # Joystick controls kite bar position in closed loop
@@ -100,15 +105,12 @@ HAT_BACKWARD        = 13
 HAT_RIGHT           = 14
 HAT_FORWARD         = 15
 buttons_state = bitfield16(0)
+previous_buttons_state = buttons_state
 mode = JOY_OL
 
 # Variables to save offset
-joy_OL_offset_forward = 0
-joy_OL_offset_right   = 0
-joy_CL_offset_forward = 0
-joy_CL_offset_right   = 0
-auto_offset_forward   = 0
-auto_offset_right     = 0
+joy_offset_forward = [0 for i in range(Nmode)]
+joy_offset_right   = [0 for i in range(Nmode)]
 inc                   = 0.05 # Increment normalized
 
 ROBOKITE_SYSTEM = 0
@@ -120,9 +122,15 @@ joystick_address = 'udpin:localhost:14556'
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
-Kp = 1.
-Kd = 0.1
+Kp_ini = 1.
+Kd_ini = 0.1
+Kp = Kp_ini
+Kd = Kd_ini
 inc_factor = 2.
+Kp_mini = Kp_ini/inc_factor**5
+Kp_maxi = Kp_ini*inc_factor**5
+Kd_mini = Kd_ini/inc_factor**5
+Kd_maxi = Kd_ini*inc_factor**5
 roll_max_excursion = 45*np.pi/180
 
 def resetOrder():
@@ -197,9 +205,9 @@ while True:
       if time.time()-thb > HEARTBEAT_SAMPLE_TIME:
         thb = time.time()
         print "Sending heartbeat"
-        master_forward_ground.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
-                                  0, 0, 0)
         master_forward_embedded.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_KITE, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                                  0, 0, 0)
+        master_forward_ground.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
         master_forward_joystick.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
@@ -211,11 +219,12 @@ while True:
         print msg
         m.from_euler(msg.roll, msg.pitch, msg.yaw)
         pos = m*v
+        speed= m*f
         azimuth = atan2(pos.y, pos.x)
         elevation = atan2(pos.z, hypot(pos.x, pos.y))
         if isConnectedToGroundStation:
           master_forward_embedded.mav.send(msg)
-          master_forward_embedded.mav.local_position_ned_send(10, pos.x, pos.y, pos.z, 0, 0, 0 )
+          master_forward_embedded.mav.local_position_ned_send(10, pos.x, pos.y, pos.z, speed.x, speed.y, speed.z )
         rollspeed = msg.rollspeed
         roll = msg.roll
         if mode == AUTO:
@@ -232,6 +241,8 @@ while True:
         cmd1 = msg.x/1000.
         cmd2 = msg.y/1000.
         buttons_state = bitfield16(msg.buttons)
+        buttons_down_event = buttons_state-previous_buttons_state
+        previous_buttons_state = buttons_state
         if isConnectedToGroundStation:
           master_forward_joystick.mav.send(msg)
 
@@ -248,56 +259,36 @@ while True:
         elif buttons_state[AUTO]:
           mode = AUTO
           print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
-        elif buttons_state[INC_BUTTON_LEFT]:
-          Kd = Kd * inc_factor
-          print("Kd: ", Kd)
-        elif buttons_state[INC_BUTTON_RIGHT]:
-          Kp = Kp * inc_factor
-          print("Kp: ", Kp)
-        elif buttons_state[DEC_BUTTON_LEFT]:
-          Kd = Kd / inc_factor
-          print("Kd: ", Kd)
-        elif buttons_state[DEC_BUTTON_RIGHT]:
-          Kp = Kp / inc_factor
-          print("Kp: ", Kp)
-        elif buttons_state[RESET_OFFSET_BUTTON]:
-          if mode == JOY_OL:
-            joy_OL_offset_forward = 0
-            joy_OL_offset_right   = 0
-          elif mode == JOY_CL:
-            joy_CL_offset_forward = 0
-            joy_CL_offset_right   = 0
-          elif mode == AUTO:
-            auto_offset_forward   = 0
-            auto_offset_right     = 0
-        elif buttons_state[HAT_LEFT]:
-          if mode == JOY_OL:
-            joy_OL_offset_right   -= inc
-          elif mode == JOY_CL:
-            joy_CL_offset_right   -= inc
-          elif mode == AUTO:
-            auto_offset_right     -= inc
-        elif buttons_state[HAT_RIGHT]:
-          if mode == JOY_OL:
-            joy_OL_offset_right   += inc
-          elif mode == JOY_CL:
-            joy_CL_offset_right   += inc
-          elif mode == AUTO:
-            auto_offset_right     += inc
-        elif buttons_state[HAT_FORWARD]:        
-          if mode == JOY_OL:
-            joy_OL_offset_forward -= inc
-          elif mode == JOY_CL:
-            joy_CL_offset_forward -= inc
-          elif mode == AUTO:
-            auto_offset_forward   -= inc
-        elif buttons_state[HAT_BACKWARD]:        
-          if mode == JOY_OL:
-            joy_OL_offset_forward += inc
-          elif mode == JOY_CL:
-            joy_CL_offset_forward += inc
-          elif mode == AUTO:
-            auto_offset_forward   += inc
+          
+        if mode == JOY_OL:  
+          if buttons_down_event[INC_BUTTON_LEFT]:
+            Kd = saturation(Kd_mini, Kd * inc_factor, Kd_maxi)
+            print("Kd: ", Kd)
+          elif buttons_down_event[INC_BUTTON_RIGHT]:
+            Kp = saturation(Kp_mini, Kp * inc_factor, Kp_maxi)
+            print("Kp: ", Kp)
+          elif buttons_down_event[DEC_BUTTON_LEFT]:
+            Kd = saturation(Kd_mini, Kd / inc_factor, Kd_maxi)
+            print("Kd: ", Kd)
+          elif buttons_down_event[DEC_BUTTON_RIGHT]:
+            Kp = saturation(Kp_mini, Kp / inc_factor, Kp_maxi)
+            print("Kp: ", Kp)
+            
+        if buttons_state[RESET_OFFSET_BUTTON]:
+          joy_offset_forward[mode] = 0
+          joy_offset_right[mode]   = 0
+        elif buttons_down_event[HAT_LEFT]:
+          joy_offset_right[mode]   -= inc
+        elif buttons_down_event[HAT_RIGHT]:
+          joy_offset_right[mode]   += inc
+        elif buttons_down_event[HAT_RIGHT]:
+          joy_offset_right[mode]   += inc
+        elif buttons_down_event[HAT_RIGHT]:
+          joy_offset_right[mode]   += inc
+        elif buttons_down_event[HAT_FORWARD]:        
+          joy_offset_forward[mode] -= inc
+        elif buttons_down_event[HAT_BACKWARD]:        
+          joy_offset_forward[mode] += inc
           
     # Send messages 
     if (time.time()-t0 > ORDER_SAMPLE_TIME) or (mustUpdateOrder):
@@ -305,14 +296,14 @@ while True:
       try:
         # Create messages to be sent   
         if mode == JOY_OL:
-          msg1 = NMEA("PW1", int((cmd1 + joy_OL_offset_right)  *127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_OL_offset_forward)*127), "OR")
+          msg1 = NMEA("PW1", int((cmd1 + joy_offset_right[mode])  *127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
         elif mode == JOY_CL:
-          msg1 = NMEA("SP1", int((cmd1 + joy_CL_offset_right)  *127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_CL_offset_forward)*127), "OR")
+          msg1 = NMEA("SP1", int((cmd1 + joy_offset_right[mode])  *127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
         elif mode == AUTO:
-          msg1 = NMEA("PW1", int((auto_offset_right -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + auto_offset_forward)*127),   "OR")  # \todo: add regulation based on line tension?
+          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
           msg1 = NMEA("PW1", 0, "OR")
           msg2 = NMEA("PW2", 0, "OR") 
@@ -339,7 +330,7 @@ while True:
           time_ms = int(time_us/1000)
           group_mlx = 0
           if len(fdbk) == 5:
-            master_forward_ground.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), 0 ,0, 0 ])
+            master_forward_ground.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), float(fdbk[5]) ,float(fdbk[6]), float(fdbk[7]) ])
             master_forward_ground.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
     except Exception as e:
       #ser.close()

@@ -62,7 +62,7 @@ boolean isRFUpdated = false;
 // Define Variables we'll be connecting to
 double Setpoint1, Input1, Output1;
 double Setpoint2, Input2, Output2;
-double Input3;
+double Input3, Input4, Input5, Input6;
 // Specify the links and initial tuning parameters (Kp, Ki, Kd)
 float Kp1 = 1;
 float Ki1 = 0.001;
@@ -78,7 +78,7 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 #define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
 #define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
 #define POT_OFFSET        0.05 // Distance from rotation axis to lever arm (in m)
-#define NEUTRAL_ANGLE_DEG    90 // Zero of the potentiometer
+#define NEUTRAL_ANGLE_DEG    85 // Zero of the potentiometer
 // Linear encoder
 #define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
 #define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
@@ -233,6 +233,9 @@ void computeFeedback()
   
   // Line tension
   Input3 = data[3]/127. - 1;
+  Input4 = analogRead(A0)/1023.;
+  Input5 = analogRead(A1)/1023.;
+  Input6 = analogRead(A2)/1023.;
 }
 
 void sendFeedback()
@@ -280,6 +283,12 @@ void sendFeedback()
     Serial.print((Input2/127.+1)/2.*1023);
     Serial.print(", ");
     Serial.print((Input3+1)/2.*1023);
+    Serial.print(", ");
+    Serial.print((Input4+1)/2.*1023);
+    Serial.print(", ");
+    Serial.print((Input5+1)/2.*1023);
+    Serial.print(", ");
+    Serial.print((Input6+1)/2.*1023);
     Serial.println("");
     isFeedbackRequested = false;
   }

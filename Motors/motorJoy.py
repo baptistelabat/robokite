@@ -241,7 +241,7 @@ while True:
         cmd1 = msg.x/1000.
         cmd2 = msg.y/1000.
         buttons_state = bitfield16(msg.buttons)
-        buttons_down_event = buttons_state-previous_buttons_state
+        buttons_down_event = [buttons_state[i]-previous_buttons_state[i] for i in range(16)]
         previous_buttons_state = buttons_state
         if isConnectedToGroundStation:
           master_forward_joystick.mav.send(msg)

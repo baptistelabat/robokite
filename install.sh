@@ -113,3 +113,7 @@ git clone https://github.com/PaulStoffregen/RadioHead.git ~/sketchbook/libraries
 wget http://latestfiasco.com/ftp/QGroundControl-Stable-V2.2.1.tar.bz2
 mkdir QGroundControl
 tar xvjf QGroundControl-Stable-V2.2.1.tar.bz2 -C QGroundControl 
+
+# Geda (Circuits drawing)
+# Library
+git clone https://github.com/freespace/geda-symbols.git

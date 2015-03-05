@@ -58,14 +58,10 @@ while True:
       if time.time()-t0 > HEARTBEAT_SAMPLE_TIME:
         t0 = time.time()
         if isConnectedToGroundStation:
-          msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+          #msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
           print "Sending heartbeat"
           master_forward.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
-      if time.time()-t_last_order > ORDER_SAMPLE_TIME:
-          t_last_order = time.time()
-          #if isConnectedToGroundStation:
-            #master_forward.mav.manual_control_send(0, cmd1*1000, cmd2*1000, 0, 0, buttons_state)
      # Deals with joystick deconnection and reconnection      
       if time.time()-last_event_time > JOY_RECONNECT_TIME:
          print("No joystick event for x seconds, trying reconnection")

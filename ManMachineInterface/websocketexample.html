@@ -1,0 +1,56 @@
+<head>
+<title>Web to serial</title>
+<!-- <script src="js/jquery-1.8.3.min.js"></script> -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script>
+var ws = new WebSocket("ws://"+location.hostname+":"+location.port+"/websocket");
+ws.onopen = function() {
+   ws.send("Hello, world");
+};
+ws.onmessage = function (evt) {
+	$('#output').val($('#output').val()+evt.data);
+};
+
+var runningLen = 0;
+var interval;
+
+function newText(){
+	var form = document.getElementById("textInput");
+	var len = form.value.length;
+	if (len > runningLen) {
+		ws.send(form.value.substring(runningLen));
+		runningLen = len;
+	} else if (len < runningLen) {
+		runningLen = len;
+	};
+}
+function addTextAreaCallback(textArea, callback, delay) {
+	var timer = null;
+	textArea.onkeyup = function() {
+		if (timer) {
+			window.clearTimeout(timer);
+		}
+		timer = window.setTimeout( function() {
+			timer = null;
+			callback();
+		}, delay);
+	};
+	textArea = null;
+}
+
+$(document).ready(function() {
+	addTextAreaCallback(document.getElementById("textInput"), newText,500);
+});
+	
+</script>
+</head>
+<body>
+
+<div id="mainbody" style="background-color:#FFFFFF;margin-left:auto;margin-right:auto;">
+	<textarea id="textInput" rows="10" cols="50"></textarea> Text to send to serial port
+	<textarea id="output" rows="10" cols="50" readonly></textarea> Text from serial port
+
+</div>
+
+</body>
+</html>

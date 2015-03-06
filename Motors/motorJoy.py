@@ -34,6 +34,14 @@ sys.path.append('../../mavlink/pymavlink')
 import rotmat
 from math import radians, atan2, hypot, pi
 
+import socket
+def getIP():
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.connect(("8.8.8.8",80))
+  ip = s.getsockname()[0]
+  s.close()
+  return ip
+
 m = rotmat.Matrix3()
 v = rotmat.Vector3(0,0,-1)
 f = rotmat.Vector3(1,0,0)
@@ -116,9 +124,9 @@ inc                   = 0.05 # Increment normalized
 ROBOKITE_SYSTEM = 0
 GROUND_UNIT     = 0
 FLYING_UNIT     = 1
-embedded_device  = '/dev/ttyUSB0'
+embedded_device  = '/dev/ttyUSB1'
 ground_station   = 'udpout:localhost:14550'
-joystick_address = 'udpin:localhost:14556'
+joystick_address = 'udpin:'+getIP()+':14556'
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
@@ -166,6 +174,7 @@ if isMavlinkInstalled:
     isConnectedToGroundStation = False
     print("Mavlink connection to ground station failed")
   try:
+    print joystick_address
     mav_joystick = mavutil.mavlink_connection(joystick_address, baud=57600, source_system=254) # 255 is ground station
     isConnectedToJoystick = True
     print("Connected (mavlink) to joystick on ", joystick_address)
@@ -216,7 +225,7 @@ while True:
     if isConnectedToEmbeddedDevice:
       msg = master.recv_match(type='ATTITUDE', blocking=False)
       if msg!=None:
-        print msg
+        #print msg
         m.from_euler(msg.roll, msg.pitch, msg.yaw)
         pos = m*v
         speed= m*f
@@ -259,36 +268,36 @@ while True:
         elif buttons_state[AUTO]:
           mode = AUTO
           print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
-          
-        if mode == JOY_OL:  
-          if buttons_down_event[INC_BUTTON_LEFT]:
-            Kd = saturation(Kd_mini, Kd * inc_factor, Kd_maxi)
-            print("Kd: ", Kd)
-          elif buttons_down_event[INC_BUTTON_RIGHT]:
-            Kp = saturation(Kp_mini, Kp * inc_factor, Kp_maxi)
-            print("Kp: ", Kp)
-          elif buttons_down_event[DEC_BUTTON_LEFT]:
-            Kd = saturation(Kd_mini, Kd / inc_factor, Kd_maxi)
-            print("Kd: ", Kd)
-          elif buttons_down_event[DEC_BUTTON_RIGHT]:
-            Kp = saturation(Kp_mini, Kp / inc_factor, Kp_maxi)
-            print("Kp: ", Kp)
             
         if buttons_state[RESET_OFFSET_BUTTON]:
           joy_offset_forward[mode] = 0
           joy_offset_right[mode]   = 0
-        elif buttons_down_event[HAT_LEFT]:
+        elif buttons_down_event[HAT_LEFT]==1:
           joy_offset_right[mode]   -= inc
-        elif buttons_down_event[HAT_RIGHT]:
+        elif buttons_down_event[HAT_RIGHT]==1:
           joy_offset_right[mode]   += inc
-        elif buttons_down_event[HAT_RIGHT]:
+        elif buttons_down_event[HAT_RIGHT]==1:
           joy_offset_right[mode]   += inc
-        elif buttons_down_event[HAT_RIGHT]:
+        elif buttons_down_event[HAT_RIGHT]==1:
           joy_offset_right[mode]   += inc
-        elif buttons_down_event[HAT_FORWARD]:        
+        elif buttons_down_event[HAT_FORWARD]==1:        
           joy_offset_forward[mode] -= inc
-        elif buttons_down_event[HAT_BACKWARD]:        
+        elif buttons_down_event[HAT_BACKWARD]==1:        
           joy_offset_forward[mode] += inc
+                    
+        if mode == AUTO:  
+          if buttons_down_event[INC_BUTTON_LEFT]==1:
+            Kd = saturation(Kd_mini, Kd * inc_factor, Kd_maxi)
+            print("Kd: ", Kd)
+          elif buttons_down_event[INC_BUTTON_RIGHT]==1:
+            Kp = saturation(Kp_mini, Kp * inc_factor, Kp_maxi)
+            print("Kp: ", Kp)
+          elif buttons_down_event[DEC_BUTTON_LEFT]==1:
+            Kd = saturation(Kd_mini, Kd / inc_factor, Kd_maxi)
+            print("Kd: ", Kd)
+          elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
+            Kp = saturation(Kp_mini, Kp / inc_factor, Kp_maxi)
+            print("Kp: ", Kp)
           
     # Send messages 
     if (time.time()-t0 > ORDER_SAMPLE_TIME) or (mustUpdateOrder):
@@ -329,7 +338,7 @@ while True:
           time_us = int(time.time()*1e6)
           time_ms = int(time_us/1000)
           group_mlx = 0
-          if len(fdbk) == 5:
+          if len(fdbk) == 8:
             master_forward_ground.mav.actuator_control_target_send(time_us, group_mlx, [0, 0, float(fdbk[2]), float(fdbk[3]), float(fdbk[4]), float(fdbk[5]) ,float(fdbk[6]), float(fdbk[7]) ])
             master_forward_ground.mav.set_actuator_control_target_send(time_us, group_mlx, ROBOKITE_SYSTEM, GROUND_UNIT, [float(fdbk[0]), float(fdbk[1]), 0, 0, 0, 0 ,0, 0 ])
     except Exception as e:

@@ -104,6 +104,14 @@ void sendFeedback()
     computeFeedback();
     driver.send(data, sizeof(data));
     driver.waitPacketSent();
+    Serial.print(data[0]);
+    Serial.print(", ");
+        Serial.print(data[1]);
+    Serial.print(", ");
+        Serial.print(data[2]);
+    Serial.print(", ");
+        Serial.print(data[3]);
+    Serial.println(", ");
   }
 }
 // Taken from http://playground.arduino.cc/Main/RotaryEncoders J.Carter(of Earth)

@@ -65,10 +65,10 @@ double Setpoint2, Input2, Output2;
 double Input3, Input4, Input5, Input6;
 // Specify the links and initial tuning parameters (Kp, Ki, Kd)
 float Kp1 = 1;
-float Ki1 = 0.001;
+float Ki1 = 0.00;
 float Kd1 = 0.001;
 float Kp2 = 1;
-float Ki2 = 0.001;
+float Ki2 = 0.00;
 float Kd2 = 0.001;
 PID myPID1(&Input1, &Output1, &Setpoint1, Kp1, Ki1, Kd1, DIRECT);
 PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
@@ -331,7 +331,15 @@ void sendOrder()
 }
 void computePIDTuning()
 {
- myPID1.SetTunings(atof(kpm1.value())*Kp1, atof(kim1.value())*Ki1, atof(kdm1.value())*Kd1);
- myPID2.SetTunings(atof(kpm2.value())*Kp2, atof(kim2.value())*Ki2, atof(kdm2.value())*Kd2);
+ myPID1.SetTunings(fabs(atof(kpm1.value())/127.*Kp1), fabs(atof(kim1.value())/127.*Ki1), fabs(atof(kdm1.value())/127.*Kd1));
+ myPID2.SetTunings(fabs(atof(kpm2.value())/127.*Kp2), fabs(atof(kim2.value())/127.*Ki2), fabs(atof(kdm2.value())/127.*Kd2));
+ myPID1.SetControllerDirection(sgn(atoi(kpm1.value())));
+ myPID2.SetControllerDirection(sgn(atoi(kpm2.value())));
+ //Serial.println(atof(kpm1.value())/127.*Kp1);
+}
+static inline int8_t sgn(int val) {
+  if (val < 0) return -1;
+  if (val==0) return 0;
+  return 1;
 }
  

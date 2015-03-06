@@ -2,6 +2,13 @@ import time
 import pygame
 from pygame.locals import *
 import serial
+import socket
+def getIP():
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.connect(("8.8.8.8",80))
+  ip = s.getsockname()[0]
+  s.close()
+  return ip
 
 try:
   from scipy.interpolate import interp1d
@@ -42,7 +49,9 @@ def resetOrder():
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    ground_station = 'udpout:192.168.43.2:14556'
+    IP = getIP()
+    # IP = 192.168.43.2
+    ground_station = 'udpout:' + IP + ':14556'
     master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=253) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected to ground station on ", ground_station)

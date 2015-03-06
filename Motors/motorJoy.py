@@ -132,14 +132,14 @@ joystick_address = 'udpin:'+getIP()+':14556'
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 
 Kp_ini = 1.
-Kd_ini = 0.1
+KdRoll_ini = 0.1
 Kp = Kp_ini
-Kd = Kd_ini
+KdRoll = KdRoll_ini
 inc_factor = 2.
 Kp_mini = Kp_ini/inc_factor**5
 Kp_maxi = Kp_ini*inc_factor**5
-Kd_mini = Kd_ini/inc_factor**5
-Kd_maxi = Kd_ini*inc_factor**5
+KdRoll_mini = KdRoll_ini/inc_factor**5
+KdRoll_maxi = KdRoll_ini*inc_factor**5
 roll_max_excursion = 45*np.pi/180
 
 A_eight_ini = 5*np.pi/180
@@ -301,14 +301,14 @@ while True:
                     
         if mode == AUTO:  
           if buttons_down_event[INC_BUTTON_LEFT]==1:
-            Kd = saturation(Kd_mini, Kd * inc_factor, Kd_maxi)
-            print("Kd: ", Kd)
+            KdRoll = saturation(KdRoll_mini, KdRoll * inc_factor, KdRoll_maxi)
+            print("KdRoll: ", KdRoll)
           elif buttons_down_event[INC_BUTTON_RIGHT]==1:
             Kp = saturation(Kp_mini, Kp * inc_factor, Kp_maxi)
             print("Kp: ", Kp)
           elif buttons_down_event[DEC_BUTTON_LEFT]==1:
-            Kd = saturation(Kd_mini, Kd / inc_factor, Kd_maxi)
-            print("Kd: ", Kd)
+            KdRoll = saturation(KdRoll_mini, KdRoll / inc_factor, KdRoll_maxi)
+            print("KdRoll: ", KdRoll)
           elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
             Kp = saturation(Kp_mini, Kp / inc_factor, Kp_maxi)
             print("Kp: ", Kp)
@@ -339,13 +339,13 @@ while True:
           msg1 = NMEA("SP1", int((cmd1 + joy_offset_right[mode])  *127), "OR")
           msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
         elif mode == AUTO:
-          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion) - Kd*rollspeed)*127), "OR")
+          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion) - KdRoll*rollspeed)*127), "OR")
           msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
           msg1 = NMEA("PW1", 0, "OR")
           msg2 = NMEA("PW2", 0, "OR")
         elif mode == EIGHT:
-          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion-A_eight*np.sin(2*np.pi/T_eight*(time.time()-t0_eight))) - Kd*rollspeed)*127), "OR")
+          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion-A_eight*np.sin(2*np.pi/T_eight*(time.time()-t0_eight))) - KdRoll*rollspeed)*127), "OR")
           msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
 
         ser.write(msg1.encode())

@@ -98,11 +98,12 @@ baudrate = 57600
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
 HEARTBEAT_SAMPLE_TIME = 1
 # Definition of gamepad button in use
-Nmode = 4  
+Nmode = 10  
 MANUAL              = 0 # Control lines are released to enable manual control
 JOY_OL              = 1 # Joystick controls voltage applied to motors (open loop control)
 JOY_CL              = 2 # Joystick controls kite bar position in closed loop
 AUTO                = 3 # Kite roll is stabilised thanks to IMU measurements, joystick controls the kite roll angle
+EIGHT               = 9 # Pilot the kite in figure of eight
 INC_BUTTON_LEFT     = 4 # Increase derivative gain
 INC_BUTTON_RIGHT    = 5 # Increase proportional gain
 DEC_BUTTON_LEFT     = 6 # Decrease derivative gain
@@ -141,15 +142,24 @@ Kd_mini = Kd_ini/inc_factor**5
 Kd_maxi = Kd_ini*inc_factor**5
 roll_max_excursion = 45*np.pi/180
 
+A_eight_ini = 5*np.pi/180
+T_eight_ini = 10
+A_eight = A_eight_ini
+T_eight = T_eight_ini
+inc_factor_eight = 1.5
+A_eight_mini = A_eight_ini/inc_factor_eight**5
+A_eight_maxi = A_eight_ini*inc_factor_eight**5
+T_eight_mini = T_eight_ini/inc_factor_eight**5
+T_eight_maxi = T_eight_ini*inc_factor_eight**5
+t0_eight = 0
+
 def resetOrder():
   global msg1, msg2, mfb, cmd1, cmd2, mode
   # Define the NMEA message in use
-  if mode==JOY_OL:
+  if mode==JOY_OL or mode==AUTO or mode==EIGHT:
     msg1 = NMEA("PW1", 0, "OR") # Order to first motor    
   elif mode==JOY_CL:
     msg1 = NMEA("SP1", 0, "OR") # Order to first motor
-  elif mode==AUTO:
-    msg1 = NMEA("PW1", 0, "OR") # Order to first motor
   msg2 = NMEA("PW2", 0, "OR") # Order to second motor
 
   cmd1 = 0
@@ -236,7 +246,7 @@ while True:
           master_forward_embedded.mav.local_position_ned_send(10, pos.x, pos.y, pos.z, speed.x, speed.y, speed.z )
         rollspeed = msg.rollspeed
         roll = msg.roll
-        if mode == AUTO:
+        if mode==AUTO or mode==EIGHT:
           mustUpdateOrder = True
       msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
       if msg!=None:
@@ -268,6 +278,10 @@ while True:
         elif buttons_state[AUTO]:
           mode = AUTO
           print("AUTO: JOYSTICK to KITE ROLL CLOSE LOOP")
+        elif buttons_state[EIGHT]:
+          mode = EIGHT
+          T0_eight = time.time()
+          print("EIGHT: KITE ROLL EIGHT LOOP")
             
         if buttons_state[RESET_OFFSET_BUTTON]:
           joy_offset_forward[mode] = 0
@@ -298,6 +312,20 @@ while True:
           elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
             Kp = saturation(Kp_mini, Kp / inc_factor, Kp_maxi)
             print("Kp: ", Kp)
+            
+        if mode == EIGHT:  
+          if buttons_down_event[INC_BUTTON_LEFT]==1:
+            T_eight = saturation(T_eight_mini, T_eight * inc_factor_eight, T_eight_maxi)
+            print("T_eight: ", T_eight)
+          elif buttons_down_event[INC_BUTTON_RIGHT]==1:
+            A_eight = saturation(A_eight_mini, A_eight * inc_factor_eight, A_eight_maxi)
+            print("A_eight: ", A_eight*180/np.pi)
+          elif buttons_down_event[DEC_BUTTON_LEFT]==1:
+            T_eight = saturation(T_eight_mini, T_eight / inc_factor_eight, T_eight_maxi)
+            print("T_eight: ", T_eight)
+          elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
+            A_eight = saturation(A_eight_mini, A_eight / inc_factor_eight, A_eight_maxi)
+            print("A_eight: ", A_eight*180/np.pi)
           
     # Send messages 
     if (time.time()-t0 > ORDER_SAMPLE_TIME) or (mustUpdateOrder):
@@ -315,7 +343,10 @@ while True:
           msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
           msg1 = NMEA("PW1", 0, "OR")
-          msg2 = NMEA("PW2", 0, "OR") 
+          msg2 = NMEA("PW2", 0, "OR")
+        elif mode == EIGHT:
+          msg1 = NMEA("PW1", int((joy_offset_right[mode] -Kp*(roll-cmd1*roll_max_excursion-A_eight*np.sin(2*np.pi/T_eight*(time.time()-t0_eight))) - Kd*rollspeed)*127), "OR")
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
 
         ser.write(msg1.encode())
         #print(msg1)

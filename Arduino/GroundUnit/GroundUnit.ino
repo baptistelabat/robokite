@@ -43,12 +43,16 @@ TinyGPSCustom pwm1     (nmea, "ORPW1", 1);  // Dimentionless voltage setpoint (P
 TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (Pulse Width Modulation) for Sabertooth output 2
 TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth output 1
 TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth output 2
+TinyGPSCustom speedlim1  (nmea, "ORSL1", 1);  // Speed limitation for Sabertooth output 1
+TinyGPSCustom speedlim2  (nmea, "ORSL2", 1);  // Speed limitation for Sabertooth output 2
+TinyGPSCustom poslim1  (nmea, "ORPL1", 1);  // Position limitation for Sabertooth output 1
+TinyGPSCustom poslim2  (nmea, "ORPL2", 1);  // Position limitation for Sabertooth output 2
 TinyGPSCustom kpm1 (nmea, "ORKP1", 1); // Proportional coefficient multiplicator
-TinyGPSCustom kim1 (nmea, "ORKI1", 1); // Integral coefficient multiplicator
+//TinyGPSCustom kim1 (nmea, "ORKI1", 1); // Integral coefficient multiplicator
 TinyGPSCustom kdm1 (nmea, "ORKD1", 1); // Derivative coefficient multiplicator
-TinyGPSCustom kpm2 (nmea, "ORKP2", 1); // Proportional coefficient multiplicator
-TinyGPSCustom kim2 (nmea, "ORKI2", 1); // Integral coefficient multiplicator
-TinyGPSCustom kdm2 (nmea, "ORKD2", 1); // Derivative coefficient multiplicator
+//TinyGPSCustom kpm2 (nmea, "ORKP2", 1); // Proportional coefficient multiplicator
+//TinyGPSCustom kim2 (nmea, "ORKI2", 1); // Integral coefficient multiplicator
+//TinyGPSCustom kdm2 (nmea, "ORKD2", 1); // Derivative coefficient multiplicator
 boolean isFeedbackRequested = false;
 
 uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
@@ -63,6 +67,10 @@ boolean isRFUpdated = false;
 double Setpoint1, Input1, Output1;
 double Setpoint2, Input2, Output2;
 double Input3, Input4, Input5, Input6;
+float posSat1 = 1;
+float posSat2 = 1;
+float speedSat1 = 1;
+float speedSat2 = 1;
 // Specify the links and initial tuning parameters (Kp, Ki, Kd)
 float Kp1 = 1;
 float Ki1 = 0.00;
@@ -205,10 +213,14 @@ void processSerialInput()
           isFeedbackRequested = true;
           digitalWrite(LED_PIN, HIGH);
         }
-        if (kpm1.isUpdated()||kim1.isUpdated()||kdm1.isUpdated()||kpm2.isUpdated()||kim2.isUpdated()||kdm2.isUpdated())
+        if (kpm1.isUpdated()||kdm1.isUpdated())//||kpm2.isUpdated()||kim2.isUpdated()||kdm2.isUpdated())
         {
           computePIDTuning();
-        }   
+        }
+        if (speedlim1.isUpdated()||speedlim2.isUpdated()||poslim1.isUpdated()||poslim2.isUpdated())
+        {
+          updateSaturation();
+        }  
       }
     }
     // Clear the string:
@@ -298,21 +310,21 @@ void computeOrder()
 {
   if (myPID1.GetMode() == MANUAL)
   {
-    power1 = atoi(pwm1.value());
+    power1 = atoi(pwm1.value())*speedSat1;
   }
   if (myPID2.GetMode() == MANUAL)
   {
-    power2 = atoi(pwm2.value());
+    power2 = atoi(pwm2.value())*speedSat2;
   }
   if (myPID1.GetMode() == AUTOMATIC)
   {
-    Setpoint1 = atoi(setpos1.value())/127.;
+    Setpoint1 = atoi(setpos1.value())/127.*posSat1;
     myPID1.Compute();
     power1 = Output1*127;
   }
   if (myPID2.GetMode() == AUTOMATIC)
   {
-    Setpoint2 = atoi(setpos2.value())/127.;
+    Setpoint2 = atoi(setpos2.value())/127.*posSat2;
     myPID2.Compute();
     power2 = Output2*127;
   }
@@ -331,11 +343,22 @@ void sendOrder()
 }
 void computePIDTuning()
 {
- myPID1.SetTunings(fabs(atof(kpm1.value())/127.*Kp1), fabs(atof(kim1.value())/127.*Ki1), fabs(atof(kdm1.value())/127.*Kd1));
- myPID2.SetTunings(fabs(atof(kpm2.value())/127.*Kp2), fabs(atof(kim2.value())/127.*Ki2), fabs(atof(kdm2.value())/127.*Kd2));
+   myPID1.SetTunings(fabs(atof(kpm1.value())/127.*Kp1), 0, fabs(atof(kdm1.value())/127.*Kd1));
+ 
+ //myPID1.SetTunings(fabs(atof(kpm1.value())/127.*Kp1), fabs(atof(kim1.value())/127.*Ki1), fabs(atof(kdm1.value())/127.*Kd1));
+ //myPID2.SetTunings(fabs(atof(kpm2.value())/127.*Kp2), fabs(atof(kim2.value())/127.*Ki2), fabs(atof(kdm2.value())/127.*Kd2));
  myPID1.SetControllerDirection(sgn(atoi(kpm1.value())));
- myPID2.SetControllerDirection(sgn(atoi(kpm2.value())));
+ //myPID2.SetControllerDirection(sgn(atoi(kpm2.value())));
  //Serial.println(atof(kpm1.value())/127.*Kp1);
+}
+void updateSaturation()
+{
+  myPID1.SetOutputLimits(-atoi(speedlim1.value())/127., atoi(speedlim1.value())/127.);
+  myPID2.SetOutputLimits(-atoi(speedlim2.value())/127., atoi(speedlim2.value())/127.);
+  speedSat1 = atoi(speedlim1.value())/127.;
+  //speedSat2 = atoi(speedlim2.value())/127.;
+  posSat1 = atoi(poslim1.value())/127.;
+  //posSat2 = atoi(poslim2.value())/127.;
 }
 static inline int8_t sgn(int val) {
   if (val < 0) return -1;

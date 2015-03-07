@@ -163,6 +163,9 @@ Kpm_maxi = Kpm_ini*inc_factor**5
 Kdm_mini = Kdm_ini/inc_factor**5
 Kdm_maxi = Kdm_ini*inc_factor**5
 
+speedSat = 100
+posSat = 100
+
 def resetOrder():
   global msg1, msg2, mfb, cmd1, cmd2, mode
   # Define the NMEA message in use
@@ -308,8 +311,8 @@ while True:
           joy_offset_forward[mode] -= inc
         elif buttons_down_event[HAT_BACKWARD]==1:        
           joy_offset_forward[mode] += inc
-          
-        if mode == JOY_CL:
+        
+        if buttons_state[JOY_CL]: # gain tuning only if mode button pressed
           if buttons_down_event[INC_BUTTON_LEFT]==1:
             Kdm = saturation(Kdm_mini, Kdm * inc_factor, Kdm_maxi)
             print("Kdm: ", Kdm)
@@ -332,7 +335,7 @@ while True:
             ser.write(msg_gain.encode())
             ser.write(msg_gain.encode())
                     
-        if mode == AUTO:  
+        if buttons_state[AUTO]:  
           if buttons_down_event[INC_BUTTON_LEFT]==1:
             KdRoll = saturation(KdRoll_mini, KdRoll * inc_factor, KdRoll_maxi)
             print("KdRoll: ", KdRoll)
@@ -345,6 +348,31 @@ while True:
           elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
             KpRoll = saturation(KpRoll_mini, KpRoll / inc_factor, KpRoll_maxi)
             print("KpRoll: ", KpRoll)
+            
+        if mode == JOY_CL:
+          if buttons_down_event[INC_BUTTON_RIGHT]==1:
+            posSat = saturation(0, posSat + 20, 100)
+            print("posSat: ", posSat)
+            msg_gain = NMEA("PL1", int(posSat*127/100), "OR")
+            ser.write(msg_gain.encode())
+          elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
+            posSat = saturation(0, posSat - 20, 100)
+            print("posSat: ", posSat)
+            msg_gain = NMEA("PL1", int(posSat*127/100), "OR")
+            ser.write(msg_gain.encode())
+            
+        if mode == JOY_OL:
+          if buttons_down_event[INC_BUTTON_RIGHT]==1:
+            speedSat = saturation(0, speedSat + 20, 100)
+            print("speedSat: ", speedSat)
+            msg_gain = NMEA("SL1", int(speedSat*127/100), "OR")
+            ser.write(msg_gain.encode())
+          elif buttons_down_event[DEC_BUTTON_RIGHT]==1:
+            speedSat = saturation(0, speedSat - 20, 100)
+            print("speedSat: ", speedSat)
+            msg_gain = NMEA("SL1", int(speedSat*127/100), "OR")
+            ser.write(msg_gain.encode())
+            
             
         if mode == EIGHT:  
           if buttons_down_event[INC_BUTTON_LEFT]==1:
@@ -396,7 +424,7 @@ while True:
     try: # The ressource can be temporarily unavailable
       if ser.inWaiting() > 0:
         line = ser.readline()
-        print("Received from arduino: ", line)
+        #print("Received from arduino: ", line)
         if isConnectedToGroundStation:
           fdbk = line.split(',')
           time_us = int(time.time()*1e6)

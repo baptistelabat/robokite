@@ -29,7 +29,7 @@ import sys
 import time
 import serial
 import numpy as np
-sys.path.append('../../mavlink/pymavlink')
+sys.path.append('/home/baptiste/kites/mavlink/pymavlink')
 
 import rotmat
 from math import radians, atan2, hypot, pi
@@ -43,7 +43,8 @@ def getIP():
   return ip
 
 m = rotmat.Matrix3()
-v = rotmat.Vector3(0,0,-1)
+tether_length = 30
+v = rotmat.Vector3(0,0,-tether_length)
 f = rotmat.Vector3(1,0,0)
 
 try:

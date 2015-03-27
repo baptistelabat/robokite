@@ -5,6 +5,9 @@
 *.avi
 *.mp4
 *.jpg
+*.tlog
+*.raw
+*.gcode
 *~
 octave-workspace
 ObjectTracking/log/*

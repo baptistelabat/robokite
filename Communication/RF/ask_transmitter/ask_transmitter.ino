@@ -7,10 +7,10 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-RH_ASK driver(4800, 11, 12);
+RH_ASK driver(4800, 11, 5);
 //Transmitter : ATAD D12
 
-uint8_t data[3];  // 2 element array of unsigned 8-bit type, holding Joystick readings
+uint8_t data[4];  // array of unsigned 8-bit type, holding Joystick readings
 void setup()
 {
     Serial.begin(9600);	  // Debugging only
@@ -19,6 +19,7 @@ void setup()
     data[0] = 0;//map(584, 0, 1023, 0, 255);
     data[1] = 0;//map(212, 0, 1023, 0, 255);
     data[2] = 0;//map(212, 0, 1023, 0, 255);    
+    data[3] = 0;//map(212, 0, 1023, 0, 255);    
     
 }
 
@@ -27,6 +28,7 @@ void loop()
     data[0] = data[0] + 1 ;//map(584, 0, 1023, 0, 255);
     data[1] = data[0]*2;
     data[2] = data[0]+data[1];
+    data[3] = 0;
   
     driver.send(data, sizeof(data));
     driver.waitPacketSent();

@@ -1,7 +1,7 @@
 width = 15;
 beam_size = 10;
 beam_thickness = 5;
-thickness = 2;
+thickness = 3;
 bridge_length = 32;
 potentiometer_width = 17;
 total_length = bridge_length+2*width+2*thickness;
@@ -26,7 +26,7 @@ union(){
 	}
 		minkowski(){
 			cube(size = [potentiometer_width, potentiometer_width, beam_thickness/2], center=true);
-			cylinder(r= 2, h=beam_thickness/2,center=true);
+			cylinder(r= thickness, h=beam_thickness/2,center=true);
 }
 	}
 	cube(size = [potentiometer_width, potentiometer_width, beam_thickness*2], center=true);
@@ -57,12 +57,11 @@ difference(){
 }
 }
 
-translate([0, 0, beam_thickness+1]) top_beam();
-bottom_beam();
+projection()  translate([0, 12, beam_thickness+1]) rotate([0,0, 90]) top_beam();
+projection() bottom_beam();
 
 translate([0, 0, 2* beam_thickness+2]) difference(){
  	cylinder(r=3+thickness,h=beam_thickness, center=true);
 	cylinder(r=3, h=2*beam_thickness, center=true);
 }
-
 

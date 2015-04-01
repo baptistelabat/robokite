@@ -1,40 +1,38 @@
-use <MCAD/nuts_and_bolts.scad>
-
 guiding_length = 10;
 x = 2;
-space = 15;
+space = 16;
+potentiometer_diameter = 6.6;
+alpha = 2/3;
 
+total_length = guiding_length*3/2+space;
 
+// Bottom part
 difference(){
+	union(){
+		cube(size=[total_length,guiding_length,guiding_length], center = true);
+	}
+
+	translate([total_length/2-guiding_length/2,0,0]) cylinder(r=potentiometer_diameter/2, h=10*guiding_length, center = true);
+	translate([-total_length/2+guiding_length/2+guiding_length*(1-alpha)/2,0,0]) cube(size=[alpha*guiding_length, alpha*guiding_length, 2*guiding_length],center = true) ;
+}
+
+
+// Top part to be inserted at 90deg
+translate([0,1.5*guiding_length,0])
 union(){
-	hull(){
-	translate([space +guiding_length/2,0,0]) cube(size=[15,10,guiding_length], center = true);
-	translate([x, 0, x]) sphere(3);
+difference(){
+	union(){
+		cube(size=[total_length,guiding_length,guiding_length], center = true);
 	}
 
-	hull(){
-		translate([0,0,space+guiding_length/2]) rotate([0,90,0])cube(size=[15,10,guiding_length], center = true);
-		translate([x, 0, x]) sphere(3);
-	}
+	translate([total_length/2-guiding_length/2,0,0]) cylinder(r=potentiometer_diameter/2, h=10*guiding_length, center = true);
+
+	difference(){
+	translate([-total_length/2+guiding_length/2-1,0,0]) cube(size=[guiding_length+2, guiding_length+2, 2*guiding_length],center = true) ;
+	translate([-total_length/2+guiding_length/2,0,-guiding_length*(1-alpha)/2]) cube(size=[guiding_length, alpha*guiding_length, alpha*guiding_length],center = true) ;
+}
+}
 }
 
-	translate([space +guiding_length/2,0,0]) cylinder(r=3.25, h=10*guiding_length, center = true);
-	translate([0,0,space+guiding_length/2]) rotate([0,90,0])cylinder(r=3.25, h=10*guiding_length, center = true);
 
-//space for nut
-	rotate([0,-90,0])
-union(){translate([space +guiding_length/2+4.5,0, 0]) rotate([0,90,0]) translate([0,0,-1.25])  nutHole(3);
- translate([space +guiding_length/2+2.5,0, 0]) rotate([0,90,0]) translate([0,0,-1.25]) nutHole(3);
 
-	translate([space +guiding_length/2+5,0, 0]) rotate([0,90,0]) cylinder(r=1.5, h=15, center=true);}
-
-	translate([space +guiding_length/2+4.5,0, 0]) rotate([0,90,0]) translate([0,0,-1.25])  nutHole(3);
-	translate([space +guiding_length/2+2.5,0, 0]) rotate([0,90,0]) translate([0,0,-1.25])  nutHole(3);
-	translate([space +guiding_length/2+5,0, 0]) rotate([0,90,0]) cylinder(r=1.5, h=15, center=true);
-
-//Cube to visualize
-	//cube(space +guiding_length/2+7);
-
-}
-
-//cube(size=[sqrt(guiding_length

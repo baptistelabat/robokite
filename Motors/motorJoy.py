@@ -37,9 +37,12 @@ from math import radians, atan2, hypot, pi
 import socket
 def getIP():
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  s.connect(("8.8.8.8",80))
-  ip = s.getsockname()[0]
-  s.close()
+  try:
+    s.connect(("8.8.8.8",80))
+    ip = s.getsockname()[0]
+    s.close()
+  except:
+    ip="127.0.0.1"
   return ip
 
 m = rotmat.Matrix3()
@@ -129,6 +132,7 @@ FLYING_UNIT     = 1
 embedded_device  = '/dev/ttyUSB0'
 ground_station   = 'udpout:localhost:14550'
 joystick_address = 'udpin:'+getIP()+':14556'
+#joystick_address = 'udpin:localhost:14556'
 
 mfb  = NMEA("FBR", 0, "OR") # Feedback request
 

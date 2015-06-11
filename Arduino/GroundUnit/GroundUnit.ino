@@ -94,6 +94,10 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 
 #define ORDER_RATE_ms 100
 long last_order_ms = 0;
+long last_simu_ms = 0;
+int dt_ms = 0;
+
+boolean SIL = false; // Use Software in the Loop simulation
 void setup()
 {
   pinMode(LED_PIN, OUTPUT); 
@@ -130,6 +134,8 @@ void setup()
     data[i] = 127;
   }
   data[0] = NEUTRAL_ANGLE_DEG*255./POT_RANGE_DEG+127;
+  
+  last_simu_ms = millis();
 }
 
 /*
@@ -157,9 +163,16 @@ void loop()
 {
    processSerialInput();
    processRFInput();
-   computeFeedback();
+   if (false==SIL)
+   {
+     computeFeedback();
+   }
    computeOrder();
    sendOrder();
+   if (SIL)
+   {
+     simulate();
+   }
    sendFeedback();
    delay(10);
 }
@@ -292,7 +305,7 @@ void sendFeedback()
     Serial.print(", ");
     Serial.print((Input1+1)/2.*1023);
     Serial.print(", ");
-    Serial.print((Input2/127.+1)/2.*1023);
+    Serial.print((Input2+1)/2.*1023);
     Serial.print(", ");
     Serial.print((Input3+1)/2.*1023);
     Serial.print(", ");
@@ -366,3 +379,9 @@ static inline int8_t sgn(int val) {
   return 1;
 }
  
+void simulate()
+{ dt_ms = millis()-last_simu_ms;
+  Input1=Input1+power1/127.*dt_ms/1000.;
+  Input2=Input2+power2/127.*dt_ms/1000.;
+  last_simu_ms= millis();
+}

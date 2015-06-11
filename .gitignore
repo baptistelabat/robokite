@@ -8,6 +8,10 @@
 *.tlog
 *.raw
 *.gcode
+*.stl
+*.svg
+*.dxf
+*.mavlink
 *~
 octave-workspace
 ObjectTracking/log/*

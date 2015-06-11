@@ -31,6 +31,7 @@ import serial
 import numpy as np
 
 from math import radians, atan2, hypot, pi
+from time import sleep
 
 import socket
 def getIP():
@@ -235,6 +236,7 @@ while True:
   thb = 0
     # This is the main program loop
   while True:
+    sleep(0.005)
     # Mavlink messages
     if isConnectedToGroundStation:
       if time.time()-thb > HEARTBEAT_SAMPLE_TIME:

@@ -29,9 +29,7 @@ import sys
 import time
 import serial
 import numpy as np
-sys.path.append('/home/baptiste/kites/mavlink/pymavlink')
 
-import rotmat
 from math import radians, atan2, hypot, pi
 
 import socket
@@ -45,16 +43,17 @@ def getIP():
     ip="127.0.0.1"
   return ip
 
+try:
+  from pymavlink import mavutil
+  from pymavlink import rotmat
+  isMavlinkInstalled = True
+except:
+  isMavlinkInstalled = False
+  
 m = rotmat.Matrix3()
 tether_length = 30
 v = rotmat.Vector3(0,0,-tether_length)
 f = rotmat.Vector3(1,0,0)
-
-try:
-  from pymavlink import mavutil
-  isMavlinkInstalled = True
-except:
-  isMavlinkInstalled = False
 
 global msg1, msg2, mfb, cmd1, cmd2, mode
 cmd1 = 0

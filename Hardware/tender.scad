@@ -1,5 +1,8 @@
-tender();
-
+thickness=5;
+projection() union(){
+	translate([20 ,0,0]) cube(size=[35, 50, thickness], center=true);
+	translate([0,0,0]) tender();
+}
 module tender()
 {
 difference(){

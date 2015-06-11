@@ -17,8 +17,8 @@ module arm(){
 }
 for (z = [-1, 1]) 
 {}
-
-projection() union(){for (i=[0:5]){translate([35*i, 0,0]) arm();}};
+arm();
+//projection() union(){for (i=[0:5]){translate([35*i, 0,0]) arm();}};
 
 
 

@@ -337,7 +337,7 @@ void sendOrder()
     last_order_ms = millis();
   // Order in the range -127/127
     //SWSerial.println(127);
-   ST.motor(1, power1);
+   ST.motor(1, -power1);
    ST.motor(2, power2);
   }
 }

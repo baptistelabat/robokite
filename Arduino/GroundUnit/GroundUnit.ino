@@ -158,9 +158,9 @@ void loop()
    processSerialInput();
    processRFInput();
    computeFeedback();
-   sendFeedback();
    computeOrder();
    sendOrder();
+   sendFeedback();
    delay(10);
 }
 void processRFInput()

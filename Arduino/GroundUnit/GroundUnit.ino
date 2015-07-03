@@ -86,13 +86,13 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 #define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
 #define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
 #define POT_OFFSET        0.05 // Distance from rotation axis to lever arm (in m)
-#define NEUTRAL_ANGLE_DEG    85 // Zero of the potentiometer
+#define NEUTRAL_ANGLE_DEG    0 // Zero of the potentiometer
 // Linear encoder
 #define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
 #define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
 #define PI 3.1415
 
-#define ORDER_RATE_ms 100
+#define ORDER_RATE_ms 50
 long last_order_ms = 0;
 long last_simu_ms = 0;
 int dt_ms = 0;
@@ -106,7 +106,7 @@ void setup()
   SWSerial.begin(9600);
   
   // Initialize serial communications with computer
-  Serial.begin(57600);
+  Serial.begin(115200);
   
   if (!driver.init())
     Serial.println("init failed");
@@ -252,7 +252,7 @@ void computeFeedback()
   Input1 = (rawAngle_deg - NEUTRAL_ANGLE_DEG)*1.0/POT_USED_RANGE_DEG;
   
   // Linear encoder position
-  Input2 = (data[1]-127);//*LINEAR_RESOLUTION/2./LINEAR_USED_RANGE;
+  Input2 = (data[1]-127)/255.;//*LINEAR_RESOLUTION/2./LINEAR_USED_RANGE;
   // Correction for lever arm (potentiometer not on axis)
   //Input2+= (rawAngle_deg - NEUTRAL_ANGLE_DEG)* POT_OFFSET*PI/180;
   
@@ -265,7 +265,7 @@ void computeFeedback()
 
 void sendFeedback()
 {
-  mavlink_message_t msg; 
+  /*mavlink_message_t msg; 
   uint8_t bufout[MAVLINK_MAX_PACKET_LEN];
   uint16_t len;
   uint64_t time_us = micros();
@@ -274,7 +274,7 @@ void sendFeedback()
   uint8_t target_system = system_id;
   uint8_t component_id = 1;
   uint8_t target_component = 2;// Sabertooth
-  
+  */
   // All the feedback values are normalized in the range 0-1023 (10 bits resolution)
   if (isFeedbackRequested)
   {

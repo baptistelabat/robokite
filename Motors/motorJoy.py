@@ -64,6 +64,7 @@ line="0, 0, 0, 0, 0"
 rollspeed = 0
 roll = 0
 mustUpdateOrder = False
+mustUpdateOrder2 = False
 
 def bitfield16(n):
   a = [0 for i in range(16)]
@@ -97,9 +98,11 @@ def NMEA(message_type, value, talker_id= "OR"):
 
 # Parameters for the serial connection
 locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
-baudrate = 57600
+baudrate = 115200
 
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
+ORDER2_SAMPLE_TIME = 0.01 
+FEEDBACK_SAMPLE_TIME = 1
 HEARTBEAT_SAMPLE_TIME = 1
 # Definition of gamepad button in use
 Nmode = 10  
@@ -232,11 +235,13 @@ while True:
         
   # Reset the timers    
   t0 = 0
+  t02= 0
   last_event_time = 0
   thb = 0
+  last_feedback_time = 0
     # This is the main program loop
   while True:
-    sleep(0.005)
+    #sleep(0.005)
     # Mavlink messages
     if isConnectedToGroundStation:
       if time.time()-thb > HEARTBEAT_SAMPLE_TIME:
@@ -266,6 +271,7 @@ while True:
         roll = msg.roll
         if mode==AUTO or mode==EIGHT:
           mustUpdateOrder = True
+          mustUpdateOrder2 = True
       msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
       if msg!=None:
         if isConnectedToGroundStation:
@@ -275,6 +281,7 @@ while True:
       msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
       if msg is not None:
         mustUpdateOrder = True
+        mustUpdateOrder2 = True
         cmd1 = msg.x/1000.
         cmd2 = msg.y/1000.
         buttons_state = bitfield16(msg.buttons)
@@ -394,33 +401,52 @@ while True:
             print("A_eight: ", A_eight*180/np.pi)
           
     # Send messages 
-    if (time.time()-t0 > ORDER_SAMPLE_TIME) or (mustUpdateOrder):
+    if (time.time()-t0 > ORDER_SAMPLE_TIME):
       t0 = time.time()
+      print t0
       try:
         # Create messages to be sent   
         if mode == JOY_OL:
           msg1 = NMEA("PW1", int((cmd1 + joy_offset_right[mode])  *127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
         elif mode == JOY_CL:
           msg1 = NMEA("SP1", int((cmd1 + joy_offset_right[mode])  *127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
         elif mode == AUTO:
           msg1 = NMEA("PW1", int((joy_offset_right[mode] -KpRoll*(roll-cmd1*roll_max_excursion) - KdRoll*rollspeed)*127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
         elif mode == MANUAL:
           msg1 = NMEA("PW1", 0, "OR")
-          msg2 = NMEA("PW2", 0, "OR")
         elif mode == EIGHT:
           msg1 = NMEA("PW1", int((joy_offset_right[mode] -KpRoll*(roll-cmd1*roll_max_excursion-A_eight*np.sin(2*np.pi/T_eight*(time.time()-t0_eight))) - KdRoll*rollspeed)*127), "OR")
-          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
-
-        ser.write(msg1.encode())
+ 
         #print(msg1)
+        ser.write(msg1.encode())
+        time.sleep(0.01)
+        mustUpdateOrder = False
+        # Create messages to be sent   
+        if mode == JOY_OL:
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
+        elif mode == JOY_CL:
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127), "OR")
+        elif mode == AUTO:
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
+        elif mode == MANUAL:
+          msg2 = NMEA("PW2", 0, "OR")
+        elif mode == EIGHT:
+          msg2 = NMEA("PW2", int((cmd2 + joy_offset_forward[mode])*127),   "OR")  # \todo: add regulation based on line tension?
+        #time.sleep(0.01)
         ser.write(msg2.encode())
+        time.sleep(0.01)
         #print(msg2)
+        mustUpdateOrder2 = False
+      except Exception as e:
+        print("Error sending order: " + str(e))
+        #ser.close()
+        break
+
+    if (time.time()-last_feedback_time > FEEDBACK_SAMPLE_TIME) :
+      last_feedback_time = time.time()
+      try:
         ser.write(mfb.encode())
         #print(mfb)
-        mustUpdateOrder = False
       except Exception as e:
         print("Error sending order: " + str(e))
         #ser.close()
@@ -432,6 +458,7 @@ while True:
         #print("Received from arduino: ", line)
         if isConnectedToGroundStation:
           fdbk = line.split(',')
+          #print(fdbk)
           time_us = int(time.time()*1e6)
           time_ms = int(time_us/1000)
           group_mlx = 0

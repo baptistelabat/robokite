@@ -69,7 +69,7 @@ while True:
   t0 = 0
   t_last_order = 0
   while True:
-      sleep(0.005)
+      #sleep(0.005)
       if time.time()-t0 > HEARTBEAT_SAMPLE_TIME:
         t0 = time.time()
         if isConnectedToGroundStation:

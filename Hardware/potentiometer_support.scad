@@ -54,12 +54,19 @@ difference(){
 }
 
 projection() difference(){
-	bottom_beam();
-	translate([0 , potentiometer_width/2],0) cube(size = [potentiometer_width, potentiometer_width, beam_thickness*2], center=true);
+	union()
+	{
+		bottom_beam();
+			translate([0,15,0]) minkowski(){
+			cube(size = [potentiometer_width, potentiometer_width, beam_thickness/2], center=true);
+			cylinder(r= thickness, h=beam_thickness/2,center=true);
 }
-projection() translate([0, 23, beam_thickness+1]) bottom_beam();
+	}
+	translate([0 , potentiometer_width/2+4],0) cube(size = [potentiometer_width, potentiometer_width, beam_thickness*2], center=true);
+}
+projection() translate([0, 38, beam_thickness+1]) bottom_beam();
 
-projection()  translate([0, 44, 2*beam_thickness+2])top_beam();
+projection()  translate([0, 59, 2*beam_thickness+2])top_beam();
 
 translate([0, 0, 2* beam_thickness+2]) difference(){
  	cylinder(r=3+thickness,h=beam_thickness, center=true);

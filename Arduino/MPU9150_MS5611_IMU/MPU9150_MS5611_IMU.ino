@@ -177,8 +177,15 @@ short n_gyro_range_old = 0;
 short n_accel_range = 0;
 short n_accel_range_old = 0;
 
+#define   PIN_5V_1 4
+#define   PIN_0V_1 3
+
 void setup()
 {
+  pinMode(PIN_0V_1, OUTPUT);
+  pinMode(PIN_5V_1, OUTPUT);
+  digitalWrite(PIN_5V_1, HIGH);
+  digitalWrite(PIN_0V_1, LOW);
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
   Serial.begin(57600); // Start serial at 57600 bps
@@ -263,7 +270,9 @@ void serialEvent()
 
 
 void loop()
-{   
+{ 
+  digitalWrite(PIN_5V_1, HIGH);
+  digitalWrite(PIN_0V_1, LOW);
   //ground_press = baro.getPressure(MS561101BA_OSR_4096);
     processSerialInput();
     if (fabs(millis()-last_baro_read_ms)>1./BaroRate)

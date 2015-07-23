@@ -102,7 +102,7 @@ baudrate = 115200
 
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
 ORDER2_SAMPLE_TIME = 0.01 
-FEEDBACK_SAMPLE_TIME = 1
+FEEDBACK_SAMPLE_TIME = 0.1
 HEARTBEAT_SAMPLE_TIME = 1
 # Definition of gamepad button in use
 Nmode = 10  
@@ -403,7 +403,6 @@ while True:
     # Send messages 
     if (time.time()-t0 > ORDER_SAMPLE_TIME):
       t0 = time.time()
-      print t0
       try:
         # Create messages to be sent   
         if mode == JOY_OL:

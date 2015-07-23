@@ -92,7 +92,7 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 #define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
 #define PI 3.1415
 
-#define ORDER_RATE_ms 50
+#define ORDER_RATE_ms 100
 long last_order_ms = 0;
 long last_simu_ms = 0;
 int dt_ms = 0;
@@ -206,32 +206,43 @@ void processSerialInput()
       {
         if (pwm1.isUpdated())
         { 
+          pwm1.value();
           myPID1.SetMode(MANUAL);
         }
         if (pwm2.isUpdated())
         {
+          pwm2.value();
           myPID2.SetMode(MANUAL);
         }
         if (setpos1.isUpdated())
         { 
+          setpos1.value();
           myPID1.SetMode(AUTOMATIC);
         }
         if (setpos2.isUpdated())
         {
+          setpos2.value();
           myPID2.SetMode(AUTOMATIC);
         }
         if (feedback_request.isUpdated())
         {
+          feedback_request.value();
           // $ORFBR,0*57
           isFeedbackRequested = true;
           digitalWrite(LED_PIN, HIGH);
         }
         if (kpm1.isUpdated()||kdm1.isUpdated())//||kpm2.isUpdated()||kim2.isUpdated()||kdm2.isUpdated())
         {
+          kpm1.value();
+          kdm1.value();
           computePIDTuning();
         }
         if (speedlim1.isUpdated()||speedlim2.isUpdated()||poslim1.isUpdated()||poslim2.isUpdated())
         {
+          speedlim1.value();
+          speedlim2.value();
+          poslim1.value();
+          poslim2.value();
           updateSaturation();
         }  
       }
@@ -350,7 +361,7 @@ void sendOrder()
     last_order_ms = millis();
   // Order in the range -127/127
     //SWSerial.println(127);
-   ST.motor(1, -power1);
+   ST.motor(1, power1);
    ST.motor(2, power2);
   }
 }

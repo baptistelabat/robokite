@@ -28,6 +28,7 @@ import os
 import sys
 import time
 import serial
+import glob
 import numpy as np
 
 from math import radians, atan2, hypot, pi
@@ -97,7 +98,6 @@ def NMEA(message_type, value, talker_id= "OR"):
   return msg
 
 # Parameters for the serial connection
-locations = ['/dev/ttyACM0','/dev/ttyACM1','/dev/ttyACM2','/dev/ttyACM3','/dev/ttyACM4','/dev/ttyACM5','/dev/ttyUSB0','/dev/ttyUSB1','/dev/ttyUSB2','/dev/ttyUSB3','/dev/ttyS0','/dev/ttyS1','/dev/ttyS2','/dev/ttyS3','COM1','COM2','COM3']
 baudrate = 115200
 
 ORDER_SAMPLE_TIME = 0.05 #seconds Sample time to send order without overwhelming arduino
@@ -132,7 +132,6 @@ inc                   = 0.05 # Increment normalized
 ROBOKITE_SYSTEM = 0
 GROUND_UNIT     = 0
 FLYING_UNIT     = 1
-embedded_device  = '/dev/ttyUSB0'
 ground_station   = 'udpout:localhost:14550'
 joystick_address = 'udpin:'+getIP()+':14556'
 #joystick_address = 'udpin:localhost:14556'
@@ -187,13 +186,15 @@ def resetOrder():
 
 # Open mavlink connection
 if isMavlinkInstalled:
-  try:
-    master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
-    isConnectedToEmbeddedDevice = True
-    print("Mavlink connection to embbeded device on", embedded_device)
-  except:
-    isConnectedToEmbeddedDevice = False
-    print("Connected (mavlink) to embbed device failed")
+  embedded_device_locations = glob.glob('/dev/ttyUSB*')
+  for embedded_device in embedded_device_locations:
+    try:
+      master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
+      isConnectedToEmbeddedDevice = True
+      print("Mavlink connection to embbeded device on", embedded_device)
+    except:
+      isConnectedToEmbeddedDevice = False
+      print("Connected (mavlink) to embbed device failed")
   try:
     master_forward_ground = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
     master_forward_embedded = mavutil.mavlink_connection(ground_station, baud=57600, source_system=100) # 255 is ground station
@@ -215,6 +216,7 @@ if isMavlinkInstalled:
 
 # This loop is here for robustness in case of deconnection
 while True:
+  locations = glob.glob('/dev/ttyAC*')
   for device in locations:
     try:
       print("Trying...", device)
@@ -253,9 +255,9 @@ while True:
                                   0, 0, 0)
         master_forward_joystick.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID,
                                   0, 0, 0)
-      #msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)
+      #msg = master_forward.recv_match(type='HEARTBEAT', blocking=False)        
 
-    if isConnectedToEmbeddedDevice:
+    try:
       msg = master.recv_match(type='ATTITUDE', blocking=False)
       if msg!=None:
         #print msg
@@ -275,8 +277,19 @@ while True:
       msg = master.recv_match(type='SCALED_PRESSURE', blocking=False)
       if msg!=None:
         if isConnectedToGroundStation:
-          master_forward_embedded.mav.send(msg)      
-      
+          master_forward_embedded.mav.send(msg)
+    except Exception as e:
+      print("Error reading from serial port: " + str(e))
+      embedded_device_locations = glob.glob('/dev/ttyUSB*')
+      for embedded_device in embedded_device_locations:
+        try:
+          master = mavutil.mavlink_connection(embedded_device, baud=57600, source_system=254) # 255 is ground station
+          isConnectedToEmbeddedDevice = True
+          print("Mavlink connection to embbeded device on", embedded_device)
+        except:
+          isConnectedToEmbeddedDevice = False
+          print("Connected (mavlink) to embbed device failed")
+    
     if isConnectedToJoystick:
       msg = mav_joystick.recv_match(type='MANUAL_CONTROL', blocking=False)
       if msg is not None:

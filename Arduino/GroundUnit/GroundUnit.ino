@@ -339,13 +339,13 @@ void computeOrder()
   }
   if (myPID1.GetMode() == AUTOMATIC)
   {
-    Setpoint1 = atoi(setpos1.value())/127.*posSat1;
+    Setpoint1 = atoi(setpos1.value())/127.*posSat1*1.3;//Factor to go a bit further and be sure to reach saturation (even with static error)
     myPID1.Compute();
     power1 = Output1*127;
   }
   if (myPID2.GetMode() == AUTOMATIC)
   {
-    Setpoint2 = atoi(setpos2.value())/127.*posSat2;
+    Setpoint2 = atoi(setpos2.value())/127.*posSat2*1.3;
     myPID2.Compute();
     power2 = Output2*127;
   }
@@ -386,14 +386,11 @@ void updateSaturation()
   if (speedlim1.isUpdated())
   {
      myPID1.SetOutputLimits(-atoi(speedlim1.value())/127., atoi(speedlim1.value())/127.);
+     speedSat1 = atoi(speedlim1.value())/127.;
   }
   if (speedlim2.isUpdated())
   {
     myPID2.SetOutputLimits(-atoi(speedlim2.value())/127., atoi(speedlim2.value())/127.);
-  }
-  if (speedlim1.isUpdated())
-  {
-    speedSat1 = atoi(speedlim1.value())/127.;
   }
   if (poslim1.isUpdated())
   {

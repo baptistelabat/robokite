@@ -374,7 +374,7 @@ while True:
             KpRoll = saturation(KpRoll_mini, KpRoll / inc_factor, KpRoll_maxi)
             print("KpRoll: ", KpRoll)
             
-        if mode == JOY_CL:
+        if mode == JOY_CL and buttons_state[JOY_CL]==0:
           if buttons_down_event[INC_BUTTON_RIGHT]==1:
             posSat = saturation(0, posSat + 20, 100)
             print("posSat: ", posSat)

@@ -85,7 +85,6 @@ PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 // Potentiometer
 #define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
 #define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
-#define POT_OFFSET        0.05 // Distance from rotation axis to lever arm (in m)
 #define NEUTRAL_ANGLE_DEG    0 // Zero of the potentiometer
 // Linear encoder
 #define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
@@ -264,8 +263,6 @@ void computeFeedback()
   
   // Linear encoder position
   Input2 = (data[1]-127)/255.;//*LINEAR_RESOLUTION/2./LINEAR_USED_RANGE;
-  // Correction for lever arm (potentiometer not on axis)
-  //Input2+= (rawAngle_deg - NEUTRAL_ANGLE_DEG)* POT_OFFSET*PI/180;
   
   // Line tension
   Input3 = data[3]/127. - 1;
@@ -351,6 +348,16 @@ void computeOrder()
     Setpoint2 = atoi(setpos2.value())/127.*posSat2;
     myPID2.Compute();
     power2 = Output2*127;
+  }
+  
+  //Saturation based on posSat
+  if (Input1>posSat1)
+  {
+    power1 = min(power1,0);
+  }
+  if (Input1<-posSat1)
+  {
+    power1 = max(power1,0);
   }
 }
 

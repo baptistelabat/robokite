@@ -326,16 +326,16 @@ while True:
           joy_offset_right[mode]   = 0
         elif buttons_down_event[HAT_LEFT]==1:
           joy_offset_right[mode]   -= inc
+          print("Steering offset", joy_offset_right[mode] )
         elif buttons_down_event[HAT_RIGHT]==1:
           joy_offset_right[mode]   += inc
-        elif buttons_down_event[HAT_RIGHT]==1:
-          joy_offset_right[mode]   += inc
-        elif buttons_down_event[HAT_RIGHT]==1:
-          joy_offset_right[mode]   += inc
+          print("Steering offset", joy_offset_right[mode] )
         elif buttons_down_event[HAT_FORWARD]==1:        
           joy_offset_forward[mode] -= inc
+          print("Trim offset", joy_offset_right[mode] )
         elif buttons_down_event[HAT_BACKWARD]==1:        
           joy_offset_forward[mode] += inc
+          print("Trim offset", joy_offset_right[mode] )
         
         if buttons_state[JOY_CL]: # gain tuning only if mode button pressed
           if buttons_down_event[INC_BUTTON_LEFT]==1:

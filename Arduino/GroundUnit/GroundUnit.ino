@@ -238,11 +238,11 @@ void processSerialInput()
         }
         if (speedlim1.isUpdated()||speedlim2.isUpdated()||poslim1.isUpdated()||poslim2.isUpdated())
         {
+          updateSaturation();
           speedlim1.value();
           speedlim2.value();
           poslim1.value();
           poslim2.value();
-          updateSaturation();
         }  
       }
     }
@@ -349,8 +349,6 @@ void computeOrder()
     myPID2.Compute();
     power2 = Output2*127;
   }
-  
-  //Saturation based on posSat
   if (Input1>posSat1)
   {
     power1 = min(power1,0);
@@ -368,6 +366,7 @@ void sendOrder()
     last_order_ms = millis();
   // Order in the range -127/127
     //SWSerial.println(127);
+      //Saturation based on posSat
    ST.motor(1, power1);
    ST.motor(2, power2);
   }
@@ -384,11 +383,22 @@ void computePIDTuning()
 }
 void updateSaturation()
 {
-  myPID1.SetOutputLimits(-atoi(speedlim1.value())/127., atoi(speedlim1.value())/127.);
-  myPID2.SetOutputLimits(-atoi(speedlim2.value())/127., atoi(speedlim2.value())/127.);
-  speedSat1 = atoi(speedlim1.value())/127.;
-  //speedSat2 = atoi(speedlim2.value())/127.;
-  posSat1 = atoi(poslim1.value())/127.;
+  if (speedlim1.isUpdated())
+  {
+     myPID1.SetOutputLimits(-atoi(speedlim1.value())/127., atoi(speedlim1.value())/127.);
+  }
+  if (speedlim2.isUpdated())
+  {
+    myPID2.SetOutputLimits(-atoi(speedlim2.value())/127., atoi(speedlim2.value())/127.);
+  }
+  if (speedlim1.isUpdated())
+  {
+    speedSat1 = atoi(speedlim1.value())/127.;
+  }
+  if (poslim1.isUpdated())
+  {
+    posSat1 = atoi(poslim1.value())/127.;
+  }
   //posSat2 = atoi(poslim2.value())/127.;
 }
 static inline int8_t sgn(int val) {

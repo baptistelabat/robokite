@@ -2,7 +2,18 @@ import time
 import pygame
 from pygame.locals import *
 import serial
-
+import socket
+from time import sleep
+def getIP():
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  try:
+    s.connect(("8.8.8.8",80))
+    ip = s.getsockname()[0]
+    s.close()
+  except:
+    ip="127.0.0.1"
+  return ip
+  
 #try:
 try:
   from pymavlink import mavutil
@@ -34,8 +45,11 @@ def saturation(mini, x, maxi):
 # Read mavlink messages
 if isMavlinkInstalled:
   try:
-    ground_station = 'udpout:localhost:14556'
-    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=254) # 255 is ground station
+    IP = getIP()
+    # IP = 192.168.43.2
+    ground_station = 'udpout:' + IP + ':14556'
+    #ground_station = 'udpout:localhost:14556'
+    master_forward = mavutil.mavlink_connection(ground_station, baud=57600, source_system=253) # 255 is ground station
     isConnectedToGroundStation = True
     print("Connected to ground station on ", ground_station)
   except:

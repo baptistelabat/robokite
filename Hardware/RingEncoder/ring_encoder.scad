@@ -7,6 +7,7 @@ pot_length = 12.8;
 screw_length = 6.9;
 thickness = 3;
 axis_radius = 5.5;
+spacing = 1.5;
 
 wheel_radius = width/2+thickness+0.5;
 
@@ -18,16 +19,17 @@ difference(){
 		translate([2*pot_radius-mep,0,50+screw_length]) cube([2*pot_radius	, 100,100], center=true);
 }
 }
-//pot(meplat);
+
+//rotate([0,-90,0])
 difference(){
 union(){
 translate([0,0,-1.5+1]) cube(size=[width+thickness, length+thickness, 5], center=true);
 cylinder(r= screw_radius+thickness, h=screw_length);
 difference(){
-		translate([0,0,screw_length-thickness]) cylinder(r=wheel_radius+thickness, h=pot_length+thickness);
+		translate([0,0,screw_length-thickness]) cylinder(r=wheel_radius+spacing+thickness, h=pot_length+thickness);
 		translate([50,0,screw_length+(pot_length-thickness)/2]) cube([100, 100,pot_length-thickness], center=true);
 	
-		translate([0,0,screw_length]) cylinder(r=wheel_radius+0.5, h=pot_length-thickness);
+		translate([0,0,screw_length]) cylinder(r=wheel_radius+spacing, h=pot_length-thickness);
 }
 }
 pot(0);
@@ -36,9 +38,14 @@ pot(0);
 
 
 
+
+//Wheel
+
 translate([30,0,0])
 difference(){
 	translate([0,0, screw_length+1]) cylinder(r=wheel_radius, h=pot_length-5);
 pot(meplat);
 	}
+
+
 

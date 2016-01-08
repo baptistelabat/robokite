@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html style="direction: ltr;" lang="fr">
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+</head>
+<body>
+  <p>Kite 2D simulator<br>
+	      <input id = "line_length"
+				type = "input"
+				min = "0"
+				max = "1000"
+				value = "30"
+				step = "1" />
+    </p>
+    <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="1000" height="800">
+          <g transform="translate(300,400) ">
+            <line id="kite_line" x1="0" y1="0" x2="300" y2="-200" style="stroke:rgb(255,0,0);stroke-width:2" />   
+            <g id="local_frame" transform="translate(300,-200)">
+              <g id="kite" transform="rotate(0)">
+                <line x1="-10" y1="0" x2="20" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
+              </g>
+            </g>
+          </g>
+    </svg>
+    <form action = "">
+		<fieldset>
+      Angle of key(°)
+			<input id = "angleOfKeyRange"
+				type = "range"
+				min = "0"
+				max = "90"
+				value = "0"
+				step = "1" />
+			<output id = "angleOfKey">0</output>
+    </fieldset>
+	</form>	
+	<script type = "text/javascript" language="javascript" src = "javascript/app.js" charset="utf-8"></script>				
+</body>
+</html>
+            

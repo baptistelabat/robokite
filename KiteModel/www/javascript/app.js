@@ -1,0 +1,124 @@
+console.log("This is a kite simulator");
+function liftCoefficient(alpha){
+  // This is a simplified formula for lift coefficient
+  // Fit with lift for an infinite elliptic wing for small angle
+  // Maximum lift at 45°
+  // No lift at 90°
+  // Negative lift from 90°
+  Cl = Math.PI*Math.sin (2*alpha);
+  return Cl;
+ }
+function dragCoefficient(alpha){
+  Cd0 = 0.01;
+  Cd = Math.sin (alpha) + Cd0;
+  return Cd;
+}
+var V = 10;
+
+line_length     = 10;
+wind_velocity   = 10;
+kite_mass       = 10;  
+kite_surface    = 6;  
+rho_air         = 1;    // Air density
+elevation0      = 0;
+omega0          = 0;    // Angular rate
+AoKdeg          = 50;   // Angle of Keying (calage)
+sampleTime      = 0.001; // Sample time
+g               = 9.81;
+meter2pix = 20;
+
+AoK = AoKdeg*Math.PI/180;
+omega = 0;
+elevation = 0;
+y_base = 0;
+z_base = 0;
+
+
+// y is horizontal and positive in wind propagation direction
+// z is vertical and positive up
+
+// Base velocity relative to ground projected in ground axis
+// Base is assumed to be static
+v_base = 0;
+w_base = 0;
+document.getElementById("angleOfKeyRange").addEventListener("change", updateAngleOfKey);
+setInterval(update, 1);
+setInterval(updatePlot,100);
+
+function plot(y_base, z_base, y_kite, z_kite, pitch){
+  rotateKite(pitch);
+  translateKite(y_kite, z_kite);
+}
+function updatePlot(){
+  plot(y_base, z_base, y_kite, z_kite, pitch);
+}
+
+//function update(dt, AoK){
+function update(){
+  dt = sampleTime;
+  // Compute kite position
+  y_kite = y_base + line_length * Math.cos(elevation);
+  z_kite = z_base + line_length * Math.sin(elevation);
+  
+  pitch = AoK -elevation;
+  //console.log(pitch);
+
+  // Kite velocity relative to ground, projected in ground axis
+  // Line length is assumed to be constant, and line is assumed straight.
+  v_kite = v_base - omega*line_length*Math.cos(Math.PI/2 - elevation);
+  w_kite = w_base + omega*line_length*Math.sin(Math.PI/2 - elevation);
+
+  // Wind velocity: air velocity relative to ground, projected in ground axis
+  // Assumed to be constant in time and space and horizontal
+  v_wind = wind_velocity;
+  w_wind = 0;
+
+  // Wind relative velocity : air velocity relative to kite, projected in ground axis
+  v_air_kite = v_wind-v_kite;
+  w_air_kite = w_wind-w_kite;
+
+  // Angle of attack of the kite, defined between kite chord and relative air velocity
+  AoA = Math.atan2(w_air_kite, v_air_kite)+pitch;
+ 
+  // Dynamic pressure
+  q = 1/2*rho_air *(v_air_kite*v_air_kite + w_air_kite*w_air_kite);
+
+  // Lift and drag
+  lift   = q*kite_surface*liftCoefficient(AoA);
+  drag   = q*kite_surface*dragCoefficient(AoA);
+
+  // Torque computed at base
+  ML = +lift * y_kite-kite_mass*g;
+  MD = -drag * z_kite;
+
+  // Angular acceleration
+  omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.5*omega;  //x*omega = amortissement
+
+  omega = omega + omegap * dt;
+  elevation = elevation + omega * dt;
+  y_base = y_base + v_base*dt;
+  z_base = z_base + w_base*dt;
+}
+function rotateKite(r){
+    kite = document.getElementById("kite");
+        r_deg = r*180/Math.PI;
+		kite.setAttribute('transform', 'rotate(' +r_deg +')');
+		}
+function translateKite(y, z){
+  kite_frame = document.getElementById("local_frame");
+  kite_line = document.getElementById("kite_line");
+  kite_frame.setAttribute('transform', 'translate(' +y*meter2pix +','+ -z*meter2pix +')');
+  kite_line.setAttribute('x2', y*meter2pix);
+  kite_line.setAttribute('y2', -z*meter2pix);
+}
+
+function updateAngleOfKey(){
+		//get elements
+		var myRange = document.getElementById("angleOfKeyRange");
+		var myOutput = document.getElementById("angleOfKey");
+		//copy the value over
+		myOutput.value = myRange.value;
+    AoK = myOutput.value*Math.PI/180;
+	}
+
+

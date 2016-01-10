@@ -10,14 +10,14 @@ function liftCoefficient(alpha){
  }
 function dragCoefficient(alpha){
   Cd0 = 0.01;
-  Cd = Math.sin (alpha) + Cd0;
+  Cd = Math.pow(Math.sin (alpha),2) + Cd0;
   return Cd;
 }
 var V = 10;
 
 line_length     = 10;
 wind_velocity   = 10;
-kite_mass       = 10;  
+kite_mass       = 1;  
 kite_surface    = 6;  
 rho_air         = 1;    // Air density
 elevation0      = 0;
@@ -42,6 +42,10 @@ z_base = 0;
 v_base = 0;
 w_base = 0;
 document.getElementById("angleOfKeyRange").addEventListener("change", updateAngleOfKey);
+document.getElementById("lineLengthRange").addEventListener("change", updateLineLength);
+document.getElementById("windVelocityRange").addEventListener("change", updateWindVelocity);
+document.getElementById("kiteMassRange").addEventListener("change", updateKiteMass);
+document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 setInterval(update, 1);
 setInterval(updatePlot,100);
 
@@ -88,11 +92,11 @@ function update(){
   drag   = q*kite_surface*dragCoefficient(AoA);
 
   // Torque computed at base
-  ML = +lift * y_kite-kite_mass*g;
+  ML = +lift * y_kite-kite_mass*g*y_kite;
   MD = -drag * z_kite;
 
   // Angular acceleration
-  omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.5*omega;  //x*omega = amortissement
+  omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.0*omega;  //x*omega = amortissement
 
   omega = omega + omegap * dt;
   elevation = elevation + omega * dt;
@@ -120,5 +124,36 @@ function updateAngleOfKey(){
 		myOutput.value = myRange.value;
     AoK = myOutput.value*Math.PI/180;
 	}
-
+function updateLineLength(){
+		//get elements
+		var myRange = document.getElementById("lineLengthRange");
+		var myOutput = document.getElementById("lineLength");
+		//copy the value over
+		myOutput.value = myRange.value;
+    line_length = myOutput.value;
+	}
+  function updateWindVelocity(){
+		//get elements
+		var myRange = document.getElementById("windVelocityRange");
+		var myOutput = document.getElementById("windVelocity");
+		//copy the value over
+		myOutput.value = myRange.value;
+    wind_velocity = myOutput.value;
+	}
+  function updateKiteMass(){
+		//get elements
+		var myRange = document.getElementById("kiteMassRange");
+		var myOutput = document.getElementById("kiteMass");
+		//copy the value over
+		myOutput.value = myRange.value;
+    kite_mass = myOutput.value;
+	}
+  function updateKiteSurface(){
+		//get elements
+		var myRange = document.getElementById("kiteSurfaceRange");
+		var myOutput = document.getElementById("kiteSurface");
+		//copy the value over
+		myOutput.value = myRange.value;
+    kite_surface = myOutput.value;
+	}
 

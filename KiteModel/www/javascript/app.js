@@ -48,6 +48,8 @@ document.getElementById("kiteMassRange").addEventListener("change", updateKiteMa
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 setInterval(update, 1);
 setInterval(updatePlot,100);
+var d = new Date();
+var told = d.getTime();
 
 function plot(y_base, z_base, y_kite, z_kite, pitch){
   rotateKite(pitch);
@@ -59,7 +61,16 @@ function updatePlot(){
 
 //function update(dt, AoK){
 function update(){
-  dt = sampleTime;
+  
+  // Try to use real time
+  d = new Date();
+  t = d.getTime();
+  dt = (t-told)/1000;
+  told = t;
+  console.log(dt/sampleTime)
+  // Use constant sampleTime instead (to avoid Nan for unknown reason)
+  dt = sampleTime// +0*dt;
+
   // Compute kite position
   y_kite = y_base + line_length * Math.cos(elevation);
   z_kite = z_base + line_length * Math.sin(elevation);
@@ -82,23 +93,35 @@ function update(){
   w_air_kite = w_wind-w_kite;
 
   // Angle of attack of the kite, defined between kite chord and relative air velocity
-  AoA = Math.atan2(w_air_kite, v_air_kite)+pitch;
+  angle_air_kite = Math.atan2(w_air_kite, v_air_kite);
+  AoA = angle_air_kite +pitch;
  
   // Dynamic pressure
   q = 1/2*rho_air *(v_air_kite*v_air_kite + w_air_kite*w_air_kite);
 
-  // Lift and drag
+  // Lift and drag are in apparent wind frame
   lift   = q*kite_surface*liftCoefficient(AoA);
   drag   = q*kite_surface*dragCoefficient(AoA);
+  
+  // Rotate to ground frame
+  Fz = lift* Math.cos(angle_air_kite) + drag*Math.sin(angle_air_kite);
+  Fy = -lift* Math.sin(angle_air_kite) + drag*Math.cos(angle_air_kite);
 
   // Torque computed at base
-  ML = +lift * y_kite-kite_mass*g*y_kite;
-  MD = -drag * z_kite;
+  ML = +Fz * y_kite-kite_mass*g*y_kite;
+  MD = -Fy * z_kite;
 
   // Angular acceleration
   omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.0*omega;  //x*omega = amortissement
+  //console.log(omegap);
+  // Saturate to avoid instabilities
+  omegap = Math.max(-60000, Math.min(omegap,60000));
 
   omega = omega + omegap * dt;
+  
+  // Saturate to avoid divergences 
+  //console.log(omega);
+  omega = Math.max(-60, Math.min(omega,60));
   elevation = elevation + omega * dt;
   y_base = y_base + v_base*dt;
   z_base = z_base + w_base*dt;

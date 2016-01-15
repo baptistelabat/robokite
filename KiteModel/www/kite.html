@@ -5,17 +5,12 @@
 </head>
 <body>
   <p>Kite 2D simulator<br>
-	      <input id = "line_length"
-				type = "input"
-				min = "0"
-				max = "1000"
-				value = "30"
-				step = "1" />
+  <output id = "elevation">0</output>°
     </p>
-    <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="1000" height="1000">
-          <g transform="translate(300,650) ">
-            <line id="kite_line" x1="0" y1="0" x2="300" y2="-200" style="stroke:rgb(255,0,0);stroke-width:2" />   
-            <g id="local_frame" transform="translate(300,-200)">
+    <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="500" height="500">
+          <g transform="translate(250,250) ">
+            <line id="kite_line" x1="0" y1="0" x2="300" y2="-150" style="stroke:rgb(255,0,0);stroke-width:2" />   
+            <g id="local_frame" transform="translate(300,-150)">
               <g id="kite" transform="rotate(0)">
                 <line x1="-10" y1="0" x2="20" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
               </g>
@@ -28,7 +23,7 @@
 			<input id = "angleOfKeyRange"
 				type = "range"
 				min = "0"
-				max = "90"
+				max = "110"
 				value = "20"
 				step = "1" />
 			<output id = "angleOfKey">20</output>

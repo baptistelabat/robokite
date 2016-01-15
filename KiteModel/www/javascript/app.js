@@ -9,8 +9,11 @@ function liftCoefficient(alpha){
   return Cl;
  }
 function dragCoefficient(alpha){
-  Cd0 = 0.01;
-  Cd = Math.pow(Math.sin (alpha),2) + Cd0;
+  Cd0 = 0.1;
+  AR = 5; // Aspect ratio
+  e = 1;
+  inducedDragCoefficient = Math.pow(2*Math.PI*Math.sin(alpha),2)/(Math.PI*AR*e);
+  Cd = inducedDragCoefficient + Cd0;
   return Cd;
 }
 var V = 10;
@@ -23,7 +26,7 @@ rho_air         = 1;    // Air density
 elevation0      = 0;
 omega0          = 0;    // Angular rate
 AoKdeg          = 50;   // Angle of Keying (calage)
-sampleTime      = 0.001; // Sample time
+sampleTime      = 0.0005; // Sample time
 g               = 9.81;
 meter2pix = 20;
 
@@ -57,6 +60,7 @@ function plot(y_base, z_base, y_kite, z_kite, pitch){
 }
 function updatePlot(){
   plot(y_base, z_base, y_kite, z_kite, pitch);
+  updateOutput();
 }
 
 //function update(dt, AoK){
@@ -67,7 +71,7 @@ function update(){
   t = d.getTime();
   dt = (t-told)/1000;
   told = t;
-  console.log(dt/sampleTime)
+  //console.log(dt/sampleTime)
   // Use constant sampleTime instead (to avoid Nan for unknown reason)
   dt = sampleTime// +0*dt;
 
@@ -95,7 +99,7 @@ function update(){
   // Angle of attack of the kite, defined between kite chord and relative air velocity
   angle_air_kite = Math.atan2(w_air_kite, v_air_kite);
   AoA = angle_air_kite +pitch;
- 
+  //console.log(AoA);
   // Dynamic pressure
   q = 1/2*rho_air *(v_air_kite*v_air_kite + w_air_kite*w_air_kite);
 
@@ -179,4 +183,8 @@ function updateLineLength(){
 		myOutput.value = myRange.value;
     kite_surface = myOutput.value;
 	}
+  function updateOutput(){
+    var myOutput = document.getElementById("elevation");
+    myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
+  }
 

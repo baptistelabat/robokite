@@ -30,6 +30,7 @@ sampleTime      = 0.0005; // Sample time
 earth_gravity              = 9.81;
 g= earth_gravity;
 meter2pix = 20;
+reel_speed = 0;
 
 AoK = AoKdeg*Math.PI/180;
 omega = 0;
@@ -51,6 +52,7 @@ document.getElementById("windVelocityRange").addEventListener("change", updateWi
 document.getElementById("kiteMassRange").addEventListener("change", updateKiteMass);
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 document.getElementById("myCheck").addEventListener("change", updateGravity);
+document.getElementById("reelSpeedRange").addEventListener("change", updateReelSpeed);
 setInterval(update, 1);
 setInterval(updatePlot,100);
 var d = new Date();
@@ -87,9 +89,9 @@ function update(){
   //console.log(pitch);
 
   // Kite velocity relative to ground, projected in ground axis
-  // Line length is assumed to be constant, and line is assumed straight.
-  v_kite = v_base - omega*line_length*Math.cos(Math.PI/2 - elevation);
-  w_kite = w_base + omega*line_length*Math.sin(Math.PI/2 - elevation);
+  // Line is assumed straight.
+  v_kite = v_base - omega*line_length*Math.cos(Math.PI/2 - elevation) + reel_speed*Math.cos(elevation);
+  w_kite = w_base + omega*line_length*Math.sin(Math.PI/2 - elevation) + reel_speed*Math.sin(elevation);
 
   // Wind velocity: air velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
@@ -127,6 +129,11 @@ function update(){
   omegap = Math.max(-60000, Math.min(omegap,60000));
 
   simulation_time = simulation_time + dt;
+  
+  // Compute line length
+  line_length = Math.max(2,line_length + reel_speed*dt);
+  
+  
   omega = omega + omegap * dt;
   
   // Saturate to avoid divergences 
@@ -168,6 +175,14 @@ function updateLineLength(){
 		//copy the value over
 		myOutput.value = myRange.value;
     line_length = myOutput.value;
+	}
+function updateReelSpeed(){
+		//get elements
+		var myRange = document.getElementById("reelSpeedRange");
+		var myOutput = document.getElementById("reelSpeed");
+		//copy the value over
+		myOutput.value = myRange.value;
+    reel_speed = myOutput.value;
 	}
   function updateWindVelocity(){
 		//get elements

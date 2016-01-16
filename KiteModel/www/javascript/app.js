@@ -20,7 +20,7 @@ var V = 10;
 
 line_length     = 10;
 wind_velocity   = 10;
-kite_mass       = 1;  
+kite_mass       = 2;  
 kite_surface    = 6;  
 rho_air         = 1;    // Air density
 elevation0      = 0;
@@ -52,7 +52,8 @@ document.getElementById("kiteSurfaceRange").addEventListener("change", updateKit
 setInterval(update, 1);
 setInterval(updatePlot,100);
 var d = new Date();
-var told = d.getTime();
+var t0 = d.getTime();
+told = 0;
 
 function plot(y_base, z_base, y_kite, z_kite, pitch){
   rotateKite(pitch);
@@ -68,7 +69,7 @@ function update(){
   
   // Try to use real time
   d = new Date();
-  t = d.getTime();
+  t = d.getTime()-t0;
   dt = (t-told)/1000;
   told = t;
   //console.log(dt/sampleTime)
@@ -114,6 +115,7 @@ function update(){
   // Torque computed at base
   ML = +Fz * y_kite-kite_mass*g*y_kite;
   MD = -Fy * z_kite;
+  
 
   // Angular acceleration
   omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.0*omega;  //x*omega = amortissement
@@ -126,9 +128,13 @@ function update(){
   // Saturate to avoid divergences 
   //console.log(omega);
   omega = Math.max(-60, Math.min(omega,60));
+  
   elevation = elevation + omega * dt;
   y_base = y_base + v_base*dt;
   z_base = z_base + w_base*dt;
+  
+    // Compute line tension
+  line_tension = Fy*Math.cos(elevation) +  (Fz-kite_mass*g)*Math.sin(elevation) + kite_mass*omega*omega*line_length;
 }
 function rotateKite(r){
     kite = document.getElementById("kite");
@@ -186,5 +192,10 @@ function updateLineLength(){
   function updateOutput(){
     var myOutput = document.getElementById("elevation");
     myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
+    
+    myOutput = document.getElementById("time");
+    myOutput.value = Math.round(t)/1000;
+    myOutput = document.getElementById("lineTension");
+    myOutput.value = Math.round(line_tension*10)/100;
   }
 

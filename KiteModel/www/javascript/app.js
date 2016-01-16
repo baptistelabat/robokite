@@ -53,7 +53,7 @@ document.getElementById("kiteMassRange").addEventListener("change", updateKiteMa
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 document.getElementById("myCheck").addEventListener("change", updateGravity);
 document.getElementById("reelSpeedRange").addEventListener("change", updateReelSpeed);
-setInterval(update, 1);
+setInterval(updaten, 1);
 setInterval(updatePlot,100);
 var d = new Date();
 var t0 = d.getTime();
@@ -68,6 +68,13 @@ function updatePlot(){
   plot(y_base, z_base, y_kite, z_kite, pitch);
   updateOutput();
   setLineLength();
+}
+function updaten()
+{
+  for (i=0;i<8;i++) // Dirty manual tuning to get close of real time on my computer
+  {
+    update();
+  }
 }
 
 //function update(dt, AoK){

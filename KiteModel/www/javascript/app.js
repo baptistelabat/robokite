@@ -67,10 +67,7 @@ function plot(y_base, z_base, y_kite, z_kite, pitch){
 function updatePlot(){
   plot(y_base, z_base, y_kite, z_kite, pitch);
   updateOutput();
-  if (Math.abs(reel_speed)>0)
-  {
-    setLineLength();
-  }
+  setLineLength();
 }
 
 //function update(dt, AoK){

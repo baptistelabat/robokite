@@ -56,6 +56,7 @@ setInterval(updatePlot,100);
 var d = new Date();
 var t0 = d.getTime();
 told = 0;
+simulation_time = 0;
 
 function plot(y_base, z_base, y_kite, z_kite, pitch){
   rotateKite(pitch);
@@ -125,6 +126,7 @@ function update(){
   // Saturate to avoid instabilities
   omegap = Math.max(-60000, Math.min(omegap,60000));
 
+  simulation_time = simulation_time + dt;
   omega = omega + omegap * dt;
   
   // Saturate to avoid divergences 
@@ -202,7 +204,7 @@ function updateLineLength(){
     myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
     
     myOutput = document.getElementById("time");
-    myOutput.value = Math.round(t)/1000;
+    myOutput.value = Math.round(simulation_time*100)/100;
     
     myOutput = document.getElementById("lineTension");
     myOutput.value = Math.round(line_tension*10)/100;

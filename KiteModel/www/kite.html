@@ -5,7 +5,7 @@
 </head>
 <body>
   <p>Kite pendulum 2D simulator<br>
-  <output id = "elevation">0</output>°   <output id = "time">0</output>s   <output id = "lineTension">0</output>dN
+  <output id = "elevation">0</output>°   <output id = "time">0</output>s   <output id = "kiteSpeed">0</output>m/s <output id = "lineTension">0</output>dN
     </p>
     <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="500" height="500">
           <g transform="translate(250,250) ">
@@ -19,54 +19,55 @@
     </svg>
     <form action = "">
 		<fieldset>
-      Angle of key (°)
+      Angle of key
 			<input id = "angleOfKeyRange"
 				type = "range"
 				min = "0"
 				max = "110"
 				value = "50"
 				step = "1" />
-			<output id = "angleOfKey">20</output>
+			<output id = "angleOfKey">20</output>°
     </fieldset>
       <fieldset>
-      Line length (m)
+      Line length
 			<input id = "lineLengthRange"
 				type = "range"
 				min = "0"
 				max = "30"
 				value = "10"
 				step = "1" />
-			<output id = "lineLength">30</output>
+			<output id = "lineLength">30</output>m
     </fieldset>
     <fieldset>
-      Wind velocity (m/s)
+      Wind velocity
 			<input id = "windVelocityRange"
 				type = "range"
 				min = "0"
 				max = "20"
 				value = "10"
 				step = "1" />
-			<output id = "windVelocity">10</output>
+			<output id = "windVelocity">10</output>m/s
     </fieldset>
     <fieldset>
-      Kite mass (kg)
+      Kite mass
 			<input id = "kiteMassRange"
 				type = "range"
 				min = "0.1"
 				max = "100"
 				value = "2"
 				step = "0.1" />
-			<output id = "kiteMass">2</output>
+			<output id = "kiteMass">2</output>kg
+        gravity <input type="checkbox" id="myCheck" checked =true>
     </fieldset>
     <fieldset>
-      Kite surface (m2)
+      Kite surface
 			<input id = "kiteSurfaceRange"
 				type = "range"
 				min = "0"
 				max = "100"
 				value = "6"
 				step = "1" />
-			<output id = "kiteSurface">6</output>
+			<output id = "kiteSurface">6</output>m2
     </fieldset>
 	</form>	
 	<script type = "text/javascript" language="javascript" src = "javascript/app.js" charset="utf-8"></script>				

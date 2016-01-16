@@ -27,7 +27,8 @@ elevation0      = 0;
 omega0          = 0;    // Angular rate
 AoKdeg          = 50;   // Angle of Keying (calage)
 sampleTime      = 0.0005; // Sample time
-g               = 9.81;
+earth_gravity              = 9.81;
+g= earth_gravity;
 meter2pix = 20;
 
 AoK = AoKdeg*Math.PI/180;
@@ -49,6 +50,7 @@ document.getElementById("lineLengthRange").addEventListener("change", updateLine
 document.getElementById("windVelocityRange").addEventListener("change", updateWindVelocity);
 document.getElementById("kiteMassRange").addEventListener("change", updateKiteMass);
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
+document.getElementById("myCheck").addEventListener("change", updateGravity);
 setInterval(update, 1);
 setInterval(updatePlot,100);
 var d = new Date();
@@ -189,13 +191,23 @@ function updateLineLength(){
 		myOutput.value = myRange.value;
     kite_surface = myOutput.value;
 	}
+  function updateGravity(){
+		//get elements
+    
+		var myCheck = document.getElementById("myCheck");
+    g = earth_gravity*myCheck.checked;
+	}
   function updateOutput(){
     var myOutput = document.getElementById("elevation");
     myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
     
     myOutput = document.getElementById("time");
     myOutput.value = Math.round(t)/1000;
+    
     myOutput = document.getElementById("lineTension");
     myOutput.value = Math.round(line_tension*10)/100;
+    
+    myOutput = document.getElementById("kiteSpeed");
+    myOutput.value = Math.round(omega*line_length*10)/10;
   }
 

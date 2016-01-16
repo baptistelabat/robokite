@@ -67,6 +67,10 @@ function plot(y_base, z_base, y_kite, z_kite, pitch){
 function updatePlot(){
   plot(y_base, z_base, y_kite, z_kite, pitch);
   updateOutput();
+  if (Math.abs(reel_speed)>0)
+  {
+    setLineLength();
+  }
 }
 
 //function update(dt, AoK){
@@ -131,8 +135,12 @@ function update(){
   simulation_time = simulation_time + dt;
   
   // Compute line length
-  line_length = Math.max(2,line_length + reel_speed*dt);
-  
+  line_length = line_length + reel_speed*dt;
+  if (line_length<2)
+  {
+    reel_speed = 0;
+    line_length = 2;
+  }
   
   omega = omega + omegap * dt;
   
@@ -174,7 +182,15 @@ function updateLineLength(){
 		var myOutput = document.getElementById("lineLength");
 		//copy the value over
 		myOutput.value = myRange.value;
-    line_length = myOutput.value;
+    //line_length = myOutput.value;
+	}
+function setLineLength(){
+		//get elements
+		var myRange = document.getElementById("lineLengthRange");
+		var myOutput = document.getElementById("lineLength");
+		//copy the value over
+		myOutput.value = Math.round(line_length*10)/10;
+    myRange.value = line_length;
 	}
 function updateReelSpeed(){
 		//get elements

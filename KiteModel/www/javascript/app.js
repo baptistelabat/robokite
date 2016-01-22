@@ -1,4 +1,7 @@
 console.log("This is a kite simulator");
+var CL = [];
+var CD = [];
+var alpha_deg = [];
 function liftCoefficient(alpha){
   // This is a simplified formula for lift coefficient
   // Fit with lift for an infinite elliptic wing for small angle
@@ -6,6 +9,12 @@ function liftCoefficient(alpha){
   // No lift at 90°
   // Negative lift from 90°
   Cl = Math.PI*Math.sin (2*alpha);
+  
+  if (CL.length >0)
+  {
+    Cl = everpolate.linear(alpha*180/Math.PI, alpha_deg, CL);
+  }
+
   return Cl;
  }
 function dragCoefficient(alpha){
@@ -14,6 +23,10 @@ function dragCoefficient(alpha){
   e = 1;
   inducedDragCoefficient = Math.pow(2*Math.PI*Math.sin(alpha),2)/(Math.PI*AR*e);
   Cd = inducedDragCoefficient + Cd0;
+  if (CD.length >0)
+  {
+    Cd = everpolate.linear(alpha*180/Math.PI, alpha_deg, CD);
+  }
   return Cd;
 }
 var V = 10;

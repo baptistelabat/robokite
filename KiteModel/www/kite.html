@@ -77,8 +77,26 @@
 				step = "1" />
 			<output id = "kiteSurface">6</output>m2
     </fieldset>
-	</form>	
-	<script type = "text/javascript" language="javascript" src = "javascript/app.js" charset="utf-8"></script>				
+	</form>
+    <form class="form-horizontal well">
+      <legend>
+        <h3>
+          <div id="title">Polar selection (Xfoil format, can be downloaded from http://airfoiltools.com/polar/)</div>
+        </h3>
+      </legend>
+      <fieldset>
+          <label for="csvFileInput"> <strong>CSV File:</strong>
+          </label>
+          <input type="file" id="csvFileInput" onchange="handleFiles(this.files)"
+          accept=".">
+        </div>
+      </fieldset>
+    </form>
+    <div id="output">
+    </div>
+    <script type = "text/javascript" language="javascript" src="javascript/everpolate.browserified.min.js"></script>
+	  <script type = "text/javascript" language="javascript" src = "javascript/app.js" charset="utf-8"></script>		
+  	<script type = "text/javascript" language="javascript" src = "javascript/read-csv.js" charset="utf-8"></script>
 </body>
 </html>
             

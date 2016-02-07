@@ -27,20 +27,29 @@
 
 #define calibration_factor -7050.0 //This value is obtained using the SparkFun_HX711_Calibration sketch
 
-#define DOUT  3
-#define CLK  2
-#define GND  4
+#define DOUT  12
+#define CLK  11
+#define GND  13
+
+#define OFFSET 8177300
+#define SCALE  -146.7
 
 HX711 scale(DOUT, CLK);
+
+long raw_value;
 
 void setup() {
   pinMode(GND, OUTPUT);
   Serial.begin(57600);
   Serial.println("HX711 scale demo");
   
+  // No calibration
+  scale.set_offset(0);
+  scale.set_scale(1); //Read the raw value
+  
   // Result of calibration
-  scale.set_offset(8177300);
-  scale.set_scale(-146.7); //Read the raw value
+  //scale.set_offset(8177300);
+  //scale.set_scale(-146.7); 
   
 
   Serial.println("Readings:");
@@ -48,10 +57,11 @@ void setup() {
 
 void loop() {
   digitalWrite(GND, LOW);
+  raw_value = scale.get_units();
   Serial.print("Reading: ");
-  Serial.print(scale.read_average(), 1); //raw value
+  Serial.print(raw_value, 1); //raw value
   Serial.print(" ");
-  Serial.print(scale.get_units(), 1); //scaled and offset after calibration
+  Serial.print((raw_value-OFFSET)/SCALE, 1); //scaled and offset after calibration
   Serial.print(" g"); 
   Serial.println();
 }

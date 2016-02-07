@@ -6,57 +6,46 @@
  
  The HX711 does one thing well: read load cells. T
 
- Arduino pin (Nano)
- 2    -> HX711 CLK
- 3    -> HX711 DAT
- 3V3  -> HX711 VCC
- GND  -> HX711 GND
- 
- 5V   -> Radio VCC
- 4    -> Radio GND 
- RX   -> Radio TX
- TX   -> Radio RX
- 
-
- 
  The HX711 board can be powered from 2.7V to 5V so the Arduino 5V power should be fine.
  
 */
 
 #include "HX711.h"
 
-#define calibration_factor -7050.0 //This value is obtained using the SparkFun_HX711_Calibration sketch
+#define HX711_DOUT  12 // or DAT
+#define HX711_CLK   11
+#define HX711_GND   13
 
-#define DOUT  12
-#define CLK  11
-#define GND  13
-
-#define OFFSET 8177300
-#define SCALE  -146.7
-
-HX711 scale(DOUT, CLK);
-
+#define OFFSET 8177300 // From raw value when no load
+#define SCALE  -146.7  // From calibration
+HX711 scale(HX711_DOUT, HX711_CLK);
 long raw_value;
 
 void setup() {
-  pinMode(GND, OUTPUT);
   Serial.begin(57600);
-  Serial.println("HX711 scale demo");
   
-  // No calibration
-  scale.set_offset(0);
-  scale.set_scale(1); //Read the raw value
-  
-  // Result of calibration
-  //scale.set_offset(8177300);
-  //scale.set_scale(-146.7); 
-  
-
-  Serial.println("Readings:");
+  setupHX711();
+}
+void loop() {
+  loopHX711();
 }
 
-void loop() {
-  digitalWrite(GND, LOW);
+void setupHX711() {
+  // Ground connection
+  pinMode(HX711_GND, OUTPUT);
+  Serial.print("HX711_DOUT -> D");
+  Serial.println(HX711_DOUT);
+  Serial.print("HX711_CLK -> D");
+  Serial.println(HX711_CLK);
+  Serial.print("HX711_GND -> D");
+  Serial.println(HX711_GND);
+  Serial.println("HX711_VCC -> 3V3");
+
+   // No calibration, read the raw value
+  scale.set_offset(0);
+  scale.set_scale(1);
+}
+void loopHX711() {
   raw_value = scale.get_units();
   Serial.print("Reading: ");
   Serial.print(raw_value, 1); //raw value
@@ -65,3 +54,5 @@ void loop() {
   Serial.print(" g"); 
   Serial.println();
 }
+
+

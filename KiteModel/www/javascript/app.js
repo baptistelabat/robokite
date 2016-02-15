@@ -29,6 +29,16 @@ function dragCoefficient(alpha){
   }
   return Cd;
 }
+function wind_profile(w10, z){
+  // Compute the effective wind at this altitude using log wind profil
+  // http://en.wikipedia.org/wiki/Log_wind_profile
+  Zref = 10.  ; // Reference altitude for wind measurements (m)
+  Zo = 0.055    // longueur de rugosite du terrain (m)
+  
+  // Saturate z in order not to fall to negative wind or zero wind
+  z = Math.max(z, 10*Zo)
+  return w10*Math.log(z/Zo)/Math.log(Zref/Zo) //Log wind profil
+}
 var V = 10;
 
 line_length     = 10;
@@ -116,7 +126,7 @@ function update(){
 
   // Wind velocity: air velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
-  v_wind = wind_velocity;
+  v_wind = wind_profile(wind_velocity, z_kite);
   w_wind = 0;
 
   // Wind relative velocity : air velocity relative to kite, projected in ground axis

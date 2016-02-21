@@ -37,20 +37,20 @@ function dragCoefficient(alpha){
   }
   return Cd;
 }
-function wind_profile(w10, z){
+function wind_profile(w10, kite_position){
   // Compute the effective wind at this altitude using log wind profil
   // http://en.wikipedia.org/wiki/Log_wind_profile
   Zref = 10.  ; // Reference altitude for wind measurements (m)
   Zo = 0.055    // longueur de rugosite du terrain (m)
   
   // Saturate z in order not to fall to negative wind or zero wind
-  z = Math.max(z, 10*Zo)
-  return w10*Math.log(z/Zo)/Math.log(Zref/Zo) //Log wind profil
+  z = Math.max(kite_position[2], 10*Zo)
+  return w10//*Math.log(z/Zo)/Math.log(Zref/Zo) //Log wind profil
 }
 var V = 10;
 
 line_length     = 10;
-wind_velocity   = 10;
+wind_speed      = 10;
 kite_mass       = 2;  
 kite_surface    = 6;  
 rho_air         = 1;    // Air density
@@ -66,8 +66,11 @@ reel_speed = 0;
 AoK = AoKdeg*Math.PI/180;
 omega = 0;
 elevation = 0;
-y_base = 0;
-z_base = 0;
+var kite_position = [0, line_length, 0]; 
+var kite_velocity = [0, 0, 0];
+var base_position = [0, 0, 0];
+var base_velocity = [0, 0, 0]; 
+
 
 
 // y is horizontal and positive in wind propagation direction
@@ -91,12 +94,12 @@ var t0 = d.getTime();
 told = 0;
 simulation_time = 0;
 
-function plot(y_base, z_base, y_kite, z_kite, pitch){
+function plot(kite_position, pitch){
   rotateKite(pitch);
-  translateKite(y_kite, z_kite);
+  translateKite(kite_position[1], kite_position[2]);
 }
 function updatePlot(){
-  plot(y_base, z_base, y_kite, z_kite, pitch);
+  plot(kite_position, pitch);
   updateOutput();
   setLineLength();
 }
@@ -120,52 +123,50 @@ function update(){
   // Use constant sampleTime instead (to avoid Nan for unknown reason)
   dt = sampleTime// +0*dt;
 
-  // Compute kite position
-  y_kite = y_base + line_length * Math.cos(elevation);
-  z_kite = z_base + line_length * Math.sin(elevation);
-  
   pitch = AoK -elevation;
   //console.log(pitch);
 
-  // Kite velocity relative to ground, projected in ground axis
-  // Line is assumed straight.
-  v_kite = v_base - omega*line_length*Math.cos(Math.PI/2 - elevation) + reel_speed*Math.cos(elevation);
-  w_kite = w_base + omega*line_length*Math.sin(Math.PI/2 - elevation) + reel_speed*Math.sin(elevation);
-
   // Wind velocity: air velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
-  v_wind = wind_profile(wind_velocity, z_kite);
-  w_wind = 0;
+  wind_velocity = [0, wind_profile(wind_speed, kite_position), 0];
 
   // Wind relative velocity : air velocity relative to kite, projected in ground axis
-  v_air_kite = v_wind-v_kite;
-  w_air_kite = w_wind-w_kite;
+  wind_relative_velocity = math.subtract(wind_velocity,kite_velocity);
 
   // Angle of attack of the kite, defined between kite chord and relative air velocity
-  angle_air_kite = Math.atan2(w_air_kite, v_air_kite);
+  angle_air_kite = Math.atan2(wind_relative_velocity[2], wind_relative_velocity[1]);
   AoA = angle_air_kite +pitch;
   //console.log(AoA);
   // Dynamic pressure
-  q = 1/2*rho_air *(v_air_kite*v_air_kite + w_air_kite*w_air_kite);
+  v_air_kite = 0
+  w_air_kite = 0
+  q = 1/2*rho_air *math.hypot(wind_relative_velocity)^2;
 
   // Lift and drag are in apparent wind frame
   lift   = q*kite_surface*liftCoefficient(AoA);
   drag   = q*kite_surface*dragCoefficient(AoA);
   
   // Rotate to ground frame
-  Fz = lift* Math.cos(angle_air_kite) + drag*Math.sin(angle_air_kite);
-  Fy = -lift* Math.sin(angle_air_kite) + drag*Math.cos(angle_air_kite);
-
-  // Torque computed at base
-  ML = +Fz * y_kite-kite_mass*g*y_kite;
-  MD = -Fy * z_kite;
+  CTM = [[1, 0, 0], [0, -Math.sin(angle_air_kite), Math.cos(angle_air_kite)],[0, Math.cos(angle_air_kite),Math.sin(angle_air_kite)]];
+  Faero = math.multiply(CTM, math.transpose([0,lift, drag]));
   
+  Fweight = [0, 0, -kite_mass*g];
 
-  // Angular acceleration
-  omegap = 1/(kite_mass*line_length^2) * (ML + MD)- 0.0*omega;  //x*omega = amortissement
-  //console.log(omegap);
-  // Saturate to avoid instabilities
-  omegap = Math.max(-60000, Math.min(omegap,60000));
+  extension = math.hypot(math.subtract(kite_position,base_position))-line_length;
+  YoungModulus = 34.5e3;// Kevlar
+  line_diameter = 0.001;
+  line_section =Math.PI*(line_diameter/2)^2;
+  line_tension = extension/line_length *YoungModulus*line_section;
+  line_tension=Math.max(0, line_tension);
+  Fline =[0, -line_tension * Math.cos(elevation), -line_tension * Math.sin(elevation)];
+
+  Fsum = math.chain(Faero).add(Fline).add(Fweight).done();
+  inv_kite_mass = math.diag([1/kite_mass, 1/kite_mass, 1/kite_mass]);
+  kite_velocity = math.add(kite_velocity, math.multiply(math.multiply(inv_kite_mass,Fsum),dt));
+  // Saturate to avoid divergences
+  kite_velocity = [Math.max(-100, Math.min(kite_velocity[0],100)), Math.max(-100, Math.min(kite_velocity[1],100)), Math.max(-100, Math.min(kite_velocity[2],100))];
+  
+  
 
   simulation_time = simulation_time + dt;
   
@@ -176,19 +177,12 @@ function update(){
     reel_speed = 0;
     line_length = 2;
   }
+
+  kite_position = math.add(kite_position, math.multiply(kite_velocity,dt));
   
-  omega = omega + omegap * dt;
-  
-  // Saturate to avoid divergences 
-  //console.log(omega);
-  omega = Math.max(-60, Math.min(omega,60));
-  
-  elevation = elevation + omega * dt;
-  y_base = y_base + v_base*dt;
-  z_base = z_base + w_base*dt;
-  
-    // Compute line tension
-  line_tension = Fy*Math.cos(elevation) +  (Fz-kite_mass*g)*Math.sin(elevation) + kite_mass*omega*omega*line_length;
+
+  elevation = Math.atan2(kite_position[2], kite_position[1]);
+  base_position = math.add(base_position, math.multiply(base_velocity,dt));
 }
 function rotateKite(r){
     kite = document.getElementById("kite");

@@ -4,12 +4,20 @@ var CD = [];
 var alpha_deg = [];
 function liftCoefficient(alpha){
   // This is a simplified formula for lift coefficient
-  // Fit with lift for an infinite elliptic wing for small angle
   // Maximum lift at 45°
   // No lift at 90°
   // Negative lift from 90°
-  Cl = Math.PI*Math.sin (2*alpha);
+  //http://people.clarkson.edu/~pmarzocc/AE429/AE-429-4.pdf
+  dCl = 2*Math.PI; //infinite elliptic wing for small angle
   
+  //AR= span^2/kite_surface;
+  AR = 5;
+  e  = 1// Oswald efficiency factor
+  //alphai= Cl/(Math.PI*e*AR);
+  
+  //dCL = dCl*AR/(AR+2.5)
+  dCL = dCl/(1+dCl/(Math.PI*e*AR))
+  Cl = dCL/2.*Math.sin (2*alpha);
   if (CL.length >0)
   {
     Cl = everpolate.linear(alpha*180/Math.PI, alpha_deg, CL);

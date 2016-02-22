@@ -55,23 +55,26 @@ kite_mass       = 2;
 kite_surface    = 6;  
 rho_air         = 1;    // Air density
 elevation0      = 0;
-omega0          = 0;    // Angular rate
+kite_angular_velocity0          = 0;    // Angular rate
 AoKdeg          = 50;   // Angle of Keying (calage)
 sampleTime      = 0.0005; // Sample time
 earth_gravity              = 9.81;
 g= earth_gravity;
 meter2pix = 20;
 reel_speed = 0;
+pitch=0;
+line_tension = 0;
 
 AoK = AoKdeg*Math.PI/180;
-omega = 0;
+var kite_angular_velocity = [0,0,0];
+kite_angular_velocity[0] = kite_angular_velocity0;
 elevation = 0;
 var kite_position = [0, line_length, 0]; 
 var kite_velocity = [0, 0, 0];
 var base_position = [0, 0, 0];
 var base_velocity = [0, 0, 0]; 
 
-
+is1dof=true;
 
 // y is horizontal and positive in wind propagation direction
 // z is vertical and positive up
@@ -112,16 +115,7 @@ function updaten()
 }
 
 //function update(dt, AoK){
-function update(){
-  
-  // Try to use real time
-  d = new Date();
-  t = d.getTime()-t0;
-  dt = (t-told)/1000;
-  told = t;
-  //console.log(dt/sampleTime)
-  // Use constant sampleTime instead (to avoid Nan for unknown reason)
-  dt = sampleTime// +0*dt;
+function computeForces(){
 
   pitch = AoK -elevation;
   //console.log(pitch);
@@ -149,11 +143,15 @@ function update(){
   // Rotate to ground frame
   CTM = [[1, 0, 0], [0, -Math.sin(angle_air_kite), Math.cos(angle_air_kite)],[0, Math.cos(angle_air_kite),Math.sin(angle_air_kite)]];
   Faero = math.multiply(CTM, math.transpose([0,lift, drag]));
-  
+  //console.log("Faero", Faero);
   Fweight = [0, 0, -kite_mass*g];
 
   extension = math.hypot(math.subtract(kite_position,base_position))-line_length;
   YoungModulus = 34.5e3;// Kevlar
+   if (is1dof)
+   {
+      YoungModulus=0;
+   }
   line_diameter = 0.001;
   line_section =Math.PI*(line_diameter/2)^2;
   line_tension = extension/line_length *YoungModulus*line_section;
@@ -161,12 +159,18 @@ function update(){
   Fline =[0, -line_tension * Math.cos(elevation), -line_tension * Math.sin(elevation)];
 
   Fsum = math.chain(Faero).add(Fline).add(Fweight).done();
-  inv_kite_mass = math.diag([1/kite_mass, 1/kite_mass, 1/kite_mass]);
-  kite_velocity = math.add(kite_velocity, math.multiply(math.multiply(inv_kite_mass,Fsum),dt));
-  // Saturate to avoid divergences
-  kite_velocity = [Math.max(-100, Math.min(kite_velocity[0],100)), Math.max(-100, Math.min(kite_velocity[1],100)), Math.max(-100, Math.min(kite_velocity[2],100))];
+  //console.log("Fsum",Fsum);
+}
+function update(){
   
-  
+  // Try to use real time
+  d = new Date();
+  t = d.getTime()-t0;
+  dt = (t-told)/1000;
+  told = t;
+  //console.log(dt/sampleTime)
+  // Use constant sampleTime instead (to avoid Nan for unknown reason)
+  dt = sampleTime// +0*dt;
 
   simulation_time = simulation_time + dt;
   
@@ -177,12 +181,36 @@ function update(){
     reel_speed = 0;
     line_length = 2;
   }
-
-  kite_position = math.add(kite_position, math.multiply(kite_velocity,dt));
-  
-
-  elevation = Math.atan2(kite_position[2], kite_position[1]);
   base_position = math.add(base_position, math.multiply(base_velocity,dt));
+  computeForces();
+  
+  torque_at_base = math.cross(math.subtract(kite_position,base_position), Fsum);
+  //console.log("torque", torque_at_base);
+  inv_kite_mass = math.diag([1/kite_mass, 1/kite_mass, 1/kite_mass]);
+  
+  if (true==is1dof){
+    //console.log(kite_angular_velocity[0]);
+    kite_angular_acceleration = 1/(kite_mass*line_length^2)*torque_at_base[0];
+    //kite_angular_acceleration = Math.max(-60000, Math.min(kite_angular_acceleration,60000));
+    kite_angular_velocity[0] = kite_angular_velocity[0]+kite_angular_acceleration*dt;
+    // Saturate to avoid divergences
+    //kite_angular_velocity[0] = Math.max(-60, Math.min(kite_angular_velocity[0],60));
+    elevation = elevation+kite_angular_velocity[0]*dt;
+    kite_position = math.chain(line_length).multiply( [0, Math.cos(elevation), Math.sin(elevation)]).done();
+    kite_velocity = math.chain(line_length).multiply(kite_angular_velocity[0]).multiply( [0, -Math.sin(elevation), Math.cos(elevation)]).done();
+    line_tension = Faero[1]*Math.cos(elevation) +  (Faero[2]-kite_mass*g)*Math.sin(elevation) + kite_mass*kite_angular_velocity[0]*kite_angular_velocity[0]*line_length;
+  }
+  else
+  {
+    kite_velocity = math.add(kite_velocity, math.multiply(math.multiply(inv_kite_mass,Fsum),dt));
+    // Saturate to avoid divergences
+    kite_velocity = [Math.max(-100, Math.min(kite_velocity[0],100)), Math.max(-100, Math.min(kite_velocity[1],100)), Math.max(-100, Math.min(kite_velocity[2],100))];
+  
+    kite_position = math.add(kite_position, math.multiply(kite_velocity,dt));
+    elevation = Math.atan2(kite_position[2], kite_position[1]);
+  }
+  
+  
 }
 function rotateKite(r){
     kite = document.getElementById("kite");
@@ -270,6 +298,6 @@ function updateReelSpeed(){
     myOutput.value = Math.round(line_tension*10)/100;
     
     myOutput = document.getElementById("kiteSpeed");
-    myOutput.value = Math.round(omega*line_length*10)/10;
+    myOutput.value = Math.round(kite_angular_velocity[0]*line_length*10)/10;
   }
 

@@ -81,7 +81,7 @@ torque_at_base = new THREE.Vector3( 0, 0, 0 );
 pqr = new THREE.Vector3( 0, 0, 0 );
 pqr.x = pqr0;
 
-kite_position.set(0, line_length, 0); 
+kite_position.set(0, base_position.y+line_length, 0); 
 
 is1dof=true;
 
@@ -99,6 +99,8 @@ document.getElementById("kiteMassRange").addEventListener("change", updateKiteMa
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 document.getElementById("myCheck").addEventListener("change", updateGravity);
 document.getElementById("reelSpeedRange").addEventListener("change", updateReelSpeed);
+document.getElementById("yBaseRange").addEventListener("change", updateyBase);
+document.getElementById("yBaseSpeedRange").addEventListener("change", updateyBaseSpeed);
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
 var d = new Date();
@@ -106,16 +108,21 @@ var t0 = d.getTime();
 told = 0;
 simulation_time = 0;
 
-function plot(kite_position, pitch){
+function plot(kite_position, base_position, pitch){
   rotateKite(pitch);
   translateKite(kite_position.y, kite_position.z);
+  translateBase(base_position.y, base_position.z);
 }
 function updatePlot(){
-  plot(kite_position, pitch);
+  plot(kite_position,base_position, pitch);
   updateOutput();
   if (reel_speed!=0)
   {
     setLineLength();
+  }
+  if (base_velocity.y!=0)
+  {
+    setyBase();
   }
 }
 function updaten()
@@ -138,7 +145,7 @@ function computeForces(){
   //console.log("Wind y z", wind_velocity.y, wind_velocity.z)
 
   // Wind relative velocity : air velocity relative to kite, projected in ground axis
-  wind_relative_velocity = wind_velocity.sub(kite_velocity);
+  wind_relative_velocity = wind_velocity.clone().sub(kite_velocity);
   //console.log("Kite velocity", kite_velocity.y, kite_velocity.z)
   //console.log("WindR y z", wind_relative_velocity.y, wind_relative_velocity.z)
 
@@ -167,7 +174,7 @@ function computeForces(){
   Fweight.set(0, 0, -kite_mass*g);
 
   //console.log("Fweight", Fweight.x)
-  extension = kite_position.sub(base_position).length()-line_length;
+  extension = kite_position.clone().sub(base_position).length()-line_length;
   //console.log("Extension", extension)
   YoungModulus = 34.5e3;// Kevlar
    if (is1dof)
@@ -180,8 +187,8 @@ function computeForces(){
   line_tension=Math.max(0, line_tension);
   //console.log("Tension", line_tension)
   Fline.set(0, -line_tension * Math.cos(elevation), -line_tension * Math.sin(elevation));
-
-  Fsum = Faero.add(Fline).add(Fweight);
+  Fsum.set(0,0,0);
+  Fsum.add(Faero).add(Fline).add(Fweight);
   //console.log("Fsum",Fsum);
 }
 function update(){
@@ -204,7 +211,7 @@ function update(){
     reel_speed = 0;
     line_length = 2;
   }
-  base_position = base_position.add(base_velocity.multiplyScalar(dt));
+  base_position.add(base_velocity.clone().multiplyScalar(dt));
   computeForces();
   
   torque_at_base.crossVectors(kite_position.sub(base_position), Fsum);
@@ -219,13 +226,17 @@ function update(){
     // Saturate to avoid divergences
     //pqr.x = Math.max(-60, Math.min(pqr.x,60));
     elevation = elevation+pqr.x*dt;
-    kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length);
+    kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length).add(base_position);
     kite_velocity.set(0, -Math.sin(elevation), Math.cos(elevation)).multiplyScalar(line_length*pqr.x);
+    //console.log(base_velocity);
+    kite_velocity.add(base_velocity);
+    //console.log("kite_vel", kite_velocity);
+    
     line_tension = Faero.y*Math.cos(elevation) +  (Faero.z-kite_mass*g)*Math.sin(elevation) + kite_mass*pqr.x*pqr.x*line_length;
   }
   else
   {
-    kite_velocity =kite_velocity.add(Fsum.multiplyScalar(inv_kite_mass*dt));
+    kite_velocity.add(Fsum.multiplyScalar(inv_kite_mass*dt));
     // Saturate to avoid divergences
     kite_velocity.set(Math.max(-100, Math.min(kite_velocity.x,100)), Math.max(-100, Math.min(kite_velocity.y,100)), Math.max(-100, Math.min(kite_velocity.z,100)));
   
@@ -247,6 +258,11 @@ function translateKite(y, z){
   kite_line.setAttribute('x2', y*meter2pix);
   kite_line.setAttribute('y2', -z*meter2pix);
 }
+function translateBase(y, z){
+  kite_line = document.getElementById("kite_line");
+  kite_line.setAttribute('x1', y*meter2pix);
+  kite_line.setAttribute('y1', -z*meter2pix);
+}
 
 function updateAngleOfKey(){
 		//get elements
@@ -263,8 +279,8 @@ function updateLineLength(){
 		//copy the value over
 		myOutput.value = myRange.value;
     if (reel_speed==0)
-    {console.log(myRange.value)
-    line_length = 1*myRange.value;
+    {
+      line_length = 1*myRange.value;
     }
 	}
 function setLineLength(){
@@ -327,3 +343,30 @@ function updateReelSpeed(){
     myOutput = document.getElementById("kiteSpeed");
     myOutput.value = Math.round(pqr.x*line_length*10)/10;
   }
+  function updateyBase(){
+		//get elements
+		var myRange = document.getElementById("yBaseRange");
+		var myOutput = document.getElementById("yBase");
+		//copy the value over
+		myOutput.value = myRange.value;
+    if (base_velocity.y==0)
+    {
+      base_position.setY( 1*myRange.value);
+    }
+	}
+  function setyBase(){
+		//get elements
+		var myRange = document.getElementById("yBaseRange");
+		var myOutput = document.getElementById("yBase");
+		//copy the value over
+		myOutput.value = Math.round(base_position.y*10)/10;
+    myRange.value = base_position.y;
+	}
+function updateyBaseSpeed(){
+		//get elements
+		var myRange = document.getElementById("yBaseSpeedRange");
+		var myOutput = document.getElementById("yBaseSpeed");
+		//copy the value over
+		myOutput.value = myRange.value;
+    base_velocity.setY(1*myRange.value); //Multiply by one to avoid bug when negative values
+	}

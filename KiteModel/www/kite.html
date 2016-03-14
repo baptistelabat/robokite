@@ -56,14 +56,18 @@
 			<output id = "lineLength">10</output>m
     </fieldset>
     <fieldset>
-      Wind velocity
-			<input id = "windVelocityRange"
+      Fluid velocity
+			<input id = "fluidVelocityRange"
 				type = "range"
 				min = "0"
 				max = "20"
 				value = "10"
 				step = "1" />
-			<output id = "windVelocity">10</output>m/s
+			<output id = "fluidVelocity">10</output>m/s
+      <select id="fluidSelect">
+        <option value="Air">Air</option>
+        <option value="Water">Water</option>
+      </select>
     </fieldset>
     <fieldset>
       Kite mass
@@ -81,7 +85,7 @@
 			<input id = "kiteSurfaceRange"
 				type = "range"
 				min = "0"
-				max = "100"
+				max = "20"
 				value = "6"
 				step = "1" />
 			<output id = "kiteSurface">6</output>m2

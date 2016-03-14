@@ -35,8 +35,8 @@ function dragCoefficient(alpha, AR){
   }
   return Cd;
 }
-function wind_profile(w10, kite_position){
-  // Compute the effective wind at this altitude using log wind profil
+function fluid_profile(w10, kite_position){
+  // Compute the effective fluid at this altitude using log wind profil
   // http://en.wikipedia.org/wiki/Log_wind_profile
   Zref = 10.  ; // Reference altitude for wind measurements (m)
   Zo = 0.055    // longueur de rugosite du terrain (m)
@@ -48,10 +48,10 @@ function wind_profile(w10, kite_position){
 var V = 10;
 
 line_length     = 10;
-wind_speed      = 10;
+fluid_speed      = 10;
 kite_mass       = 2;  
 kite_surface    = 6;  
-rho_air         = 1;    // Air density
+density         = 1.225;    // Air density
 elevation0      = 0;
 pqr0          = 0;    // Angular rate
 AoKdeg          = 50;   // Angle of Keying (calage)
@@ -73,7 +73,7 @@ kite_position = new THREE.Vector3( 0, 0, 0 );
 kite_velocity = new THREE.Vector3( 0, 0, 0 );
 base_position = new THREE.Vector3( 0, 0, 0 );
 base_velocity = new THREE.Vector3( 0, 0, 0 );
-wind_velocity = new THREE.Vector3( 0, 0, 0 );
+fluid_velocity = new THREE.Vector3( 0, 0, 0 );
 Faero         = new THREE.Vector3( 0, 0, 0 );
 Fline         = new THREE.Vector3( 0, 0, 0 );
 Fweight       = new THREE.Vector3( 0, 0, 0 );
@@ -86,7 +86,7 @@ kite_position.set(0, base_position.y+line_length, 0);
 
 is1dof=true;
 
-// y is horizontal and positive in wind propagation direction
+// y is horizontal and positive in fluid propagation direction
 // z is vertical and positive up
 
 // Base velocity relative to ground projected in ground axis
@@ -96,7 +96,7 @@ w_base = 0;
 document.getElementById("angleOfKeyRange").addEventListener("change", updateAngleOfKey);
 document.getElementById("lineLengthRange").addEventListener("change", updateLineLength);
 document.getElementById("lineLengthRange").addEventListener("mouseover", updateLineLength);
-document.getElementById("windVelocityRange").addEventListener("change", updateWindVelocity);
+document.getElementById("fluidVelocityRange").addEventListener("change", updateFluidVelocity);
 document.getElementById("kiteMassRange").addEventListener("change", updateKiteMass);
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 document.getElementById("myCheck").addEventListener("change", updateGravity);
@@ -107,6 +107,7 @@ document.getElementById("yBaseSpeedRange").addEventListener("change", updateyBas
 document.getElementById("elevationRange").addEventListener("change", updateElevation);
 document.getElementById("dynamicCheck").addEventListener("change", updateDynamic);
 document.getElementById("aspectRatioRange").addEventListener("change", updateAspectRatio);
+document.getElementById("fluidSelect").addEventListener("change", updateFluid);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -150,33 +151,33 @@ function computeForces(){
   pitch = AoK -elevation;
   //console.log(pitch);
 
-  // Wind velocity: air velocity relative to ground, projected in ground axis
+  // fluid velocity: fluid velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
-  wind_velocity.set(0, wind_profile(wind_speed, kite_position), 0);
-  //console.log("Wind y z", wind_velocity.y, wind_velocity.z)
+  fluid_velocity.set(0, fluid_profile(fluid_speed, kite_position), 0);
+  //console.log("fluid y z", fluid_velocity.y, fluid_velocity.z)
 
-  // Wind relative velocity : air velocity relative to kite, projected in ground axis
-  wind_relative_velocity = wind_velocity.clone().sub(kite_velocity);
+  // fluid relative velocity : fluid velocity relative to kite, projected in ground axis
+  fluid_relative_velocity = fluid_velocity.clone().sub(kite_velocity);
   //console.log("Kite velocity", kite_velocity.y, kite_velocity.z)
-  //console.log("WindR y z", wind_relative_velocity.y, wind_relative_velocity.z)
+  //console.log("fluidR y z", fluid_relative_velocity.y, fluid_relative_velocity.z)
 
-  // Angle of attack of the kite, defined between kite chord and relative air velocity
-  angle_air_kite = Math.atan2(wind_relative_velocity.z, wind_relative_velocity.y);
-  AoA = angle_air_kite +pitch;
+  // Angle of attack of the kite, defined between kite chord and relative fluid velocity
+  angle_fluid_kite = Math.atan2(fluid_relative_velocity.z, fluid_relative_velocity.y);
+  AoA = angle_fluid_kite +pitch;
   //console.log(AoA);
   // Dynamic pressure
-  v_air_kite = 0
-  w_air_kite = 0
-  q = 1/2*rho_air *Math.pow(wind_relative_velocity.length(),2);
+  v_fluid_kite = 0
+  w_fluid_kite = 0
+  q = 1/2*density *Math.pow(fluid_relative_velocity.length(),2);
   //console.log(q);
-  // Lift and drag are in apparent wind frame
+  // Lift and drag are in apparent fluid frame
   lift   = q*kite_surface*liftCoefficient(AoA, aspectRatio);
   drag   = q*kite_surface*dragCoefficient(AoA, aspectRatio);
   //console.log(lift)
   
   // Rotate to ground frame
   CTM = new THREE.Matrix4;
-  CTM.makeRotationX(angle_air_kite);
+  CTM.makeRotationX(angle_fluid_kite);
   //console.log(CTM);
   //console.log(CTM)
   Faero.set(  0,drag, lift);
@@ -319,13 +320,14 @@ function updateReelSpeed(){
 		myOutput.value = myRange.value;
     reel_speed = myOutput.value;
 }
-function updateWindVelocity(){
+function updateFluidVelocity(){
 		//get elements
-		var myRange = document.getElementById("windVelocityRange");
-		var myOutput = document.getElementById("windVelocity");
+		var myRange = document.getElementById("fluidVelocityRange");
+		var myOutput = document.getElementById("fluidVelocity");
 		//copy the value over
 		myOutput.value = myRange.value;
-    wind_speed = myOutput.value;
+    fluid_speed = 1*myOutput.value;
+    console.log(fluid_speed);
 }
 function updateKiteMass(){
 		//get elements
@@ -428,6 +430,46 @@ function updateDynamic(){
 		//get elements
     var myCheck = document.getElementById("dynamicCheck");
     isDynamic = myCheck.checked;
+}
+function updateFluid(){
+  var mySelect = document.getElementById("fluidSelect");
+  var myRange = document.getElementById("fluidVelocityRange");
+  var myOutput = document.getElementById("fluidVelocity");
+  var mySurfaceRange = document.getElementById("kiteSurfaceRange");
+  var mySurfaceOutput = document.getElementById("kiteSurface");
+  if (mySelect.value == "Air")
+  {
+    pqr.x=0;
+    kite_velocity.set(0,0,0);
+    density = 1.225;
+    myRange.max = 40;
+    myRange.step =1;
+    myRange.value=10;
+    myOutput.value = 10;
+    fluid_speed = 10;
+    mySurfaceRange.value = 6;
+    mySurfaceOutput.value = 6;
+    mySurfaceRange.max = 20;
+    mySurfaceRange.step=1;
+    kite_surface = 6;
+  }
+  else if (mySelect.value == "Water")
+  {
+    pqr.x = 0;
+    kite_velocity.set(0,0,0);
+    density = 1025;
+    myRange.max = 1.5;
+    myRange.step = 0.01;
+    myRange.value = 1;
+    myOutput.value = 1;
+    fluid_speed = 1;
+    mySurfaceRange.value = 0.6;
+    mySurfaceOutput.value = 0.6;
+    mySurfaceRange.max = 5;
+    mySurfaceRange.step = 0.1;   
+    kite_surface = 0.6;
+  }
+  
 }
   
   

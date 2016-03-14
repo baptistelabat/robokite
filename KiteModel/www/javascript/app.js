@@ -94,13 +94,16 @@ v_base = 0;
 w_base = 0;
 document.getElementById("angleOfKeyRange").addEventListener("change", updateAngleOfKey);
 document.getElementById("lineLengthRange").addEventListener("change", updateLineLength);
+document.getElementById("lineLengthRange").addEventListener("mouseover", updateLineLength);
 document.getElementById("windVelocityRange").addEventListener("change", updateWindVelocity);
 document.getElementById("kiteMassRange").addEventListener("change", updateKiteMass);
 document.getElementById("kiteSurfaceRange").addEventListener("change", updateKiteSurface);
 document.getElementById("myCheck").addEventListener("change", updateGravity);
 document.getElementById("reelSpeedRange").addEventListener("change", updateReelSpeed);
 document.getElementById("yBaseRange").addEventListener("change", updateyBase);
+document.getElementById("yBaseRange").addEventListener("mouseover", updateyBase);
 document.getElementById("yBaseSpeedRange").addEventListener("change", updateyBaseSpeed);
+
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
 var d = new Date();
@@ -276,8 +279,13 @@ function updateLineLength(){
 		//get elements
 		var myRange = document.getElementById("lineLengthRange");
 		var myOutput = document.getElementById("lineLength");
+    var mySpeedRange = document.getElementById("reelSpeedRange");
+		var mySpeedOutput = document.getElementById("reelSpeed");
 		//copy the value over
 		myOutput.value = myRange.value;
+    mySpeedRange.value =0;
+    mySpeedOutput.value=0;
+    reel_speed =0;
     if (reel_speed==0)
     {
       line_length = 1*myRange.value;
@@ -349,6 +357,11 @@ function updateReelSpeed(){
 		var myOutput = document.getElementById("yBase");
 		//copy the value over
 		myOutput.value = myRange.value;
+    base_velocity.setY(0);
+    var mySpeedRange = document.getElementById("yBaseSpeedRange");
+		var mySpeedOutput = document.getElementById("yBaseSpeed");
+    mySpeedRange.value=0;
+    mySpeedOutput.value=0;
     if (base_velocity.y==0)
     {
       base_position.setY( 1*myRange.value);

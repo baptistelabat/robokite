@@ -65,6 +65,8 @@ reel_speed = 0;
 pitch=0;
 line_tension = 0;
 
+isDynamic = true;
+
 AoK = AoKdeg*Math.PI/180;
 
 elevation = 0;
@@ -103,6 +105,8 @@ document.getElementById("reelSpeedRange").addEventListener("change", updateReelS
 document.getElementById("yBaseRange").addEventListener("change", updateyBase);
 document.getElementById("yBaseRange").addEventListener("mouseover", updateyBase);
 document.getElementById("yBaseSpeedRange").addEventListener("change", updateyBaseSpeed);
+document.getElementById("elevationRange").addEventListener("change", updateElevation);
+document.getElementById("dynamicCheck").addEventListener("change", updateDynamic);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -126,6 +130,10 @@ function updatePlot(){
   if (base_velocity.y!=0)
   {
     setyBase();
+  }
+  if (isDynamic)
+  {
+    setElevation();
   }
 }
 function updaten()
@@ -225,10 +233,13 @@ function update(){
     //console.log(pqr.x);
     kite_angular_acceleration = 1/(kite_mass*line_length^2)*torque_at_base.x;
     //kite_angular_acceleration = Math.max(-60000, Math.min(kite_angular_acceleration,60000));
-    pqr.x = pqr.x+kite_angular_acceleration*dt;
-    // Saturate to avoid divergences
-    //pqr.x = Math.max(-60, Math.min(pqr.x,60));
-    elevation = elevation+pqr.x*dt;
+    if (isDynamic)
+    {
+      pqr.x = pqr.x+kite_angular_acceleration*dt;
+      // Saturate to avoid divergences
+      //pqr.x = Math.max(-60, Math.min(pqr.x,60));
+      elevation = elevation+pqr.x*dt;
+    }
     kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length).add(base_position);
     kite_velocity.set(0, -Math.sin(elevation), Math.cos(elevation)).multiplyScalar(line_length*pqr.x);
     //console.log(base_velocity);
@@ -290,7 +301,7 @@ function updateLineLength(){
     {
       line_length = 1*myRange.value;
     }
-	}
+}
 function setLineLength(){
 		//get elements
 		var myRange = document.getElementById("lineLengthRange");
@@ -307,38 +318,38 @@ function updateReelSpeed(){
 		//copy the value over
 		myOutput.value = myRange.value;
     reel_speed = myOutput.value;
-	}
-  function updateWindVelocity(){
+}
+function updateWindVelocity(){
 		//get elements
 		var myRange = document.getElementById("windVelocityRange");
 		var myOutput = document.getElementById("windVelocity");
 		//copy the value over
 		myOutput.value = myRange.value;
     wind_speed = myOutput.value;
-	}
-  function updateKiteMass(){
+}
+function updateKiteMass(){
 		//get elements
 		var myRange = document.getElementById("kiteMassRange");
 		var myOutput = document.getElementById("kiteMass");
 		//copy the value over
 		myOutput.value = myRange.value;
     kite_mass = myOutput.value;
-	}
-  function updateKiteSurface(){
+}
+function updateKiteSurface(){
 		//get elements
 		var myRange = document.getElementById("kiteSurfaceRange");
 		var myOutput = document.getElementById("kiteSurface");
 		//copy the value over
 		myOutput.value = myRange.value;
     kite_surface = myOutput.value;
-	}
-  function updateGravity(){
+}
+function updateGravity(){
 		//get elements
     
 		var myCheck = document.getElementById("myCheck");
     g = earth_gravity*myCheck.checked;
-	}
-  function updateOutput(){
+}
+function updateOutput(){
     var myOutput = document.getElementById("elevation");
     myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
     
@@ -350,8 +361,8 @@ function updateReelSpeed(){
     
     myOutput = document.getElementById("kiteSpeed");
     myOutput.value = Math.round(pqr.x*line_length*10)/10;
-  }
-  function updateyBase(){
+}
+function updateyBase(){
 		//get elements
 		var myRange = document.getElementById("yBaseRange");
 		var myOutput = document.getElementById("yBase");
@@ -367,14 +378,14 @@ function updateReelSpeed(){
       base_position.setY( 1*myRange.value);
     }
 	}
-  function setyBase(){
+function setyBase(){
 		//get elements
 		var myRange = document.getElementById("yBaseRange");
 		var myOutput = document.getElementById("yBase");
 		//copy the value over
 		myOutput.value = Math.round(base_position.y*10)/10;
     myRange.value = base_position.y;
-	}
+}
 function updateyBaseSpeed(){
 		//get elements
 		var myRange = document.getElementById("yBaseSpeedRange");
@@ -382,4 +393,33 @@ function updateyBaseSpeed(){
 		//copy the value over
 		myOutput.value = myRange.value;
     base_velocity.setY(1*myRange.value); //Multiply by one to avoid bug when negative values
-	}
+}
+function updateElevation(){
+		//get elements
+		var myRange = document.getElementById("elevationRange");
+		var myOutput = document.getElementById("elevation");
+    var myCheck = document.getElementById("dynamicCheck");
+    myCheck.checked = false;
+    isDynamic = myCheck.checked;
+		//copy the value over
+		myOutput.value = myRange.value;
+    if (isDynamic==false)
+    {
+      elevation = myRange.value*Math.PI/180;;
+    }
+}
+function setElevation(){
+		//get elements
+		var myRange = document.getElementById("elevationRange");
+		var myOutput = document.getElementById("elevation");
+		//copy the value over
+		myOutput.value = Math.round(elevation*180/Math.PI*10)/10;
+    myRange.value = elevation*180/Math.PI;
+}
+function updateDynamic(){
+		//get elements
+    var myCheck = document.getElementById("dynamicCheck");
+    isDynamic = myCheck.checked;
+}
+  
+  

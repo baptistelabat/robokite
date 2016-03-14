@@ -442,7 +442,7 @@ function updateFluid(){
     pqr.x=0;
     kite_velocity.set(0,0,0);
     density = 1.225;
-    myRange.max = 40;
+    myRange.max = 20;
     myRange.step =1;
     myRange.value=10;
     myOutput.value = 10;

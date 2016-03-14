@@ -2,7 +2,7 @@ console.log("This is a kite simulator");
 var CL = [];
 var CD = [];
 var alpha_deg = [];
-function liftCoefficient(alpha){
+function liftCoefficient(alpha, AR){
   // This is a simplified formula for lift coefficient
   // Maximum lift at 45°
   // No lift at 90°
@@ -11,7 +11,6 @@ function liftCoefficient(alpha){
   dCl = 2*Math.PI; //infinite elliptic wing for small angle
   
   //AR= span^2/kite_surface;
-  AR = 5;
   e  = 1// Oswald efficiency factor
   //alphai= Cl/(Math.PI*e*AR);
   
@@ -25,9 +24,8 @@ function liftCoefficient(alpha){
 
   return Cl;
  }
-function dragCoefficient(alpha){
+function dragCoefficient(alpha, AR){
   Cd0 = 0.1;
-  AR = 5; // Aspect ratio
   e = 1;
   inducedDragCoefficient = Math.pow(2*Math.PI*Math.sin(alpha),2)/(Math.PI*AR*e);
   Cd = inducedDragCoefficient + Cd0;
@@ -64,6 +62,7 @@ meter2pix = 20;
 reel_speed = 0;
 pitch=0;
 line_tension = 0;
+aspectRatio = 5;
 
 isDynamic = true;
 
@@ -107,6 +106,7 @@ document.getElementById("yBaseRange").addEventListener("mouseover", updateyBase)
 document.getElementById("yBaseSpeedRange").addEventListener("change", updateyBaseSpeed);
 document.getElementById("elevationRange").addEventListener("change", updateElevation);
 document.getElementById("dynamicCheck").addEventListener("change", updateDynamic);
+document.getElementById("aspectRatioRange").addEventListener("change", updateAspectRatio);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -170,8 +170,8 @@ function computeForces(){
   q = 1/2*rho_air *Math.pow(wind_relative_velocity.length(),2);
   //console.log(q);
   // Lift and drag are in apparent wind frame
-  lift   = q*kite_surface*liftCoefficient(AoA);
-  drag   = q*kite_surface*dragCoefficient(AoA);
+  lift   = q*kite_surface*liftCoefficient(AoA, aspectRatio);
+  drag   = q*kite_surface*dragCoefficient(AoA, aspectRatio);
   //console.log(lift)
   
   // Rotate to ground frame
@@ -342,6 +342,14 @@ function updateKiteSurface(){
 		//copy the value over
 		myOutput.value = myRange.value;
     kite_surface = myOutput.value;
+}
+function updateAspectRatio(){
+		//get elements
+		var myRange = document.getElementById("aspectRatioRange");
+		var myOutput = document.getElementById("aspectRatio");
+		//copy the value over
+		myOutput.value = myRange.value;
+    aspectRatio = myOutput.value;
 }
 function updateGravity(){
 		//get elements

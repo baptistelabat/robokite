@@ -42,8 +42,16 @@ function fluid_profile(w10, position){
   Zo = 0.055    // longueur de rugosite du terrain (m)
   
   // Saturate z in order not to fall to negative wind or zero wind
-  z = Math.max(position.z, 10*Zo)
-  return w10//*Math.log(z/Zo)/Math.log(Zref/Zo) //Log wind profil
+  z = Math.max(position.z, 0)
+  if (isGround)
+  {
+   v=w10*Math.log((z+Zo)/Zo)/Math.log(Zref/Zo); //Log wind profil 
+  }
+  else
+  {
+    v= w10;
+  }
+  return v
 }
 var V = 10;
 
@@ -65,13 +73,14 @@ line_tension = 0;
 aspectRatio = 5;
 
 isDynamic = true;
+isGround  = true;
 
 AoK = AoKdeg*Math.PI/180;
 
 elevation = 0;
 kite_position = new THREE.Vector3( 0, 0, 0 );
 kite_velocity = new THREE.Vector3( 0, 0, 0 );
-base_position = new THREE.Vector3( 0, 0, 0 );
+base_position = new THREE.Vector3( 0, 0, 1 );
 base_velocity = new THREE.Vector3( 0, 0, 0 );
 fluid_velocity = new THREE.Vector3( 0, 0, 0 );
 Faero         = new THREE.Vector3( 0, 0, 0 );
@@ -108,6 +117,7 @@ document.getElementById("elevationRange").addEventListener("change", updateEleva
 document.getElementById("dynamicCheck").addEventListener("change", updateDynamic);
 document.getElementById("aspectRatioRange").addEventListener("change", updateAspectRatio);
 document.getElementById("fluidSelect").addEventListener("change", updateFluid);
+document.getElementById("groundCheck").addEventListener("change", updateGround);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -242,6 +252,10 @@ function update(){
       //pqr.x = Math.max(-60, Math.min(pqr.x,60));
       elevation = elevation+pqr.x*dt;
     }
+    if (isGround)
+    {
+      elevation = Math.min(Math.max(0, elevation), Math.PI);
+    }
     kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length).add(base_position);
     kite_velocity.set(0, -Math.sin(elevation), Math.cos(elevation)).multiplyScalar(line_length*pqr.x);
     //console.log(base_velocity);
@@ -280,7 +294,7 @@ function translateBase(y, z){
   kite_line.setAttribute('y1', -z*meter2pix);
 }
 function plotFluidVelocity(){
-  for (i=0;i<9;i++)
+  for (i=0;i<13;i++)
   {
     pos = new THREE.Vector3( 0, 0, i*1 );
     arrow = document.getElementById("f"+i);
@@ -439,6 +453,11 @@ function updateDynamic(){
 		//get elements
     var myCheck = document.getElementById("dynamicCheck");
     isDynamic = myCheck.checked;
+}
+function updateGround(){
+		//get elements
+    var myCheck = document.getElementById("groundCheck");
+    isGround = myCheck.checked;
 }
 function updateFluid(){
   var mySelect = document.getElementById("fluidSelect");

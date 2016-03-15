@@ -35,14 +35,14 @@ function dragCoefficient(alpha, AR){
   }
   return Cd;
 }
-function fluid_profile(w10, kite_position){
+function fluid_profile(w10, position){
   // Compute the effective fluid at this altitude using log wind profil
   // http://en.wikipedia.org/wiki/Log_wind_profile
   Zref = 10.  ; // Reference altitude for wind measurements (m)
   Zo = 0.055    // longueur de rugosite du terrain (m)
   
   // Saturate z in order not to fall to negative wind or zero wind
-  z = Math.max(kite_position.z, 10*Zo)
+  z = Math.max(position.z, 10*Zo)
   return w10//*Math.log(z/Zo)/Math.log(Zref/Zo) //Log wind profil
 }
 var V = 10;
@@ -123,6 +123,7 @@ function plot(kite_position, base_position, pitch){
 }
 function updatePlot(){
   plot(kite_position,base_position, pitch);
+  plotFluidVelocity();
   updateOutput();
   if (reel_speed!=0)
   {
@@ -277,6 +278,14 @@ function translateBase(y, z){
   kite_line = document.getElementById("kite_line");
   kite_line.setAttribute('x1', y*meter2pix);
   kite_line.setAttribute('y1', -z*meter2pix);
+}
+function plotFluidVelocity(){
+  for (i=0;i<9;i++)
+  {
+    pos = new THREE.Vector3( 0, 0, i*1 );
+    arrow = document.getElementById("f"+i);
+    arrow.setAttribute('d', "M"+ 0*meter2pix +" "+ -pos.z*meter2pix+ " L"+ fluid_profile(fluid_speed, pos)*meter2pix/10 +" "+ -pos.z*meter2pix);
+  }
 }
 
 function updateAngleOfKey(){

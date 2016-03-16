@@ -118,6 +118,7 @@ document.getElementById("aspectRatioRange").addEventListener("change", updateAsp
 document.getElementById("fluidSelect").addEventListener("change", updateFluid);
 document.getElementById("groundCheck").addEventListener("change", updateGround);
 document.getElementById("Z0Range").addEventListener("change", updateZ0);
+document.getElementById("rigidCheck").addEventListener("change", updateIsRigid);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -237,7 +238,7 @@ function update(){
   base_position.add(base_velocity.clone().multiplyScalar(dt));
   computeForces();
   
-  torque_at_base.crossVectors(kite_position.sub(base_position), Fsum);
+  torque_at_base.crossVectors(kite_position.clone().sub(base_position), Fsum);
   //console.log("torque", torque_at_base);
   inv_kite_mass = 1./kite_mass;
   
@@ -266,12 +267,25 @@ function update(){
   }
   else
   {
-    kite_velocity.add(Fsum.multiplyScalar(inv_kite_mass*dt));
-    // Saturate to avoid divergences
-    kite_velocity.set(Math.max(-100, Math.min(kite_velocity.x,100)), Math.max(-100, Math.min(kite_velocity.y,100)), Math.max(-100, Math.min(kite_velocity.z,100)));
-  
-    kite_position = kite_position.add(kite_velocity.multiplyScalar(dt));
-    elevation = Math.atan2(kite_position.z, kite_position.y);
+    if (isDynamic)
+    {
+      kite_velocity.add(Fsum.multiplyScalar(inv_kite_mass*dt));
+
+      // Saturate to avoid divergences
+      kite_velocity.set(Math.max(-100, Math.min(kite_velocity.x,100)), Math.max(-100, Math.min(kite_velocity.y,100)), Math.max(-100, Math.min(kite_velocity.z,100)));
+
+      kite_position.add(kite_velocity.clone().multiplyScalar(dt));
+      lineVector = kite_position.clone().sub(base_position);
+      elevation = Math.atan2(lineVector.z, lineVector.y);
+    }
+    else
+    {
+      kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length).add(base_position);
+    }
+    if (isGround)
+    {
+      kite_position.z = Math.max(0, kite_position.z);
+    }
   }
   
   
@@ -460,6 +474,12 @@ function updateDynamic(){
 		//get elements
     var myCheck = document.getElementById("dynamicCheck");
     isDynamic = myCheck.checked;
+}
+function updateIsRigid(){
+		//get elements
+    var myCheck = document.getElementById("rigidCheck");
+    isRigid = myCheck.checked;
+    is1dof= isRigid;
 }
 function updateGround(){
 		//get elements

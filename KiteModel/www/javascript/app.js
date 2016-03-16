@@ -294,7 +294,7 @@ function translateBase(y, z){
   kite_line.setAttribute('y1', -z*meter2pix);
 }
 function plotFluidVelocity(){
-  for (i=0;i<13;i++)
+  for (i=0;i<23;i++)
   {
     pos = new THREE.Vector3( 0, 0, i*1 );
     arrow = document.getElementById("f"+i);

@@ -35,17 +35,15 @@ function dragCoefficient(alpha, AR){
   }
   return Cd;
 }
-function fluid_profile(w10, position){
+function fluid_profile(w10, position, Z0, zRef){
   // Compute the effective fluid at this altitude using log wind profil
   // http://en.wikipedia.org/wiki/Log_wind_profile
-  Zref = 10.  ; // Reference altitude for wind measurements (m)
-  Zo = 0.055    // longueur de rugosite du terrain (m)
   
   // Saturate z in order not to fall to negative wind or zero wind
   z = Math.max(position.z, 0)
   if (isGround)
   {
-   v=w10*Math.log((z+Zo)/Zo)/Math.log(Zref/Zo); //Log wind profil 
+   v=w10*Math.log((z+Z0)/Z0)/Math.log((zRef+Z0)/Z0); //Log wind profil 
   }
   else
   {
@@ -54,7 +52,8 @@ function fluid_profile(w10, position){
   return v
 }
 var V = 10;
-
+zRef = 10.  ; // Reference altitude for wind measurements (m)
+Z0 = 0.055    // longueur de rugosite du terrain (m)
 line_length     = 10;
 fluid_speed      = 10;
 kite_mass       = 2;  
@@ -118,6 +117,7 @@ document.getElementById("dynamicCheck").addEventListener("change", updateDynamic
 document.getElementById("aspectRatioRange").addEventListener("change", updateAspectRatio);
 document.getElementById("fluidSelect").addEventListener("change", updateFluid);
 document.getElementById("groundCheck").addEventListener("change", updateGround);
+document.getElementById("Z0Range").addEventListener("change", updateZ0);
 
 setInterval(updaten, 1);
 setInterval(updatePlot,100);
@@ -164,7 +164,7 @@ function computeForces(){
 
   // fluid velocity: fluid velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
-  fluid_velocity.set(0, fluid_profile(fluid_speed, kite_position), 0);
+  fluid_velocity.set(0, fluid_profile(fluid_speed, kite_position, Z0, zRef), 0);
   //console.log("fluid y z", fluid_velocity.y, fluid_velocity.z)
 
   // fluid relative velocity : fluid velocity relative to kite, projected in ground axis
@@ -298,7 +298,7 @@ function plotFluidVelocity(){
   {
     pos = new THREE.Vector3( 0, 0, i*1 );
     arrow = document.getElementById("f"+i);
-    arrow.setAttribute('d', "M"+ 0*meter2pix +" "+ -pos.z*meter2pix+ " L"+ fluid_profile(fluid_speed, pos)*meter2pix/10 +" "+ -pos.z*meter2pix);
+    arrow.setAttribute('d', "M"+ 0*meter2pix +" "+ -pos.z*meter2pix+ " L"+ fluid_profile(fluid_speed, pos, Z0, zRef)*meter2pix +" "+ -pos.z*meter2pix);
   }
 }
 
@@ -350,7 +350,6 @@ function updateFluidVelocity(){
 		//copy the value over
 		myOutput.value = myRange.value;
     fluid_speed = 1*myOutput.value;
-    console.log(fluid_speed);
 }
 function updateKiteMass(){
 		//get elements
@@ -375,6 +374,14 @@ function updateAspectRatio(){
 		//copy the value over
 		myOutput.value = myRange.value;
     aspectRatio = myOutput.value;
+}
+function updateZ0(){
+		//get elements
+		var myRange = document.getElementById("Z0Range");
+		var myOutput = document.getElementById("Z0");
+		//copy the value over
+		myOutput.value = myRange.value;
+    Z0 = 1*myOutput.value;
 }
 function updateGravity(){
 		//get elements

@@ -81,6 +81,7 @@ kite_position = new THREE.Vector3( 0, 0, 0 );
 kite_velocity = new THREE.Vector3( 0, 0, 0 );
 base_position = new THREE.Vector3( 0, 0, 1 );
 base_velocity = new THREE.Vector3( 0, 0, 0 );
+reel_velocity = new THREE.Vector3( 0, 0, 0 );
 fluid_velocity = new THREE.Vector3( 0, 0, 0 );
 Faero         = new THREE.Vector3( 0, 0, 0 );
 Fline         = new THREE.Vector3( 0, 0, 0 );
@@ -261,6 +262,8 @@ function update(){
     kite_velocity.set(0, -Math.sin(elevation), Math.cos(elevation)).multiplyScalar(line_length*pqr.x);
     //console.log(base_velocity);
     kite_velocity.add(base_velocity);
+    reel_velocity.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(reel_speed);
+    kite_velocity.add(reel_velocity);
     //console.log("kite_vel", kite_velocity);
     
     line_tension = Faero.y*Math.cos(elevation) +  (Faero.z-kite_mass*g)*Math.sin(elevation) + kite_mass*pqr.x*pqr.x*line_length;

@@ -1,0 +1,391 @@
+<html lang="eng">
+<!--This file created 2:08 PM  09/19/2000 by Claris Home Page version 3.0-->
+ <HEAD>    
+<TITLE>KiteModeler 1.5a beta</TITLE>    
+<META NAME=GENERATOR CONTENT="Claris Home Page 3.0">   
+ <X-CLARIS-WINDOW TOP=106 BOTTOM=427 LEFT=16 RIGHT=622>    
+<X-CLARIS-TAGVIEW MODE=minimal> </HEAD> 
+<BODY BGCOLOR="#FFFFFF">
+  <p>
+   <applet code="Kite.class" width=710 height=400 align=bottom>     
+   </applet>
+   </p> 
+   <noscript> 
+   <p> This page contains an interactive Java applet 
+   to explore the various factors which affect the design and flight of several kites. 
+   All of the information presented by the applet are available within the 
+    Beginner's Guide to Aerodynamics. You should start with the slide describing 
+    the kite design. </p> 
+ </noscript>      
+ <p><font size="2" face="Arial, Helvetica, sans-serif"><b>KiteModeler</b></font></p>
+
+<p> <font color="#000000" size="2" face="Arial, Helvetica, sans-serif"> 
+        With this software you can study the physics and math which describe the
+        flight of a kite.
+        You can choose from several types of kites and change the shape, size, and materials
+        to produce your own design.
+        You can change the values of different variables which affect the design 
+        and immediately see the new
+        flight characteristics.
+        With this version of the program, you can even test how your kite
+        would fly on Mars, or off the top of a mountain.
+        The program tells you if your design is 
+         stable
+        or not and
+        also computes a prediction of how high
+        your kite will fly.
+        </font> </p>
+     <p><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">
+        If you experience difficulties when using the sliders to change variables, 
+        simply click away from the slider and then back to it.
+        If the arrows on the end of the sliders disappear, click in the areas where 
+        the left and right arrow images should appear, and they should reappear. 
+        To return to the
+        original default conditions, click the <B>Set</B> button on the view window
+        to the left.
+</p>
+<p>
+           If you see only a grey box at the top of this page, be sure that Java is
+           enabled in your browser. If Java is enabled, and you are using the Windows XP
+           operating system, you need to get a newer version of Java. Go to this link:
+           <a href="http://www.java.com/en/index.jsp">http://www.java.com/en/index.jsp</a>,
+           try the "Download It Now" button, and then select "Yes" when the download box from Sun
+           pops up.
+</p>
+
+        </font> <p></p>
+      <p><font size="2" face="Arial, Helvetica, sans-serif"><b>SCREEN LAYOUT</b></font></p>
+      <p><font size="2" face="Arial, Helvetica, sans-serif">The program screen 
+        is divided into three main parts:</font></p>
+      <ol>
+        <li><font size="2" face="Arial, Helvetica, sans-serif">On the <b>left</b> 
+          of the screen is a  graphics window 
+          in which you can display a drawing of the kite you 
+          are designing, trimming, or flying. Details
+          are given in <a href="#GRAPHICS">GRAPHICS</a>.</font></li>
+        <li><font size="2" face="Arial, Helvetica, sans-serif">On the <b>right</b> 
+          of the screen at the <b>bottom</b> is the control and output panel. 
+          You can select the "Design", "Trim", "Fly", or "Output" mode by clicking on the 
+          buttons at the top of this panel. 
+          The selected mode is indicated by a yellow button. 
+          Depending on your choice, different input panels appear at the top.
+          Output boxes are shown with a black background, input boxes with
+          a white background.
+          Details of the <a href="#INPUT VARIABLES">INPUT</a> 
+          and <a href="#OUTPUT VARIABLES">OUTPUT</a> variables are given below.
+          If you click the "Output" button, a large text window
+          is displayed at the upper right. Output can be saved to this window by
+          using the <b>Print</b>
+          button on the view window at the left.
+        </font></li>
+        <li><font size="2" face="Arial, Helvetica, sans-serif">On the <b>right</b> 
+          of the screen at the <b>top</b> are the input panels. 
+          To change the value of an input variable, simply move the slider. 
+          Or click on the input box, select and replace the old value, and hit<b>
+          Enter</b> to send the new value to the program.
+          Some input panels contain menu buttons. To operate a menu button, 
+          click on the arrow to the 
+          right and make your selection from the drop menu.
+          </font></li>
+      </ol>
+      <p><font size="2" face="Arial, Helvetica, sans-serif"><a name=GRAPHICS></a><b>GRAPHICS</b></font></p>
+
+      <p><font size="2" face="Arial, Helvetica, sans-serif">
+        The <b>View</b> window for the kite is shown on the left of the program screen.
+        You can change the size of the image by using the slider at the far left. Just
+        click and drag on the black bar to make the image larger or smaller.
+        If your kite design or trim is unstable
+        a red and yellow banner appears
+        over the graphics. You should then change either a 
+        <b>Shape</b> input
+        or a <b>Trim</b> input until the banner disappears.
+       </font></p>
+
+      <p><font size="2" face="Arial, Helvetica, sans-serif">
+         You can perform the calculations in either Imperial(English) units 
+         or Metric units
+         by clicking on the button in the upper left of the view window. Imperial units are
+         the default.
+      </p>
+      <p>
+        You can move the kite within the view window by moving your cursor into the window,
+        holding down the left mouse button, and dragging the kite to a new location. If you
+        lose the kite, click on the <b>Find</b> button above the slider.
+       </font></p>
+      <p><font size="2" face="Arial, Helvetica, sans-serif">
+        There are three views available to the user; Front, Side, and Field, as 
+        indicated by the buttons at the top of the window.
+        The selected button is indicated by a yellow background. 
+        By default, the Front view is shown in Design Mode, the Side view 
+        in Trim Mode, and the Field view in Fly Mode.
+        However, you can override the default by using the "Select View->" button.
+        Click on this button, then click on the desired view. You can use any view
+        at any time in the design, trim, and flight sequence as long as the "Select View->" button
+        is yellow. To return to the default views, just click on the "Select View->" button again.
+       </font></p>
+      <ol>
+        <li><font size="2" face="Arial, Helvetica, sans-serif"><b>Front</b> shows 
+          the kite as viewed looking perpendicular to the surface. This view is
+          the default during the "Design" of your kite. The geometric input
+          parameters are shown to the right and below the kite drawing. 
+         <b>Surfaces</b>
+          are shown as white areas, while the frame is shown as black lines.
+          The
+         <b>center of gravity</b>
+          is shown as a red dot and the 
+         <b>center of pressure</b>
+          as a green dot. The tail of the kite is given as a green line at the
+          bottom. 
+          </font></li>
+        <li><font size="2" face="Arial, Helvetica, sans-serif"><b>Side</b> shows 
+          the kite as viewed looking along the surface. This view is 
+          the default during the 
+         <b>Trim</b>
+          phase of your kite. 
+          The wind is blowing
+          over the kite from left to right and the
+         magnitude
+          of the wind is
+          shown by a small green arrow at the bottom.  
+          The kite surface is again shown as a white area, and the tail as a cyan
+          line at the right. The length of the tail (T) is set on the trim input panel.
+          The kite surface is inclined to the horizontal at the
+         <b>angle of attack</b>
+          of the kite.
+          The
+         <b>bridle</b>
+          of the kite is given by the white line below
+          the kite surface. The bridle length (B) is set on the trim input panel. 
+          The 
+         <b>control line</b>
+          is shown by a magenta line from the lower left.
+          The control line is attached to the bridle at the 
+         <b>bridle point (knot)</b>
+          shown as a white dot.  The distance of the knot from the base of the
+          kite is denoted by (K) and is shown as a yellow line below the bridle. 
+          This distance is also set on the Trim input panel.
+          This drawing changes as you trim the kite by changing the length of the
+          bridle or the location of the knot.
+          The lift, drag, and weight
+          forces that are acting on the kite 
+          during flight are displayed as vectors (arrows) with the lengths 
+          proportional to one another. You can change the length of all the force
+          vectors by using the "Scale" slider at the bottom of the window. 
+         </font></li>
+        <li><font size="2" face="Arial, Helvetica, sans-serif"><b>Field</b> shows 
+          the kite flying with the control line running from you to the kite. This view is 
+          recommended during the "Flight" phase of your kite. 
+          As before, the wind blows from left to right over the kite. 
+          A white line shows the length and shape of the control line. (Notice that the
+          line sags
+          under its own weight and may even touch the ground.) The kite flies
+          at some distance "X" from your feet and at some height "Y" above the ground.
+          The values of these variables are shown on the Output panel. 
+          If you let out line, the kite may leave the view window. You can change the
+          size of the display by using the "Scale" slide at the bottom.
+         </font></li>
+      </ol>
+
+      <p><font size="2" face="Arial, Helvetica, sans-serif"><a name="OUTPUT VARIABLES"></a><b>OUTPUT 
+        VARIABLES</b></font></p>
+      <p><font size="2" face="Arial, Helvetica, sans-serif">
+        Output variables are displayed at the bottom right of the program screen.
+        In most cases, these output variables are calculated by the computer program
+        using mathematical equations. 
+       </p>
+       <p>
+        If the "Design" or "Trim" mode is chosen, the following variables are displayed.
+        The
+         <b>Weight</b>
+        of the kite is calculated based on the input geometry and
+        the materials selected. The weight is displayed in ounces or gram-weights and
+        does not include the weight of the control line.
+        The aerodynamic
+         <b>Lift</b> and
+         <b>Drag</b>
+         are computed by the program and displayed in ounces or gram-weights.
+         The 
+         <b>Tension</b>
+         in the line is displayed in ounces or grams. This is computed based on the
+         forces on the kite and the weight of the line.
+         The
+         <b>Center of Gravity (Cg)</b> and
+         <b>Center of Pressure (Cp)</b>
+         are the average location of the weight and aerodynamics forces, respectively.
+         They are computed by the program in inches or centimeters from the bottom of the kite
+         as shown in the "Front" view.
+         The 
+         <b>Surface Area</b>
+         of all the material and the length of all the components of the
+         <b>Frame</b>
+         needed to make your kite
+         are computed based on your geometric input and the type of kite selected.
+         These values are used in the computation of the weight and Cg.
+         The  trimmed
+         <b>Angle</b>
+         of attack is displayed in degrees and
+         may be either input by the user or calculated by the program.
+         If the value is calculated by the program, the output numerals are
+         green and the value is calculated to eliminate any torque on the kite.
+         If the value is input, the output numerals are yellow
+         to warn the user that the resulting flight conditions may be unstable. 
+         The program calculates the net 
+         <b>Torque</b>
+         on the kite about the bridle point. In stable flight the value is zero (in this
+         program it is computed to a very small but non-zero number). 
+         The units for torque are ounces-inch.
+         Using the "Side" view of the kite, a positive torque is clockwise and a
+         negative torque is counter-clockwise about the bridle point.
+       </p>
+       <p>
+         If the "Fly" mode is selected, four additional variables are displayed.
+         The
+         <b>Range-X</b>
+         is the horizontal distance of the kite from your location during
+         flight. This value is related to the Height-Y and is also displayed on
+         the "Field" view.
+         The 
+         <b>Height-Y</b>
+         is the predicted altitude at which your kite flies. This value depends
+         on the flight characteristics of the kite, the wind velocity, the atmospheric
+         conditions, and the
+         amount of control line that you use. The value is computed in feet or meters and
+         is shown on the "Field" view.
+         The atmospheric
+         <b>pressure</b>
+         is displayed in pounds per square inch (psi) or or kilo-Pascals (kPa) and
+         depends on the altitude and planet chosen on the input panel.
+         The atmospheric
+         <b>temperature</b>
+         is also displayed in degrees Fahrenheit (F) or Celsius (C).
+       </font></p>
+
+      <p><font size="2" face="Arial, Helvetica, sans-serif"><a name="INPUT VARIABLES"></a><b>INPUT 
+        VARIABLES</b></font></p>
+
+      <p><font size="2" face="Arial, Helvetica, sans-serif">
+          Input variables are displayed on input panels at the upper right of the screen.
+          There are four sets of input variables which depend on the program mode.
+       <ol>
+       <li> In the "Design" mode, the default input panel is the <b>Shape</b> panel.
+            On the Shape panel you first select the type of kite to be designed
+            by using the drop menu at the upper right. You can choose from five 
+         <b>basic designs</b>.
+            Depending on the design, you then vary the height, 
+         <b>H1 and H2</b>,
+            and width parameters, 
+         <b>W1 and W2</b>,
+           to alter the shape of your kite. 
+            The "Front" view shows the meaning of these variables and also indicates if your
+            design is unstable.
+            There are default geometries for each kite based on the width <b>W1</b>. If you
+            change the type of kite, you will get the new kite default with the current
+            value of W1 held constant. Pushing the <b>Reset</b> button on the view panel
+            will return the default geometry with W1 = 10 inches.
+        </li>
+        <li> In the "Design" mode, you can also change the material properties of all
+             of the parts of your kite. Push the white
+             "Material" button to display the 
+             <b>Material</b> input panel.     
+             On the Material panel you change the material used for the <b>Surfaces</b>, <b>Frame</b>, 
+             <b>Tail</b>,
+             and control <b>Line</b> by using the drop menu at the far right of each part. 
+             Each material has a characteristic 
+         <b>"density"</b>
+             which is displayed in the black output
+             box. This density is used to compute the weight and Cg of your kite and the
+             sag of the control line. For each part you 
+             can <b>Specify</b> your own material density by making this selection on the drop
+             menu. The black output box then becomes a white input box and you can enter your own
+             data as described above.
+             You can also change the size of your kite by using the <b>Max Dimension</B>
+             input.  This value is used for the maximum value on the height, width, and bridle 
+             sliders and input boxes on the "Shape" panel.
+          </li>
+          <li>
+             In the "Trim" mode, the default input panel is the <b>Trim</b> panel.
+             On the Trim panel you can select to have the program compute
+             the trimmed angle
+             of attack or your can input your own flight angle of attack
+             by using the
+             drop menu at the upper right. If you decide to input your angle of attack,
+             you then input the angle
+             in degrees. The "Side" view shows the inclination
+             of your kite relative to the wind. The most important variables used to trim
+             your kite are the 
+         <b>Bridle</b> and
+         <b>Knot</b>
+             variables. Bridle gives the
+             total length of the bridle string in inches or centimeters. Knot gives the length along the
+             bridle string from the base of the kite to the attachment of the control line.
+             These two variables affect the trim angle of the kite which affects the magnitude
+             of the aerodynamic forces. Because the kite pivots about the knot in flight, the
+             location of the knot has a large effect on the stability of the kite.
+             The length of the <b>Tail</b> also affects stability and trim by shifting the Cg.
+           </li>
+           <li>
+             In the "Fly" mode, you may choose to fly your kite on
+             Earth or on Mars by using the menu button at the right.
+             The gravitational constant on Mars is different than the earth, so you
+             will notice that the weight of your kite changes. (The material densities
+             and payload weight are still based on "earth" values).
+             You can set the altitude in feet or meters which changes the
+             atmospheric pressure and temperature using an
+                atmospheric model.
+             You can set the 
+         <b>Wind</b>
+             speed in feet or meters per second and the
+             length of the control 
+         <b>Line</b>
+             in feet or meters. The weight of the control line is
+             calculated and causes the line to sag as shown in the "Field" view. Eventually
+             a point is reached where the line touches the ground at your feet. The program
+             then ignores any additional line input that you make.
+            You can also attach a payload to your kite at the center of gravity using
+             the input box and slider at the bottom of the panel.
+           </li>
+           </ol>
+       </font></p>
+  <p><b>NEW FEATURES</b></p>
+  <p>The Educational Programs Office will continue to improve and update KiteModeler
+     based on user input. Changes from previous versions of the program include:</p>
+  <ol>
+    <li>On <b>28 Aug 12</b>, version 1.5a was released. This version includes
+        a new variable to set the maximum size of the kite. This allows the user
+        to design very large, or very small kites. We have also re-arranged the
+        input panels and changed the colors on some buttons
+        to be more consistent with other simulators at the
+        Beginner's Guide to Aeronautics.
+     </li>
+
+    <li>On <b>14 May 12</b>, version 1.4c was released. This version includes
+        some small fixups on the displays and labels.
+     </li>
+
+    <li>On <b>3 Nov 04</b>, version 1.4b was released. This version includes
+        the "Tumbleweed" kite design which was requested by NASA Langley in
+        support of a study of a passive Mars rover design. The layout of the
+        program was modified and the planet, altitude, and payload inputs were
+        added.
+     </li>
+    <li>On <b>25 Sep 03</b>, version 1.3b was released. This version includes
+        the "Twin Trap" kite design which was requested for a NASA Connect
+        broadcast concerning the Centennial of Flight.
+     </li>
+    <li>On <b>1 Oct 02</b>, version 1.3 was released. This version includes
+        the output text field at the bottom of the program, the default geometries
+        for all the kites, the Reset feature, the line tension output,
+        and a fixed bug in the line weight.
+     </li>
+    <li>On <b>29 July 02</b>, version 1.2 was released. This version includes
+       English and Metric units and the Twin-Trap kite geometry.
+     </li>
+    <li>On <b>28 Mar 02</b>, version 1.1 was released.
+     </li>
+  </ol>
+
+<p>
+    Enjoy!
+
+</BODY>
+</HTML>

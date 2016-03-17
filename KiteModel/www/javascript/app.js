@@ -70,6 +70,7 @@ reel_speed = 0;
 pitch=0;
 line_tension = 0;
 aspectRatio = 5;
+chord = kite_surface/aspectRatio;
 
 isDynamic = true;
 isGround  = true;
@@ -129,6 +130,7 @@ told = 0;
 simulation_time = 0;
 
 function plot(kite_position, base_position, pitch){
+  plotKite();
   rotateKite(pitch);
   translateKite(kite_position.y, kite_position.z);
   translateBase(base_position.y, base_position.z);
@@ -294,7 +296,7 @@ function update(){
   
 }
 function rotateKite(r){
-    kite = document.getElementById("kite");
+    kite = document.getElementById("kite_frame");
         r_deg = r*180/Math.PI;
 		kite.setAttribute('transform', 'rotate(' +r_deg +')');
 		}
@@ -309,6 +311,12 @@ function translateBase(y, z){
   kite_line = document.getElementById("kite_line");
   kite_line.setAttribute('x1', y*meter2pix);
   kite_line.setAttribute('y1', -z*meter2pix);
+}
+function plotKite(){
+  chord = kite_surface/aspectRatio;
+  kite = document.getElementById("kite");
+  kite.setAttribute('x1', -1/3.*chord*meter2pix);
+  kite.setAttribute('x2', 2/3*chord*meter2pix);
 }
 function plotFluidVelocity(){
   for (i=0;i<23;i++)

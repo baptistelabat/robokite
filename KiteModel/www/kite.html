@@ -5,7 +5,11 @@
 </head>
 <body>
   <p>Kite pendulum 2D simulator <a href="https://github.com/baptistelabat/robokite/tree/master/KiteModel/www">(source code)</a><br>
-  <output id = "time">0</output>s   <output id = "kiteSpeed">0</output>m/s <output id = "lineTension">0</output>dN
+  <output id = "time">0</output>s   <output id = "kiteSpeed">0</output>m/s <output id = "lineTension">0</output>dN<br>
+ Power transmitted to winch <output id = "winchPower">0</output>W<br>
+ Power transmitted to base <output id = "cartPower">0</output>W<br>
+ Power taken from air <output id = "airPower">0</output>W<br>
+ Power from weight <output id = "weightPower">0</output>W
     </p>
     <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="1000" height="500">
     <marker id="triangle"
@@ -173,6 +177,7 @@
         </div>
       </fieldset>
     </form>
+    See also <a href="http://www.grc.nasa.gov/WWW/K-12/airplane/kiteprog.html">this Nasa simulator (java applet)</a>
     <div id="output">
     </div>
     <script type = "text/javascript" language="javascript" src = "javascript/three.min.js" charset="utf-8"></script>	

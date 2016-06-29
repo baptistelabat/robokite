@@ -21,7 +21,7 @@ clients = []
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render("webgl_loader_collada.html")
+        self.render("webgl_IMU.html")
  
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):  
@@ -36,6 +36,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
       clients.remove(self)
       print "close"
+	
+    def check_origin(self, origin):
+      return True
 
 handlers = [
     (r"/", MainHandler),

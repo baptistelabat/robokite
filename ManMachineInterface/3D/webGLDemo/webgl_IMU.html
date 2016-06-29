@@ -38,10 +38,13 @@
         <script src="static/libs/stats.min.js"></script>
 
         <script>
-            var ws = new WebSocket("ws://"+window.location.host + "/websocket");
+            //var ws = new WebSocket("ws://"+window.location.host + "/websocket");
+			var ws = new WebSocket("ws://localhost:8080/websocket");
+			//var ws = new WebSocket("ws://192.168.43.28:8080/websocket");
             ws.onmessage = function(evt){
             var myOutput = document.getElementById("info");
                 myOutput.innerHTML = evt.data;
+				//console.log(evt.data);
             }
 
             if ( ! Detector.webgl ) Detector.addGetWebGLMessage();

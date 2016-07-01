@@ -258,7 +258,16 @@ function update(){
     }
     if (isGround)
     {
-      elevation = Math.min(Math.max(0, elevation), Math.PI);
+	if (elevation<0)
+	{
+	  elevation = 0;
+	  pqr.x = 0;
+	}
+	if (elevation>Math.PI)
+	{
+      		elevation = Math.PI;
+		pqr.x = 0;
+	}
     }
     kite_position.set(0, Math.cos(elevation), Math.sin(elevation)).multiplyScalar(line_length).add(base_position);
     kite_velocity.set(0, -Math.sin(elevation), Math.cos(elevation)).multiplyScalar(line_length*pqr.x);
@@ -289,9 +298,18 @@ function update(){
     }
     if (isGround)
     {
-      kite_position.z = Math.max(0, kite_position.z);
+	if (kite_position.z<0)
+	{
+      		kite_position.z = 0;
+		kite_velocity.z = 0;
+	}
     }
   }
+
+  winch_power = line_tension*reel_speed;
+  cart_power  = base_velocity.y*line_tension*Math.cos(elevation);
+  air_power   = Faero.x*fluid_relative_velocity.x + Faero.y*fluid_relative_velocity.y+Faero.z*fluid_relative_velocity.z;
+  weight_power = Fweight.x*kite_velocity.x + Fweight.y*kite_velocity.y+Fweight.z*kite_velocity.z
   
   
 }
@@ -426,6 +444,18 @@ function updateOutput(){
     
     myOutput = document.getElementById("kiteSpeed");
     myOutput.value = Math.round(pqr.x*line_length*10)/10;
+
+    myOutput = document.getElementById("winchPower");
+    myOutput.value = Math.round(winch_power*10)/10;
+
+    myOutput = document.getElementById("cartPower");
+    myOutput.value = Math.round(cart_power*10)/10;
+
+    myOutput = document.getElementById("airPower");
+    myOutput.value = Math.round(air_power*10)/10;
+
+    myOutput = document.getElementById("weightPower");
+    myOutput.value = Math.round(weight_power*10)/10;
 }
 function updateyBase(){
 		//get elements

@@ -17,6 +17,7 @@ import datetime
 import time
 import json
 import math
+import ssl
 clients = []
 
 class MainHandler(tornado.web.RequestHandler):
@@ -53,11 +54,15 @@ def timer():
     for c in clients:
         #c.write_message(datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%Mm_%Ss"))
         t = time.time()
-        c.write_message( json.dumps({'x':30*math.sin(t), 'y':30*math.sin(t), 'z':30*math.sin(t), 'xrotation':math.sin(t), 'yrotation':math.cos(t), 'zrotation':0})
+        c.write_message( json.dumps({'x':0*math.sin(t), 'y':0*math.sin(t), 'z':0*math.sin(t), 'roll':math.sin(t), 'pitch':math.cos(t), 'yaw':0, 'coordinates':'EulerAngles'})
 )
  
 if __name__ == "__main__":
-    application.listen(8080)
+    data_dir = "C:/OpenSSL-Win32/bin"
+    ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_ctx.load_cert_chain(os.path.join(data_dir, "cert.pem"),
+                        os.path.join(data_dir, "key.pem"))
+    application.listen(8080,ssl_options=ssl_ctx)
     mainLoop = tornado.ioloop.IOLoop.instance()
     scheduler = tornado.ioloop.PeriodicCallback(timer, 100, io_loop = mainLoop)
     scheduler.start()

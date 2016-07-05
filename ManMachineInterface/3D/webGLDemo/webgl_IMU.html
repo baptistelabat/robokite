@@ -39,8 +39,8 @@
 
         <script>
             //var ws = new WebSocket("ws://"+window.location.host + "/websocket");
-			var ws = new WebSocket("ws://localhost:8080/websocket");
-			//var ws = new WebSocket("ws://192.168.43.28:8080/websocket");
+			//var ws = new WebSocket("ws://localhost:8080/websocket");
+			var ws = new WebSocket("wss://192.168.43.28:8080/websocket");
             ws.onmessage = function(evt){
             var myOutput = document.getElementById("info");
                 myOutput.innerHTML = evt.data;

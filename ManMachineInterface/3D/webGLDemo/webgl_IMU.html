@@ -39,8 +39,8 @@
 
         <script>
             //var ws = new WebSocket("ws://"+window.location.host + "/websocket");
-			//var ws = new WebSocket("ws://localhost:8080/websocket");
-			var ws = new WebSocket("wss://192.168.43.28:8080/websocket");
+			var ws = new WebSocket("ws://localhost:8080/websocket");
+			//var ws = new WebSocket("wss://192.168.8.102:8080/websocket");
             ws.onmessage = function(evt){
             var myOutput = document.getElementById("info");
                 myOutput.innerHTML = evt.data;
@@ -61,7 +61,7 @@
             loader.options.convertUpAxis = true;
             
             // Load the collada file ('.dae' extension)
-            loader.load( './static/phone.dae', function ( collada ) {
+            loader.load( './static/foil.dae', function ( collada ) {
 
                 dae = collada.scene;
                 skin = collada.skins[ 0 ];

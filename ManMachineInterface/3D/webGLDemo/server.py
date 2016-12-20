@@ -19,6 +19,8 @@ import json
 import math
 import ssl
 clients = []
+global t0
+t0 = 0
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -29,9 +31,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
       print "message received"     
 
     def open(self):
+      global t0
       self.vote = 50
       clients.append(self)
       self.write_message(u"Connected")
+      t0 = time.time()
       print "open"
       
     def on_close(self):
@@ -51,18 +55,23 @@ settings = dict(
 application = tornado.web.Application(handlers, **settings)
 
 def timer():
+    global t0
     for c in clients:
         #c.write_message(datetime.datetime.utcnow().strftime("%Y%m%d_%Hh%Mm_%Ss"))
-        t = time.time()
-        c.write_message( json.dumps({'x':0*math.sin(t), 'y':0*math.sin(t), 'z':0*math.sin(t), 'roll':math.sin(t), 'pitch':math.cos(t), 'yaw':0, 'coordinates':'EulerAngles'})
+        t = time.time()-t0
+        print(t0)
+        c.write_message( json.dumps({'t':t,'x':0, 'y':math.sin(t)*0, 'z':0*math.sin(t), 'roll_deg':math.sin(t)*5, 'pitch_deg':math.cos(t)*5, 'yaw_deg':0, 'coordinates':'EulerAngles'})
 )
  
 if __name__ == "__main__":
-    data_dir = "C:/OpenSSL-Win32/bin"
-    ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_ctx.load_cert_chain(os.path.join(data_dir, "cert.pem"),
-                        os.path.join(data_dir, "key.pem"))
-    application.listen(8080,ssl_options=ssl_ctx)
+    useSSL = False
+    if useSSL:
+        data_dir = "C:/OpenSSL-Win32/bin"
+        ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_ctx.load_cert_chain(os.path.join(data_dir, "cert.pem"), os.path.join(data_dir, "key.pem"))
+        application.listen(8080,ssl_options=ssl_ctx)
+    else:
+	    application.listen(8080)
     mainLoop = tornado.ioloop.IOLoop.instance()
     scheduler = tornado.ioloop.PeriodicCallback(timer, 100, io_loop = mainLoop)
     scheduler.start()

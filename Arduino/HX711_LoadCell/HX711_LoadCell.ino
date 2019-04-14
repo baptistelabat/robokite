@@ -16,9 +16,9 @@
 #define HX711_CLK   11
 #define HX711_GND   13
 
-#define OFFSET 8177300 // From raw value when no load
-#define SCALE  -146.7  // From calibration
-HX711 scale(HX711_DOUT, HX711_CLK);
+#define OFFSET -797000 // From raw value when no load
+#define SCALE  37.0  // From calibration
+HX711 scale;
 long raw_value;
 
 void setup() {
@@ -32,6 +32,7 @@ void loop() {
 
 void setupHX711() {
   // Ground connection
+  scale.begin(HX711_DOUT, HX711_CLK);
   pinMode(HX711_GND, OUTPUT);
   Serial.print("HX711_DOUT -> D");
   Serial.println(HX711_DOUT);
@@ -48,11 +49,9 @@ void setupHX711() {
 void loopHX711() {
   raw_value = scale.get_units();
   Serial.print("Reading: ");
-  Serial.print(raw_value, 1); //raw value
+  Serial.print(raw_value); //raw value
   Serial.print(" ");
   Serial.print((raw_value-OFFSET)/SCALE, 1); //scaled and offset after calibration
   Serial.print(" g"); 
   Serial.println();
 }
-
-

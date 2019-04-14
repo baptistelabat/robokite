@@ -28,37 +28,37 @@ cd ..
 	# Sabertooth library
 wget www.dimensionengineering.com/software/SabertoothArduinoLibraries.zip
 unzip SabertoothArduinoLibraries.zip
-mv Sabertooth ~/sketchbook/libraries
-mv SyRenSimplified ~/sketchbook/libraries
-mv USBSabertooth ~/sketchbook/libraries
-mv SabertoothSimplified ~/sketchbook/libraries
+mv Sabertooth ~/Arduino/libraries
+mv SyRenSimplified ~/Arduino/libraries
+mv USBSabertooth ~/Arduino/libraries
+mv SabertoothSimplified ~/Arduino/libraries
 rm SabertoothArduinoLibraries.zip
 rm install.txt
 	# Interrupt library
-git clone https://github.com/GreyGnome/PinChangeInt.git ~/sketchbook/libraries/PinChangeInt
+git clone https://github.com/GreyGnome/PinChangeInt.git ~/Arduino/libraries/PinChangeInt
 	# NMEA library
-git clone https://github.com/mikalhart/TinyGPSPlus.git ~/sketchbook/libraries/TinyGPSPlus
+git clone https://github.com/denravonska/TinyGPSPlus.git ~/Arduino/libraries/TinyGPSPlus
 	# PID library
 git clone https://github.com/br3ttb/Arduino-PID-Library.git
-mv Arduino-PID-Library/PID_v1 ~/sketchbook/libraries
+mv Arduino-PID-Library/PID_v1 ~/Arduino/libraries
 sudo rm -R Arduino-PID-Library
 	# Modified software serial library
-mv Arduino/libraries/mySoftwareSerial ~/sketchbook/libraries
+mv Arduino/libraries/mySoftwareSerial ~/Arduino/libraries
 
 
 # Download arduino dependencies for embedded board
 	# MPU9150 and I2C libraries
 git clone https://github.com/sparkfun/MPU-9150_Breakout.git
-mv MPU-9150_Breakout/firmware/I2Cdev ~/sketchbook/libraries
-mv MPU-9150_Breakout/firmware/MPU6050 ~/sketchbook/libraries
+mv MPU-9150_Breakout/firmware/I2Cdev ~/Arduino/libraries
+mv MPU-9150_Breakout/firmware/MPU6050 ~/Arduino/libraries
 sudo rm  -R MPU-9150_Breakout/
 	# MS5611 library
 git clone https://github.com/Fabio-Varesano-Association/freeimu.git
-mv freeimu/libraries/MS561101BA/ ~/sketchbook/libraries/
+mv freeimu/libraries/MS561101BA/ ~/Arduino/libraries/
 sudo rm -R freeimu
 	# Mavlink library
-mv Arduino/libraries/MavlinkForArduino ~/sketchbook/libraries
-git clone https://github.com/mavlink/c_library.git ~/sketchbook/libraries/MavlinkForArduino
+mv Arduino/libraries/MavlinkForArduino ~/Arduino/libraries
+git clone https://github.com/mavlink/c_library.git ~/Arduino/libraries/MavlinkForArduino
 
 # Download dependencies needed to visualize, modify 3D models
 	# Openscad
@@ -107,7 +107,7 @@ sudo pip install https://github.com/sightmachine/SimpleCV/zipball/develop
 # Basemap
 sudo apt-get install python-mpltoolkits.basemap
 
-git clone https://github.com/PaulStoffregen/RadioHead.git ~/sketchbook/libraries/RadioHead
+git clone https://github.com/PaulStoffregen/RadioHead.git ~/Arduino/libraries/RadioHead
 
 # Qgroundcontrol
 wget http://latestfiasco.com/ftp/QGroundControl-Stable-V2.2.1.tar.bz2

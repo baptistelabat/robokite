@@ -16,6 +16,7 @@ sudo pip install tornado
 
 	# Mavlink
 git clone git://github.com/mavlink/mavlink.git
+git submodule update --init --recursive
 cd mavlink/pymavlink
 sudo python setup.py install
 cd ..
@@ -58,7 +59,7 @@ mv freeimu/libraries/MS561101BA/ ~/Arduino/libraries/
 sudo rm -R freeimu
 	# Mavlink library
 mv Arduino/libraries/MavlinkForArduino ~/Arduino/libraries
-git clone https://github.com/mavlink/c_library.git ~/Arduino/libraries/MavlinkForArduino
+git clone https://github.com/mavlink/c_library_v2.git ~/Arduino/libraries/MavlinkForArduino/c_library_v2
 
 # Download dependencies needed to visualize, modify 3D models
 	# Openscad

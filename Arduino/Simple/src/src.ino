@@ -19,17 +19,20 @@
 #include <SoftwareSerial.h>
 #include <SabertoothSimplified.h>
 #include <TinyGPS++.h>
-#include <PID_v1.h>
 
 const int ledPin = 13;
 
 String inputString = "";         // a string to hold incoming data
 boolean stringComplete = false;  // whether the string is complete
+boolean isTimeOut = false;
 
 //Note: NOT_A_PIN (0) was previously used for RX which is not used, but this was causing problems
 SoftwareSerial SWSerial(10, 8); // RX, TX. RX on no pin (unused), TX on pin 8 (to S1).
 SabertoothSimplified ST(SWSerial); // Use SWSerial as the serial port.
 int power1, power2;
+long lastSerialReception_ms;
+long last_order_ms = 0;
+#define ORDER_RATE_ms 100
 
 TinyGPSPlus nmea;
 // O stands for Opensource, R for Robokite
@@ -40,13 +43,6 @@ TinyGPSCustom pwm2     (nmea, "ORPW2", 1);  // Dimentionless voltage setpoint (P
 TinyGPSCustom setpos1  (nmea, "ORSP1", 1);  // Position setpoint for Sabertooth output 1
 TinyGPSCustom setpos2  (nmea, "ORSP2", 1);  // Position setpoint for Sabertooth output 2
 boolean isFeedbackRequested = false;
-
-// Define Variables we'll be connecting to
-double Setpoint1, Input1, Output1;
-double Setpoint2, Input2, Output2;
-// Specify the links and initial tuning parameters (Kp, Ki, Kd)
-PID myPID1(&Input1, &Output1, &Setpoint1, 1, 0, 0, DIRECT);
-PID myPID2(&Input2, &Output2, &Setpoint2, 1, 0, 0, DIRECT);
 
 void setup()
 {
@@ -78,6 +74,8 @@ void serialEvent()
     if (inChar == '\n') {
       stringComplete = true;
     } 
+    lastSerialReception_ms = millis();
+    isTimeOut = false;
   }
 }
 
@@ -93,9 +91,14 @@ void loop()
 
 void processSerialInput()
 {
+  if (fabs(millis()-lastSerialReception_ms)>1000)
+  {
+    isTimeOut = true;
+  }
   // print the string when a newline arrives:
   if (stringComplete)
   {   
+    
     //Serial.println(inputString);
     char ctab[inputString.length()+1];
     inputString.toCharArray(ctab, sizeof(ctab));
@@ -107,11 +110,11 @@ void processSerialInput()
       {
         if (pwm1.isUpdated())
         { 
-          myPID1.SetMode(MANUAL);
+          pwm1.value();
         }
         if (pwm2.isUpdated())
         {
-          myPID2.SetMode(MANUAL);
+          pwm2.value();
         }
         if (feedback_request.isUpdated())
         {
@@ -144,21 +147,30 @@ void sendFeedback()
 }
 
 void computeOrder()
-{
-  if (myPID1.GetMode() == MANUAL)
+{ 
+  if (isTimeOut)
+  {
+    power1 = 0;
+    power2 = 0;
+  }
+  else
   {
     power1 = atoi(pwm1.value());
-  }
-  if (myPID2.GetMode() == MANUAL)
-  {
     power2 = atoi(pwm2.value());
   }
+    
 }
 
 void sendOrder()
 {
+  if (fabs(millis()-last_order_ms)>ORDER_RATE_ms)
+  {
+    last_order_ms = millis();
   // Order in the range -127/127
+    //SWSerial.println(127);
+      //Saturation based on posSat
    ST.motor(1, power1);
    ST.motor(2, power2);
+}
 }
  

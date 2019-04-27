@@ -12,7 +12,6 @@
 #include <SabertoothSimplified.h> // From http://www.dimensionengineering.com/software/SabertoothArduinoLibraries.zip
 #include <TinyGPS++.h>    // From https://github.com/mikalhart/TinyGPSPlus
 #include <PID_v1.h>       // From https://github.com/br3ttb/Arduino-PID-Library/tree/master/PID_v1
-#include <RH_ASK.h>
 #include <SPI.h> // Not actualy used but needed to compile
 #include <MavlinkForArduino.h>
 
@@ -55,12 +54,9 @@ TinyGPSCustom kdm1 (nmea, "ORKD1", 1); // Derivative coefficient multiplicator
 //TinyGPSCustom kdm2 (nmea, "ORKD2", 1); // Derivative coefficient multiplicator
 boolean isFeedbackRequested = false;
 
-uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
-uint8_t buflen = sizeof(buf);
 uint8_t data[4];  // 2 element array of unsigned 8-bit type, holding Joystick readings
-RH_ASK driver(4800, RF_DATA_PIN, 6);
-boolean isRFUpdated = false;
-// RECEPTEUR : DATA D11
+
+
 
 // PID for robust control
 // Define Variables we'll be connecting to
@@ -81,15 +77,6 @@ float Kd2 = 0.001;
 PID myPID1(&Input1, &Output1, &Setpoint1, Kp1, Ki1, Kd1, DIRECT);
 PID myPID2(&Input2, &Output2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 
-// Hardware specific parameters
-// Potentiometer
-#define POT_RANGE_DEG      300 // 300 is the value for standard potentiometer
-#define POT_USED_RANGE_DEG  60 // To normalize and saturate rotation
-#define NEUTRAL_ANGLE_DEG    0 // Zero of the potentiometer
-// Linear encoder
-#define LINEAR_RESOLUTION 0.005// Resolution of the linear encoder
-#define LINEAR_USED_RANGE 0.05 // To normalize and saturate translation motion
-#define PI 3.1415
 
 #define ORDER_RATE_ms 100
 long last_order_ms = 0;
@@ -97,8 +84,21 @@ long last_simu_ms = 0;
 int dt_ms = 0;
 
 boolean SIL = false; // Use Software in the Loop simulation
+
+/* HX711 part */
+#include "HX711.h"
+
+#define HX711_DOUT  12 // or DAT
+#define HX711_CLK   11
+#define HX711_GND   13
+
+#define OFFSET -797000 // From raw value when no load
+#define SCALE  37.0  // From calibration
+HX711 scale;
+long raw_value;
 void setup()
 {
+  setupHX711();
   pinMode(LED_PIN, OUTPUT); 
   
   // Initialize software serial communication with Sabertooth 
@@ -106,9 +106,6 @@ void setup()
   
   // Initialize serial communications with computer
   Serial.begin(115200);
-  
-  if (!driver.init())
-    Serial.println("init failed");
   
   // Reserve bytes for the inputString:
   inputString.reserve(200);
@@ -132,9 +129,25 @@ void setup()
   {
     data[i] = 127;
   }
-  data[0] = NEUTRAL_ANGLE_DEG*255./POT_RANGE_DEG+127;
   
   last_simu_ms = millis();
+}
+
+void setupHX711() {
+  // Ground connection
+  scale.begin(HX711_DOUT, HX711_CLK);
+  pinMode(HX711_GND, OUTPUT);
+  Serial.print("HX711_DOUT -> D");
+  Serial.println(HX711_DOUT);
+  Serial.print("HX711_CLK -> D");
+  Serial.println(HX711_CLK);
+  Serial.print("HX711_GND -> D");
+  Serial.println(HX711_GND);
+  Serial.println("HX711_VCC -> 3V3");
+
+   // No calibration, read the raw value
+  scale.set_offset(0);
+  scale.set_scale(1);
 }
 
 /*
@@ -161,7 +174,7 @@ void serialEvent()
 void loop()
 {
    processSerialInput();
-   processRFInput();
+   processInput();
    if (false==SIL)
    {
      computeFeedback();
@@ -175,18 +188,15 @@ void loop()
    sendFeedback();
    delay(10);
 }
-void processRFInput()
+void processInput()
 {
-    if (driver.recv(buf, &buflen)) // Non-blocking
-    {
-	// Message with a good checksum received, dump it.
-	//driver.printBuffer("Got:", buf, buflen);
-        for (byte i = 0; i < buflen; i++) // Si il n'est pas corrompu on l'affiche via Serial
-	{ 
-          data[i] = buf[i];
-        }
-        isRFUpdated = true;       
-    }
+  data[0] = scale.get_units();
+  Input1 = (data[0]-OFFSET)/SCALE;
+
+
+  Input4 = analogRead(A0)/1023.;
+  Input5 = analogRead(A1)/1023.;
+  Input6 = analogRead(A2)/1023.;
 }
 
 void processSerialInput()
@@ -198,7 +208,7 @@ void processSerialInput()
     char ctab[inputString.length()+1];
     inputString.toCharArray(ctab, sizeof(ctab));
     char *gpsStream = ctab;
-    
+
     while (*gpsStream)
     {
       if (nmea.encode(*gpsStream++))
@@ -258,17 +268,8 @@ void computeFeedback()
   // Feedbacks are normalized between -1 and 1
   
   // Potentiometer angle
-  float rawAngle_deg = (data[0]-127)/255.0*POT_RANGE_DEG;
-  Input1 = (rawAngle_deg - NEUTRAL_ANGLE_DEG)*1.0/POT_USED_RANGE_DEG;
+  float rawAngle_deg = (data[0]-127)/255.0;
   
-  // Linear encoder position
-  Input2 = (data[1]-127)/255.;//*LINEAR_RESOLUTION/2./LINEAR_USED_RANGE;
-  
-  // Line tension
-  Input3 = data[3]/127. - 1;
-  Input4 = analogRead(A0)/1023.;
-  Input5 = analogRead(A1)/1023.;
-  Input6 = analogRead(A2)/1023.;
 }
 
 void sendFeedback()
@@ -287,19 +288,6 @@ void sendFeedback()
   if (isFeedbackRequested)
   {
     
-    if (isRFUpdated)
-    {
-      float fdbk[8];//fdbk
-      fdbk[0] = float(Input1);
-      fdbk[1] = float(Input2);
-      fdbk[2] = float(Input3);
-
-      isRFUpdated = false;
-
-      //mavlink_msg_actuator_control_target_pack(system_id, component_id, &msg, time_us, group_mlx, fdbk);
-      //len = mavlink_msg_to_send_buffer(bufout, &msg);
-      //Serial.write(bufout, len);
-    }
     float orders[8];
     orders[0] = float(power1/127.);
     orders[1] = float(power2/127.);

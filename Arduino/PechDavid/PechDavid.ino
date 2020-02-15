@@ -2,18 +2,15 @@
 // Copyright (c) 2012 Dimension Engineering LLC
 // See license.txt for license details.
 
-#define RC_CMD_PIN 7
-#define RC_THRESHOLD_PIN 9
+#include "A_RCReceiver.h"
+#include "B_HX711.h"
+#include "C_Sabertooth.h"
+#include "D_Servo.h"
 
-#define SABERTOOTH_PIN 10
 
-#define HX711_DOUT  12 // or DAT
-#define HX711_CLK   11
-#define HX711_GND   13
 
-byte value1;
-byte value2;
-byte value3;
+
+
 
 void setup()
 {
@@ -21,27 +18,33 @@ void setup()
   setupSabertooth();
   setupRCReceiver();
   setupHX711();
+  setupServo();
 }
 
 
 void loop()
 {
   loopHX711();
-  int cmd, threshold, CLcmd, maxcmd;
+  int cmd, threshold, CLcmd, maxcmd, servocmd;
   double lineTension, CL;
   lineTension = getLineTension()-50;
   loopRCReceiver();
-  threshold = value3;
-  cmd = value1-127;
-  maxcmd = value2-127;
+  threshold = getValue3();
+  cmd = getValue1()-127;
+  maxcmd = getValue2()-127;
   maxcmd = constrain(maxcmd, 0, 127);
   CL = maxcmd-threshold/255.0*maxcmd*lineTension/1500.0*10;
   CLcmd = constrain(CL, 0, maxcmd);
   cmd = cmd  - CLcmd;
+  servocmd = 120+60*sin(get_cmd_integral()/127.0);
   Serial.print(lineTension);
   Serial.print('\t');
   Serial.print(threshold);
   Serial.print('\t');
   Serial.println(CL);
+  Serial.print(servocmd);
+  Serial.println(cmd);
   sendSabertooth(cmd);
+  
+  sendServo(servocmd);
 }

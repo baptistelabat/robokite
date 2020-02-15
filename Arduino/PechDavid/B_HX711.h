@@ -12,11 +12,17 @@
 
 #include "HX711.h"
 
+#define HX711_DOUT  12 // or DAT
+#define HX711_CLK   11
+#define HX711_GND   13
+
+
 #define OFFSET 385000 //10000 // From raw value when no load
 #define SCALE  -230 //140.0  // From calibration
 HX711 scale;
 long raw_value = 0;
 double val;    // variable to read the value from the analog pin
+
 
 
 void setupHX711() {

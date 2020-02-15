@@ -3,6 +3,9 @@
 #include "debug.h"
 #include "RCReceive.h"
 
+#define RC_CMD_PIN 7
+#define RC_THRESHOLD_PIN 9
+
 /*
   RC_Template.ino - Template for RC Receiver enabled programs interrupt version - Version 0.2
  Copyright (c) 2014 Wilfried Klaas.  All right reserved.
@@ -30,10 +33,13 @@ const byte PIN_RC1 = 20;
 const byte PIN_RC2 = 21; 
 
 
-
 RCReceive rcReceiver1;
 RCReceive rcReceiver2;
 RCReceive rcReceiver3;
+
+byte value1;
+byte value2;
+byte value3;
 
 void setupRCReceiver() {
   // RC Receiver in Interruptvariante
@@ -43,7 +49,14 @@ void setupRCReceiver() {
 
   // put your setup code here, to run once:
 }
+void doWork()
+{
+  // put your main code here, to run repeatedly
+  value1 = rcReceiver1.getValue();
+  value2 = rcReceiver2.getValue();
+  value3 = rcReceiver3.getValue();
 
+}
 void loopRCReceiver() {
   if ((rcReceiver1.hasNP() && !rcReceiver1.hasError())&&(rcReceiver2.hasNP() && !rcReceiver2.hasError())&&(rcReceiver3.hasNP() && !rcReceiver3.hasError()))
   {
@@ -58,17 +71,17 @@ void loopRCReceiver() {
 //  Serial.println(value2);
 }
 
-void doWork()
-{
-  // put your main code here, to run repeatedly
-  value1 = rcReceiver1.getValue();
-  value2 = rcReceiver2.getValue();
-  value3 = rcReceiver3.getValue();
 
-}
 void doError() {
   // put your main code here, to run repeatedly
   value1 = 127;
   value2 = 0;
   value3 = 0;
 }
+
+byte getValue1()
+{return value1;}
+byte getValue2()
+{return value2;}
+byte getValue3()
+{return value3;}

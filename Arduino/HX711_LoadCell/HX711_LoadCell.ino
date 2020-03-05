@@ -48,10 +48,13 @@ void setupHX711() {
 }
 void loopHX711() {
   raw_value = scale.get_units();
-  Serial.print("Reading: ");
-  Serial.print(raw_value); //raw value
-  Serial.print(" ");
-  Serial.print((raw_value-OFFSET)/SCALE, 1); //scaled and offset after calibration
-  Serial.print(" g"); 
-  Serial.println();
+  if (raw_value>0)
+  {
+    Serial.print("Reading: ");
+    Serial.print(raw_value); //raw value
+    Serial.print(" ");
+    Serial.print((raw_value-OFFSET)/SCALE, 1); //scaled and offset after calibration
+    Serial.print(" g"); 
+    Serial.println();
+  }
 }

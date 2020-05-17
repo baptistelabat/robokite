@@ -73,6 +73,8 @@ pitch=0;
 line_tension = 0;
 aspectRatio = 3;
 chord = kite_surface/aspectRatio;
+heavePeriod = 8;
+heaveAmplitude=2;
 
 isDynamic = true;
 isGround  = true;
@@ -124,6 +126,8 @@ document.getElementById("groundCheck").addEventListener("change", updateGround);
 document.getElementById("Z0Range").addEventListener("change", updateZ0);
 document.getElementById("fluidVelocityVariationPercentRange").addEventListener("change", updateFluidVelocityVariationPercent);
 document.getElementById("fluidVariationPeriodRange").addEventListener("change", updateFluidVariationPeriod);
+document.getElementById("heaveAmplitudeRange").addEventListener("change", updateHeaveAmplitude);
+document.getElementById("heavePeriodRange").addEventListener("change", updateHeavePeriod);
 document.getElementById("rigidCheck").addEventListener("change", updateIsRigid);
 
 setInterval(updaten, 1);
@@ -243,7 +247,9 @@ function update(){
     reel_speed = 0;
     line_length = 2;
   }
+  base_velocity.z = heaveAmplitude*2*Math.PI/heavePeriod*Math.cos(2*Math.PI/heavePeriod*simulation_time);
   base_position.add(base_velocity.clone().multiplyScalar(dt));
+  base_position.z = heaveAmplitude*Math.sin(2*Math.PI/heavePeriod*simulation_time);
   computeForces();
   
   torque_at_base.crossVectors(kite_position.clone().sub(base_position), Fsum);
@@ -509,6 +515,23 @@ function updateyBaseSpeed(){
 		//copy the value over
 		myOutput.value = myRange.value;
     base_velocity.setY(1*myRange.value); //Multiply by one to avoid bug when negative values
+}
+function updateHeaveAmplitude(){
+		//get elements
+		var myRange = document.getElementById("heaveAmplitudeRange");
+		var myOutput = document.getElementById("heaveAmplitude");
+		//copy the value over
+		myOutput.value = myRange.value;
+		heaveAmplitude = 1*myRange.value
+		heaveVelocity=heaveAmplitude*2*Math.PI/heavePeriod; //Multiply by one to avoid bug when negative values
+}
+function updateHeavePeriod(){
+		//get elements
+		var myRange = document.getElementById("heavePeriodRange");
+		var myOutput = document.getElementById("heavePeriod");
+		//copy the value over
+		myOutput.value = myRange.value;
+		heavePeriod=1*myRange.value; //Multiply by one to avoid bug when negative values
 }
 function updateElevation(){
 		//get elements

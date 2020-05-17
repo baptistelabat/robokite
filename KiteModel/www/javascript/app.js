@@ -71,7 +71,7 @@ meter2pix = 20;
 reel_speed = 0;
 pitch=0;
 line_tension = 0;
-aspectRatio = 5;
+aspectRatio = 3;
 chord = kite_surface/aspectRatio;
 
 isDynamic = true;

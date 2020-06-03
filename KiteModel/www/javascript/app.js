@@ -51,11 +51,13 @@ function fluid_profile(w10, position, Z0, zRef){
   }
   return v
 }
-var V = 10;
+var V = 4;
 zRef = 10.  ; // Reference altitude for wind measurements (m)
 Z0 = 0.055    // longueur de rugosite du terrain (m)
+fluidVelocityVariationPercent =50;
+fluidVariationPeriod = 10;
 line_length     = 10;
-fluid_speed      = 10;
+average_fluid_speed      = 4;
 kite_mass       = 2;  
 kite_surface    = 6;  
 density         = 1.225;    // Air density
@@ -69,8 +71,10 @@ meter2pix = 20;
 reel_speed = 0;
 pitch=0;
 line_tension = 0;
-aspectRatio = 5;
+aspectRatio = 3;
 chord = kite_surface/aspectRatio;
+heavePeriod = 8;
+heaveAmplitude=2;
 
 isDynamic = true;
 isGround  = true;
@@ -120,6 +124,10 @@ document.getElementById("aspectRatioRange").addEventListener("change", updateAsp
 document.getElementById("fluidSelect").addEventListener("change", updateFluid);
 document.getElementById("groundCheck").addEventListener("change", updateGround);
 document.getElementById("Z0Range").addEventListener("change", updateZ0);
+document.getElementById("fluidVelocityVariationPercentRange").addEventListener("change", updateFluidVelocityVariationPercent);
+document.getElementById("fluidVariationPeriodRange").addEventListener("change", updateFluidVariationPeriod);
+document.getElementById("heaveAmplitudeRange").addEventListener("change", updateHeaveAmplitude);
+document.getElementById("heavePeriodRange").addEventListener("change", updateHeavePeriod);
 document.getElementById("rigidCheck").addEventListener("change", updateIsRigid);
 
 setInterval(updaten, 1);
@@ -168,7 +176,8 @@ function computeForces(){
 
   // fluid velocity: fluid velocity relative to ground, projected in ground axis
   // Assumed to be constant in time and space and horizontal
-  fluid_velocity.set(0, fluid_profile(fluid_speed, kite_position, Z0, zRef), 0);
+  t = d.getTime()-t0;
+  fluid_velocity.set(0, fluid_profile(average_fluid_speed*(1+fluidVelocityVariationPercent/100.*Math.sin(2*Math.PI*simulation_time/fluidVariationPeriod)), kite_position, Z0, zRef), 0);
   //console.log("fluid y z", fluid_velocity.y, fluid_velocity.z)
 
   // fluid relative velocity : fluid velocity relative to kite, projected in ground axis
@@ -238,7 +247,9 @@ function update(){
     reel_speed = 0;
     line_length = 2;
   }
+  base_velocity.z = heaveAmplitude*2*Math.PI/heavePeriod*Math.cos(2*Math.PI/heavePeriod*simulation_time);
   base_position.add(base_velocity.clone().multiplyScalar(dt));
+  base_position.z = heaveAmplitude*Math.sin(2*Math.PI/heavePeriod*simulation_time);
   computeForces();
   
   torque_at_base.crossVectors(kite_position.clone().sub(base_position), Fsum);
@@ -341,7 +352,7 @@ function plotFluidVelocity(){
   {
     pos = new THREE.Vector3( 0, 0, i*1 );
     arrow = document.getElementById("f"+i);
-    arrow.setAttribute('d', "M"+ 0*meter2pix +" "+ -pos.z*meter2pix+ " L"+ fluid_profile(fluid_speed, pos, Z0, zRef)*meter2pix +" "+ -pos.z*meter2pix);
+    arrow.setAttribute('d', "M"+ 0*meter2pix +" "+ -pos.z*meter2pix+ " L"+ fluid_profile(average_fluid_speed*(1+fluidVelocityVariationPercent/100.*Math.sin(2*Math.PI*simulation_time/fluidVariationPeriod)), pos, Z0, zRef)*meter2pix +" "+ -pos.z*meter2pix);
   }
 }
 
@@ -392,7 +403,7 @@ function updateFluidVelocity(){
 		var myOutput = document.getElementById("fluidVelocity");
 		//copy the value over
 		myOutput.value = myRange.value;
-    fluid_speed = 1*myOutput.value;
+		average_fluid_speed = 1*myOutput.value;
 }
 function updateKiteMass(){
 		//get elements
@@ -424,7 +435,23 @@ function updateZ0(){
 		var myOutput = document.getElementById("Z0");
 		//copy the value over
 		myOutput.value = myRange.value;
-    Z0 = 1*myOutput.value;
+		Z0 = 1*myOutput.value;
+}
+function updateFluidVelocityVariationPercent(){
+		//get elements
+		var myRange = document.getElementById("fluidVelocityVariationPercentRange");
+		var myOutput = document.getElementById("fluidVelocityVariationPercent");
+		//copy the value over
+		myOutput.value = myRange.value;
+		fluidVelocityVariationPercent = 1*myOutput.value;
+}
+function updateFluidVariationPeriod(){
+		//get elements
+		var myRange = document.getElementById("fluidVariationPeriodRange");
+		var myOutput = document.getElementById("fluidVariationPeriod");
+		//copy the value over
+		myOutput.value = myRange.value;
+		fluidVariationPeriod = 1*myOutput.value;
 }
 function updateGravity(){
 		//get elements
@@ -489,6 +516,23 @@ function updateyBaseSpeed(){
 		myOutput.value = myRange.value;
     base_velocity.setY(1*myRange.value); //Multiply by one to avoid bug when negative values
 }
+function updateHeaveAmplitude(){
+		//get elements
+		var myRange = document.getElementById("heaveAmplitudeRange");
+		var myOutput = document.getElementById("heaveAmplitude");
+		//copy the value over
+		myOutput.value = myRange.value;
+		heaveAmplitude = 1*myRange.value
+		heaveVelocity=heaveAmplitude*2*Math.PI/heavePeriod; //Multiply by one to avoid bug when negative values
+}
+function updateHeavePeriod(){
+		//get elements
+		var myRange = document.getElementById("heavePeriodRange");
+		var myOutput = document.getElementById("heavePeriod");
+		//copy the value over
+		myOutput.value = myRange.value;
+		heavePeriod=1*myRange.value; //Multiply by one to avoid bug when negative values
+}
 function updateElevation(){
 		//get elements
 		var myRange = document.getElementById("elevationRange");
@@ -542,7 +586,7 @@ function updateFluid(){
     myRange.step =1;
     myRange.value=10;
     myOutput.value = 10;
-    fluid_speed = 10;
+    average_fluid_speed = 10;
     mySurfaceRange.value = 6;
     mySurfaceOutput.value = 6;
     mySurfaceRange.max = 20;
@@ -558,7 +602,7 @@ function updateFluid(){
     myRange.step = 0.01;
     myRange.value = 1;
     myOutput.value = 1;
-    fluid_speed = 1;
+    average_fluid_speed = 1;
     mySurfaceRange.value = 0.6;
     mySurfaceOutput.value = 0.6;
     mySurfaceRange.max = 5;

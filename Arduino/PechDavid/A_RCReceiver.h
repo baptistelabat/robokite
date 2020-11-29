@@ -27,42 +27,61 @@
  
 // uno 2, 3
 //MEGA  2, 3, 21, 20, 19, 18
-const byte PIN_RC = 19; 
-const byte PIN_RC1 = 20; 
+const byte PIN_RC_CH2 = 18;
+const byte PIN_RC_CH4 = 19; 
+const byte PIN_RC_CH5 = 20; 
+const byte PIN_RC_CH6 = 21; 
 
-const byte PIN_RC2 = 21; 
+# define RC_GND 2
 
 
 RCReceive rcReceiver1;
 RCReceive rcReceiver2;
 RCReceive rcReceiver3;
+RCReceive rcReceiver4;
+RCReceive rcReceiver5;
+RCReceive rcReceiver6;
 
-byte value1;
-byte value2;
-byte value3;
+byte value1, value2, value3, value4, value5, value6;
+
+long RCIntegral1;
 
 void setupRCReceiver() {
   // RC Receiver in Interruptvariante
-  rcReceiver1.attachInt(PIN_RC);
-  rcReceiver2.attachInt(PIN_RC1);
-  rcReceiver3.attachInt(PIN_RC2);
+  rcReceiver2.attachInt(PIN_RC_CH2);
+  rcReceiver4.attachInt(PIN_RC_CH4);
+  rcReceiver5.attachInt(PIN_RC_CH5);
+  rcReceiver6.attachInt(PIN_RC_CH6);
+    pinMode(RC_GND, OUTPUT);
+
+    RCIntegral1 = 0;
 
   // put your setup code here, to run once:
 }
 void doWork()
 {
   // put your main code here, to run repeatedly
-  value1 = rcReceiver1.getValue();
+  //value1 = rcReceiver1.getValue();
   value2 = rcReceiver2.getValue();
-  value3 = rcReceiver3.getValue();
+  //value3 = rcReceiver3.getValue();
+  value4 = rcReceiver4.getValue();
+  value5 = rcReceiver5.getValue();
+  value6 = rcReceiver6.getValue();
+
+  RCIntegral1 = RCIntegral1+ value1;
 
 }
 void loopRCReceiver() {
-  if ((rcReceiver1.hasNP() && !rcReceiver1.hasError())&&(rcReceiver2.hasNP() && !rcReceiver2.hasError())&&(rcReceiver3.hasNP() && !rcReceiver3.hasError()))
+  if (
+    (rcReceiver2.hasNP() && !rcReceiver2.hasError())
+  &&(rcReceiver4.hasNP() && !rcReceiver4.hasError())
+  &&(rcReceiver5.hasNP() && !rcReceiver5.hasError())
+  &&(rcReceiver6.hasNP() && !rcReceiver6.hasError())
+    )
   {
     doWork();
   } 
-  else if (rcReceiver1.hasError()||rcReceiver2.hasError()||rcReceiver3.hasError())
+  else if (rcReceiver2.hasError()||rcReceiver4.hasError()||rcReceiver5.hasError()||rcReceiver6.hasError())
   {
     //doError();
   }
@@ -85,3 +104,13 @@ byte getValue2()
 {return value2;}
 byte getValue3()
 {return value3;}
+byte getValue4()
+{return value4;}
+byte getValue5()
+{return value5;}
+byte getValue6()
+{return value6;}
+
+long getRCIntegral1(){
+  return RCIntegral1;
+}

@@ -17,8 +17,8 @@
 #define HX711_GND   13
 
 
-#define OFFSET 385000 //10000 // From raw value when no load
-#define SCALE  -230 //140.0  // From calibration
+#define OFFSET 318500 //10000 // From raw value when no load
+#define SCALE  -60 //140.0  // From calibration
 HX711 scale;
 long raw_value = 0;
 double val;    // variable to read the value from the analog pin
@@ -48,12 +48,12 @@ void loopHX711() {
      if (raw_value>0)
       {
       val = scale.get_units();
-//      Serial.print("Reading: ");
-//      Serial.print(raw_value); //raw value
-//      Serial.print(" ");
-//      Serial.print(val, 1); //scaled and offset after calibration
-//      Serial.print(" g"); 
-//      Serial.println();
+      Serial.print("Reading: ");
+      Serial.print(raw_value); //raw value
+      Serial.print(" ");
+      Serial.print(val, 1); //scaled and offset after calibration
+      Serial.print(" g"); 
+      Serial.println();
       }
 //      else
 //      {
@@ -63,7 +63,7 @@ void loopHX711() {
 //  else {
 //   Serial.println("HX711 not found.");
 //  }
-  delay(15);
+  //delay(15);
 
 }
 

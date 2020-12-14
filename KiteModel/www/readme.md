@@ -1,5 +1,7 @@
 See demo at https://rawgit.com/baptistelabat/robokite/master/KiteModel/www/kite.html
 
+and demo at https://rawgit.com/baptistelabat/robokite/master/KiteModel/www/kite3D.html
+
 To do:
 
 Go to 3D  

@@ -1,0 +1,74 @@
+<!DOCTYPE HTML>
+<html style="direction: ltr;" lang="fr">
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+</head>
+<body>
+  <p>Kite 3D simulator <a href="https://github.com/baptistelabat/robokite/tree/master/KiteModel/www">(source code)</a><br>
+  <output id = "time">0</output>s <br>
+ Line length <output id = "lineLength">0</output> m<br>
+ Yaw <output id = "yaw_deg">0</output> deg<br>
+ Great roll <output id = "greatRoll_deg">0</output> deg<br>
+ Great pitch <output id = "greatPitch_deg">0</output>deg<br>
+ Yaw rate <output id = "yawRate_degps">0</output> deg/s<br>
+ Great roll rate <output id = "greatRollRate_degps">0</output> deg/s<br>
+ Great pitch rate <output id = "greatPitchRate_degps">0</output> deg/s<br>
+    </p>
+    <p>
+    <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" width="1000" height="500">
+		<g transform="translate(450,350) ">
+		<line id="kite_line" x1="0" y1="0" x2="300" y2="-150" style="stroke:rgb(0,0,0);stroke-width:2" />   
+            <g id="local_frame" transform="translate(300,-150)">
+              <g id="kite_frame" transform="rotate(0)">
+                <line id="kite" x1="-10" y1="0" x2="20" y2="0" style="stroke:rgb(255,0,0);stroke-width:2" />
+              </g>
+            </g>
+            </g>
+            </svg>
+            </p>
+    <form action = "">
+		<fieldset>
+      Steering
+			<input id = "steeringRange"
+				type = "range"
+				min = "-100"
+				max = "100"
+				value = "0"
+				step = "1" />
+			<output id = "steering">0</output>
+		Brake
+			<input id = "brakeRange"
+				type = "range"
+				min = "0"
+				max = "100"
+				value = "0"
+				step = "1" />
+			<output id = "brake">0</output><br>
+		Reel out speed
+		<input id = "reelOutSpeedRange"
+				type = "range"
+				min = "-10"
+				max = "10"
+				value = "0"
+				step = "1" />
+		<output id = "reelOutSpeed">0</output>
+    </fieldset>
+    <fieldset>
+      Fluid velocity
+			<input id = "fluidVelocityRange"
+				type = "range"
+				min = "0"
+				max = "20"
+				value = "4"
+				step = "1" />
+			<output id = "fluidVelocity">4</output>m/s
+      <select id="fluidSelect">
+        <option value="Air">Air</option>
+        <option value="Water">Water</option>
+      </select>
+    <fieldset>
+	</form>
+	  <script type = "text/javascript" language="javascript" src = "javascript/app3D.js" charset="utf-8"></script>		
+</body>
+</html>
+            

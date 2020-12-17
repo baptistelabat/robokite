@@ -73,13 +73,13 @@ void loop()
   sendSabertooth(cmd);
 
   // Trancannage/winding
-  servocmd = 110+30*sin(get_cmd_integral()/127.0);
+  servocmd = 110+30*sin(get_cmd_integral()/127.0*0.1);
   sendServo(servocmd);
   
   
   
  // Debug output
-/*  Serial.print("thmin:");
+ Serial.print("thmin:");
   Serial.print(threshold_min);
   Serial.print('\t');
   Serial.print("thmax:");
@@ -98,6 +98,6 @@ void loop()
   Serial.println(cmd);
   Serial.print('\t');
   Serial.print("servocmd:");
-  Serial.print(servocmd);*/
+  Serial.print(servocmd);
 
 }

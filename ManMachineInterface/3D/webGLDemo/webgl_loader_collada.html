@@ -41,6 +41,7 @@
         <script src="static/libs/THREEx.FullScreen.js"></script>
         <script src="static/libs/THREEx.WindowResize.js"></script>
         <script src='static/libs/DAT.GUI.min.js'></script>
+		<script src="static/app3D.js"></script>
 
         <script>
             var gui = new dat.GUI({
@@ -48,26 +49,30 @@
                 });
             var params = {
                 text : 'please use control',
-                roll: 45,
-                pitch : 0,
-                yaw : 0,
-                elevation:30,
-                azimuth:45,
+				yaw : 0,
+				greatRoll: 0,
+				greatPitch: 0,
                 lineLength:30,
-                speed:0.1,
+                speed:0.,
                 position:0,
-                windspeed:5
+                windspeed:5,
+				steering:0,
+				brake:0,
+				reelOutSpeed:0,
+				isStatic: false
             };
-            gui.add(params, 'text')
-            gui.add(params, 'roll').min(-90).max(90).step(1);
-            gui.add(params, 'pitch').min(-90).max(90).step(1);
-            gui.add(params, 'yaw').min(-90).max(90).step(1);
-            gui.add(params, 'elevation').min(0).max(90).step(1);
-            gui.add(params, 'azimuth').min(-180).max(180).step(1);
+            gui.add(params, 'text');
+			gui.add(params, 'yaw').min(-180).max(180).step(1);
+			gui.add(params, 'greatRoll').min(-180).max(180).step(1);
+			gui.add(params, 'greatPitch').min(0).max(90).step(1);
             gui.add(params, 'lineLength').min(0).max(100).step(1);
             gui.add(params, 'position').min(-20).max(20).step(1);
             gui.add(params, 'speed').min(0).max(5).step(0.1);
             gui.add(params, 'windspeed').min(0).max(30).step(1);
+			gui.add(params, 'steering').min(-100).max(100).step(1);
+			gui.add(params, 'brake').min(0).max(100).step(1);
+			gui.add(params, 'reelOutSpeed').min(-5).max(5).step(0.1);
+			gui.add(params, 'isStatic');
 
 
 
@@ -366,23 +371,50 @@
                 obj = JSON.parse(myOutput.innerHTML);*/
 
                 // "Classical" roll, pitch, yaw euler angles
-                kite.rotation.order = 'YZX';
+                
                 /*kite.rotation.x = obj.xrotation;
                 kite.rotation.y = obj.yrotation;
                 kite.rotation.z = obj.zrotation;
                 kite.position.x = obj.x;
                 kite.position.y = obj.y;
                 kite.position.z = obj.z;*/
-                kite.rotation.x = params.roll*Math.PI/180;
-                kite.rotation.z = params.pitch*Math.PI/180;
-                kite.rotation.y = params.yaw*Math.PI/180;
-                kite.position.x = groundAnchor.position.x+params.lineLength*Math.cos(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
-                kite.position.y = groundAnchor.position.y+params.lineLength*Math.sin(params.elevation*Math.PI/180);
-                kite.position.z = groundAnchor.position.z+params.lineLength*Math.sin(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
-                //kite.quaternion.x = obj.q0
-                //kite.quaternion.y = obj.q1
-                //kite.quaternion.z = obj.q2
-                //kite.quaternion.w = obj.q3
+				if (params.isStatic)
+				{
+					console.log("Static")
+					kite.rotation.order = 'YZX';
+					kite.rotation.x = params.roll*Math.PI/180;
+					kite.rotation.z = -params.pitch*Math.PI/180;
+					kite.rotation.y = params.yaw*Math.PI/180;
+					kite.position.x = groundAnchor.position.x+params.lineLength*Math.cos(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+					kite.position.y = groundAnchor.position.y+params.lineLength*Math.sin(params.elevation*Math.PI/180);
+					kite.position.z = groundAnchor.position.z+params.lineLength*Math.sin(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+					//kite.quaternion.x = obj.q0
+					//kite.quaternion.y = obj.q1
+					//kite.quaternion.z = obj.q2
+					//kite.quaternion.w = obj.q3
+					kite.rotation.order = 'XZY';
+					kite.rotation.x = params.greatRoll*Math.PI/180;
+					kite.rotation.z = params.greatPitch*Math.PI/180;
+					kite.rotation.y = params.yaw*Math.PI/180;
+					kite.position.x = groundAnchor.position.x+params.lineLength*Math.sin(params.greatPitch*Math.PI/180);
+					kite.position.y = groundAnchor.position.y+params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.cos(params.greatRoll*Math.PI/180);
+					kite.position.z = groundAnchor.position.z+params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.sin(params.greatRoll*Math.PI/180);
+				}
+				else
+				{
+					console.log("Kinematic")
+					kite.rotation.order = 'XZY';
+					kite.rotation.x = greatRoll;
+					kite.rotation.z = -greatPitch;
+					kite.rotation.y = yaw;
+					kite.position.x = groundAnchor.position.x+L*Math.sin(greatPitch);
+					kite.position.y = groundAnchor.position.y+L*Math.cos(greatPitch)*Math.cos(greatRoll);
+					kite.position.z = groundAnchor.position.z+L*Math.cos(greatPitch)*Math.sin(greatRoll);
+					//kite.quaternion.x = obj.q0
+					//kite.quaternion.y = obj.q1
+					//kite.quaternion.z = obj.q2
+					//kite.quaternion.w = obj.q3
+				}
                 kite.updateMatrix();
                 
                 /*// Plots the vector
@@ -397,9 +429,9 @@
                 vectorMag.geometry.verticesNeedUpdate = true;*/
                 
                 // Plots the kite lines
-                kiteLines.geometry.vertices[0].x = 1+groundAnchor.position.x;
-                kiteLines.geometry.vertices[0].y = 1+groundAnchor.position.y;
-                kiteLines.geometry.vertices[0].z = -2+groundAnchor.position.z;
+                kiteLines.geometry.vertices[0].x = groundAnchor.position.x;
+                kiteLines.geometry.vertices[0].y = groundAnchor.position.y;
+                kiteLines.geometry.vertices[0].z = groundAnchor.position.z;
                 kiteLines.geometry.vertices[1].x = kite.position.x;
                 kiteLines.geometry.vertices[1].y = kite.position.y;
                 kiteLines.geometry.vertices[1].z = kite.position.z;

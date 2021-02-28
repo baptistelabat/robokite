@@ -62,7 +62,7 @@
 				isStatic: false
             };
             gui.add(params, 'text');
-			gui.add(params, 'yaw').min(-180).max(180).step(1);
+			var gui_yaw = gui.add(params, 'yaw').min(-180).max(180).step(1).listen();
 			gui.add(params, 'greatRoll').min(-180).max(180).step(1);
 			gui.add(params, 'greatPitch').min(0).max(90).step(1);
             gui.add(params, 'lineLength').min(0).max(100).step(1);
@@ -91,22 +91,29 @@
             var camera, scene, renderer, objects, controls;
             var keyboard = new THREEx.KeyboardState();
             var particleLight, pointLight;
-            var kite, groundAnchor, clouds, flag, skin, vectorAcc, vectorMag;
+            var kite, groundAnchor, movingParts, clouds, flag, skin, vectorAcc, vectorMag;
             var kiteLines;
             var loader = new THREE.ColladaLoader();
+            
+			movingParts = new THREE.Scene()
+			// Initialisation
+			movingParts.position.x = 0;
+			movingParts.position.y = -2;
+			movingParts.position.z = 0;
+			movingParts.rotation.x = 0;
+			movingParts.rotation.y = 0;
+			movingParts.rotation.z = 0;
+			movingParts.updateMatrix();  
             
             // Use Z up as a convention (not the default one)
             loader.options.convertUpAxis = true;
             
             // Load the collada file ('.dae' extension)
             loader.load( './static/kite.dae', function ( collada ) {
-
                 kite = collada.scene;
                 kite_geom = kite.children[0].children[0].geometry;
                 skin = collada.skins[ 0 ];
-                // Scale to fit the screen
-                kite.scale.x = kite.scale.y = kite.scale.z = 0.0254; //Because unit is inch in file
-                
+
                 // Initialisation
                 kite.rotation.x = 0;
                 kite.rotation.y = 0;
@@ -114,10 +121,9 @@
                 kite.updateMatrix();
                 THREE.GeometryUtils.center(kite_geom);
                 var m1 = new THREE.Matrix4();
-                kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );    
-
-                    
+                kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );                
             } );
+            
             var loader0 = new THREE.ColladaLoader();
             
             // Use Z up as a convention (not the default one)
@@ -127,12 +133,14 @@
             loader0.load( './static/flag.dae', function ( collada ) {
 
                 flag = collada.scene;
+                flag.scale.x = flag.scale.y = flag.scale.z = 0.01; 
                 flag_geom = flag.children[0].children[0].geometry;
                 skin = collada.skins[ 0 ];
                 // Scale to fit the screen
-                flag.scale.x = flag.scale.y = flag.scale.z = 0.01; //Because unit is inch in file
-                THREE.GeometryUtils.center(flag_geom);      
+                //flag.scale.x = flag.scale.y = flag.scale.z = 0.01; //Because unit is inch in file
+                THREE.GeometryUtils.center(flag_geom);    
             } );
+            
             var loader1 = new THREE.ColladaLoader();
             
             // Use Z up as a convention (not the default one)
@@ -140,39 +148,25 @@
             
             // Load the collada file ('.dae' extension)
             loader1.load( './static/clouds.dae', function ( collada ) {
-
                 clouds = collada.scene;
                 clouds_geom = clouds.children[0].children[0].geometry;
                 skin = collada.skins[ 0 ];
                 // Scale to fit the screen
                 clouds.scale.x = clouds.scale.y = clouds.scale.z = 0.0254; //Because unit is inch in file   
-                clouds.position.y = 7;
-                
+                clouds.position.y = 7; 
             } );
+            
             var loader2 = new THREE.ColladaLoader();
             loader2.options.convertUpAxis = true;
             loader2.load( './static/boat.dae', function ( collada ) {
-
-                groundAnchor = collada.scene;
+				groundAnchor = collada.scene;
                 skin = collada.skins[ 0 ];
-                
-                // Scale to fit the screen
-                groundAnchor.scale.x = groundAnchor.scale.y = groundAnchor.scale.z = 0.01; //Because unit is cm in file
-                
-                // Initialisation
-                groundAnchor.position.x = 0;
-                groundAnchor.position.y = -2;
-                groundAnchor.position.z = 0;
-                groundAnchor.rotation.x = 0;
-                groundAnchor.rotation.y = 0;
-                groundAnchor.rotation.z = 0;
-                groundAnchor.updateMatrix();            
-                
                 init();
-                animate();
-                            
-
+				animate();
             } );
+
+
+                            
 
 
             function init() {
@@ -207,11 +201,21 @@
                 var line = new THREE.Line( geometry, material, THREE.LinePieces );
                 scene.add( line );*/
                 
-                // Add the COLLADA      
-                scene.add( kite );
-                scene.add( groundAnchor);
-                scene.add( clouds);
-                scene.add( flag);
+                // Add the COLLADA 
+                                // Scale to fit the screen
+                groundAnchor.scale.x = groundAnchor.scale.y = groundAnchor.scale.z = 0.01; //Because unit is cm in file
+
+
+                // Scale to fit the screen
+                kite.scale.x = kite.scale.y = kite.scale.z = 0.0254; //Because unit is inch in file
+                scene.add( clouds);  
+                movingParts.add( kite );
+                movingParts.add( flag);
+                movingParts.add(groundAnchor);
+                scene.add( movingParts);  
+
+
+
 
                 particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.003, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe : true } ) );
                 scene.add( particleLight );
@@ -328,7 +332,7 @@
                 
                 //scene.add(vectorMag);
                 //scene.add(vectorAcc);
-                scene.add(kiteLines);
+                movingParts.add(kiteLines);
             }
 
             //
@@ -380,14 +384,14 @@
                 kite.position.z = obj.z;*/
 				if (params.isStatic)
 				{
-					console.log("Static")
+					//console.log("Static")
 					kite.rotation.order = 'YZX';
 					kite.rotation.x = params.roll*Math.PI/180;
 					kite.rotation.z = -params.pitch*Math.PI/180;
 					kite.rotation.y = params.yaw*Math.PI/180;
-					kite.position.x = groundAnchor.position.x+params.lineLength*Math.cos(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
-					kite.position.y = groundAnchor.position.y+params.lineLength*Math.sin(params.elevation*Math.PI/180);
-					kite.position.z = groundAnchor.position.z+params.lineLength*Math.sin(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+					kite.position.x = 1+params.lineLength*Math.cos(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
+					kite.position.y = 1+params.lineLength*Math.sin(params.elevation*Math.PI/180);
+					kite.position.z = params.lineLength*Math.sin(params.azimuth*Math.PI/180)*Math.cos(params.elevation*Math.PI/180);
 					//kite.quaternion.x = obj.q0
 					//kite.quaternion.y = obj.q1
 					//kite.quaternion.z = obj.q2
@@ -396,24 +400,25 @@
 					kite.rotation.x = params.greatRoll*Math.PI/180;
 					kite.rotation.z = params.greatPitch*Math.PI/180;
 					kite.rotation.y = params.yaw*Math.PI/180;
-					kite.position.x = groundAnchor.position.x+params.lineLength*Math.sin(params.greatPitch*Math.PI/180);
-					kite.position.y = groundAnchor.position.y+params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.cos(params.greatRoll*Math.PI/180);
-					kite.position.z = groundAnchor.position.z+params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.sin(params.greatRoll*Math.PI/180);
+					kite.position.x = 1+params.lineLength*Math.sin(params.greatPitch*Math.PI/180);
+					kite.position.y = 1+params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.cos(params.greatRoll*Math.PI/180);
+					kite.position.z = params.lineLength*Math.cos(params.greatPitch*Math.PI/180)*Math.sin(params.greatRoll*Math.PI/180);
 				}
 				else
 				{
-					console.log("Kinematic")
+					//console.log("Kinematic")
 					kite.rotation.order = 'XZY';
 					kite.rotation.x = greatRoll;
 					kite.rotation.z = -greatPitch;
 					kite.rotation.y = yaw;
-					kite.position.x = groundAnchor.position.x+L*Math.sin(greatPitch);
-					kite.position.y = groundAnchor.position.y+L*Math.cos(greatPitch)*Math.cos(greatRoll);
-					kite.position.z = groundAnchor.position.z+L*Math.cos(greatPitch)*Math.sin(greatRoll);
+					kite.position.x = 1+L*Math.sin(greatPitch);
+					kite.position.y = 1+L*Math.cos(greatPitch)*Math.cos(greatRoll);
+					kite.position.z = L*Math.cos(greatPitch)*Math.sin(greatRoll);
 					//kite.quaternion.x = obj.q0
 					//kite.quaternion.y = obj.q1
 					//kite.quaternion.z = obj.q2
 					//kite.quaternion.w = obj.q3
+					guiSetValue('yaw', yaw*Math.PI/180)
 				}
                 kite.updateMatrix();
                 
@@ -429,9 +434,9 @@
                 vectorMag.geometry.verticesNeedUpdate = true;*/
                 
                 // Plots the kite lines
-                kiteLines.geometry.vertices[0].x = groundAnchor.position.x;
-                kiteLines.geometry.vertices[0].y = groundAnchor.position.y;
-                kiteLines.geometry.vertices[0].z = groundAnchor.position.z;
+                kiteLines.geometry.vertices[0].x = 1;
+                kiteLines.geometry.vertices[0].y = 1;
+                kiteLines.geometry.vertices[0].z = 0;
                 kiteLines.geometry.vertices[1].x = kite.position.x;
                 kiteLines.geometry.vertices[1].y = kite.position.y;
                 kiteLines.geometry.vertices[1].z = kite.position.z;
@@ -439,22 +444,30 @@
 
                 params.position += delta*params.speed;
                 params.position = (params.position+20)%40 -20;
-                groundAnchor.position.z = params.position;
-                groundAnchor.updateMatrix();
+                movingParts.position.z = params.position;
+                movingParts.updateMatrix();
                 
                 clouds.position.x = (clouds.position.x + delta*params.windspeed+20)%40 -20;
                 
                 var f = Math.sqrt(params.speed*params.speed + params.windspeed*params.windspeed);
-                console.log(Math.atan2(params.speed, params.windspeed));
+                //console.log(Math.atan2(params.speed, params.windspeed));
                 flag.rotation.y = Math.atan2(params.speed, params.windspeed)-Math.PI/2+ 1*Math.PI/180*Math.sin(3*f*t);
-                flag.position.z = -6+groundAnchor.position.z;
-                flag.position.y = 1;
+                flag.position.z = -6;
+                flag.position.y = 3;
                 flag.position.x = 2.5;
                 flag.updateMatrix();
 
                 render();
                 update();
             }
+            
+            var guiSetValue = function (name, value) {
+			for (var i = 0; i < gui.__controllers.length; i++) {
+				//console.log(gui.__controllers.property)
+				if (!gui.__controllers.property == name)
+					gui.__controllers[i].setValue(value);
+			}
+};
             function update() {
                     controls.update();
                     stats.update();

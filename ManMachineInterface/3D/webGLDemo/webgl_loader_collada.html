@@ -31,9 +31,7 @@
             black
         </div>
         <script src="static/libs/three.js"></script>
-
         <script src="static/loaders/ColladaLoader.js"></script>
-
         <script src="static/Detector.js"></script>
         <script src="static/libs/stats.min.js"></script>
         <script src="static/libs/OrbitControls.js"></script>
@@ -41,70 +39,70 @@
         <script src="static/libs/THREEx.FullScreen.js"></script>
         <script src="static/libs/THREEx.WindowResize.js"></script>
         <script src='static/libs/DAT.GUI.min.js'></script>
-		<script src="static/app3D.js"></script>
-
+	    <script src="static/app3D.js"></script>
         <script>
-            var gui = new dat.GUI({
-                height : 5 * 32 - 1
+        	var gui = new dat.GUI({
+                	height : 5 * 32 - 1
                 });
             var params = {
-                text : 'please use control',
-				yaw : 0,
-				greatRoll: 0,
-				greatPitch: 0,
-                lineLength:30,
-                speed:0.,
-                position:0,
-                windspeed:5,
-				steering:0,
-				brake:0,
-				reelOutSpeed:0,
-				isStatic: false
+                text            : 'please use control',
+                yaw             : 0,
+                greatRoll       : 0,
+                greatPitch      : 0,
+                lineLength      :30,
+                speed           : 0.,
+                position        : 0,
+                windspeed       : 5,
+                steering        : 0,
+                brake           : 0,
+                reelOutSpeed    : 0,
+                isStatic        : false
             };
             gui.add(params, 'text');
-			var gui_yaw = gui.add(params, 'yaw').min(-180).max(180).step(1).listen();
-			gui.add(params, 'greatRoll').min(-180).max(180).step(1);
-			gui.add(params, 'greatPitch').min(0).max(90).step(1);
-            gui.add(params, 'lineLength').min(0).max(100).step(1);
-            gui.add(params, 'position').min(-20).max(20).step(1);
-            gui.add(params, 'speed').min(0).max(5).step(0.1);
-            gui.add(params, 'windspeed').min(0).max(30).step(1);
-			gui.add(params, 'steering').min(-100).max(100).step(1);
-			gui.add(params, 'brake').min(0).max(100).step(1);
-			gui.add(params, 'reelOutSpeed').min(-5).max(5).step(0.1);
-			gui.add(params, 'isStatic');
+		    gui.add(params, 'yaw').min(-180).max(180).step(1).listen();
+		    gui.add(params, 'greatRoll').min(-180).max(180).step(1);
+		    gui.add(params, 'greatPitch').min(0).max(90).step(1);
+		    gui.add(params, 'lineLength').min(0).max(100).step(1);
+		    gui.add(params, 'position').min(-20).max(20).step(1);
+		    gui.add(params, 'speed').min(0).max(5).step(0.1);
+		    gui.add(params, 'windspeed').min(0).max(30).step(1);
+		    gui.add(params, 'steering').min(-100).max(100).step(1);
+		    gui.add(params, 'brake').min(0).max(100).step(1);
+		    gui.add(params, 'reelOutSpeed').min(-5).max(5).step(0.1);
+		    gui.add(params, 'isStatic');
 
 
+		    /*var ws = new WebSocket("ws://"+window.location.host + "/websocket");
+		    ws.onmessage = function(evt){
+		    var myOutput = document.getElementById("info");
+		    myOutput.innerHTML = evt.data;
+		    }*/
 
+		    if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
+		    var container, stats;
+		    var camera, scene, renderer, objects, controls;
+		    var keyboard = new THREEx.KeyboardState();
+		    var particleLight, pointLight;
+		    var kite, groundAnchor, movingParts, clouds, flag, skin, vectorAcc, vectorMag;
+		    var kiteLines;
+		    
 
-            /*var ws = new WebSocket("ws://"+window.location.host + "/websocket");
-            ws.onmessage = function(evt){
-            var myOutput = document.getElementById("info");
-                myOutput.innerHTML = evt.data;
-            }*/
-
-            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
-            var container, stats;
-
-            var camera, scene, renderer, objects, controls;
-            var keyboard = new THREEx.KeyboardState();
-            var particleLight, pointLight;
-            var kite, groundAnchor, movingParts, clouds, flag, skin, vectorAcc, vectorMag;
-            var kiteLines;
+	        movingParts = new THREE.Scene();
+	        apparentWindWindowAtAnchor = new THREE.Scene();
+	        apparentWindWindowAtFlag = new THREE.Scene();
+	        
+	        // Initialisation
+	        movingParts.position.x = 0;
+	        movingParts.position.y = -2;
+	        movingParts.position.z = 0;
+	        movingParts.rotation.x = 0;
+	        movingParts.rotation.y = 0;
+	        movingParts.rotation.z = 0;
+	        movingParts.updateMatrix();  
+            
+            
             var loader = new THREE.ColladaLoader();
-            
-			movingParts = new THREE.Scene()
-			// Initialisation
-			movingParts.position.x = 0;
-			movingParts.position.y = -2;
-			movingParts.position.z = 0;
-			movingParts.rotation.x = 0;
-			movingParts.rotation.y = 0;
-			movingParts.rotation.z = 0;
-			movingParts.updateMatrix();  
-            
             // Use Z up as a convention (not the default one)
             loader.options.convertUpAxis = true;
             
@@ -124,8 +122,8 @@
                 kite_geom = kite_geom.applyMatrix(m1.identity().makeRotationY( 90*Math.PI/180.0 ) );                
             } );
             
-            var loader0 = new THREE.ColladaLoader();
             
+            var loader0 = new THREE.ColladaLoader();
             // Use Z up as a convention (not the default one)
             loader0.options.convertUpAxis = true;
             
@@ -141,11 +139,11 @@
                 THREE.GeometryUtils.center(flag_geom);    
             } );
             
-            var loader1 = new THREE.ColladaLoader();
             
+            var loader1 = new THREE.ColladaLoader();
             // Use Z up as a convention (not the default one)
             loader1.options.convertUpAxis = true;
-            
+           
             // Load the collada file ('.dae' extension)
             loader1.load( './static/clouds.dae', function ( collada ) {
                 clouds = collada.scene;
@@ -156,13 +154,16 @@
                 clouds.position.y = 7; 
             } );
             
+            
             var loader2 = new THREE.ColladaLoader();
             loader2.options.convertUpAxis = true;
             loader2.load( './static/boat.dae', function ( collada ) {
 				groundAnchor = collada.scene;
                 skin = collada.skins[ 0 ];
+                
                 init();
 				animate();
+
             } );
 
 
@@ -208,13 +209,14 @@
 
                 // Scale to fit the screen
                 kite.scale.x = kite.scale.y = kite.scale.z = 0.0254; //Because unit is inch in file
+                
                 scene.add( clouds);  
-                movingParts.add( kite );
-                movingParts.add( flag);
+                apparentWindWindowAtAnchor.add( kite );
+                apparentWindWindowAtFlag.add( flag);
                 movingParts.add(groundAnchor);
-                scene.add( movingParts);  
-
-
+                scene.add( movingParts); 
+                movingParts.add(apparentWindWindowAtFlag); 
+                movingParts.add(apparentWindWindowAtAnchor); 
 
 
                 particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.003, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff, wireframe : true } ) );
@@ -285,10 +287,15 @@
                     // Remove center vertex
                     geometry.vertices.shift();
                     var circle = new THREE.Line( geometry, material );
-                    circle.rotation.y = 90*Math.PI/180;
+                    TWA_deg = 90;
+                    AWA_deg = 70;
+                    
+                    circle.rotation.y = (90)*Math.PI/180;
                     circle.position.x = 30*Math.sin(10*i*Math.PI/180);
-                    scene.add( circle );
+                    apparentWindWindowAtAnchor.add( circle );
                 }
+                apparentWindWindowAtAnchor.rotation.y = (TWA_deg -AWA_deg)*Math.PI/180;
+                apparentWindWindowAtAnchor.updateMatrix();  
                 
                 for (var i=-90; i<18;i++){
                     var radius   = 30*Math.cos(10*i*Math.PI/180),
@@ -332,7 +339,7 @@
                 
                 //scene.add(vectorMag);
                 //scene.add(vectorAcc);
-                movingParts.add(kiteLines);
+                apparentWindWindowAtAnchor.add(kiteLines);
             }
 
             //
@@ -451,11 +458,13 @@
                 
                 var f = Math.sqrt(params.speed*params.speed + params.windspeed*params.windspeed);
                 //console.log(Math.atan2(params.speed, params.windspeed));
-                flag.rotation.y = Math.atan2(params.speed, params.windspeed)-Math.PI/2+ 1*Math.PI/180*Math.sin(3*f*t);
-                flag.position.z = -6;
-                flag.position.y = 3;
-                flag.position.x = 2.5;
-                flag.updateMatrix();
+                apparentWindWindowAtFlag.rotation.y = Math.atan2(params.speed, params.windspeed)-Math.PI/2+ 1*Math.PI/180*Math.sin(3*f*t);
+                apparentWindWindowAtAnchor.rotation.y = Math.atan2(params.speed, params.windspeed)-Math.PI/2+90*Math.PI/180;
+                apparentWindWindowAtFlag.position.z = -6;
+                apparentWindWindowAtFlag.position.y = 3;
+                apparentWindWindowAtFlag.position.x = 2.5;
+                apparentWindWindowAtFlag.updateMatrix();
+                apparentWindWindowAtAnchor.updateMatrix();
 
                 render();
                 update();

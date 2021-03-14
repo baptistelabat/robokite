@@ -37,8 +37,8 @@ function updateGlideRatio(){
 function updateDerivative(){
 	v0 = params.windspeed;
 	L= params.lineLength;
-	yawRate=g*va*steering-greatRollRate*Math.sin(greatPitch)//+c2/va*Math.sin(yawg)*sin(inclination)
 	va = v0*glideRatio*Math.sin(greatPitch)-reelOutSpeed*glideRatio
+	yawRate=g*va*steering-greatRollRate*Math.sin(greatPitch)+1./v0*(Math.sin(greatRoll)*Math.cos(greatPitch)*Math.cos(yaw))//+Math.sin(greatPitch)*Math.sin(yaw+greatRoll));
 	greatPitchRate = -v0/L*(glideRatio*Math.cos(yaw)*Math.sin(greatPitch) -Math.cos(greatPitch))+reelOutSpeed/L*glideRatio*Math.cos(yaw)
 	greatRollRate = (v0*glideRatio*Math.sin(greatPitch)-reelOutSpeed*glideRatio)/(L*Math.cos(greatPitch))*Math.sin(yaw)
 }

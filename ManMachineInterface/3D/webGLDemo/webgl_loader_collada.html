@@ -41,6 +41,17 @@
         <script src='static/libs/DAT.GUI.min.js'></script>
 	    <script src="static/app3D.js"></script>
         <script>
+			// Joystick support
+			window.addEventListener("gamepadconnected", (event) => {
+			console.log("A gamepad connected:");
+			console.log(event.gamepad);
+			});
+
+			window.addEventListener("gamepaddisconnected", (event) => {
+			console.log("A gamepad disconnected:");
+			console.log(event.gamepad);
+			});
+			
         	var gui = new dat.GUI({
                 	height : 5 * 32 - 1
                 });
@@ -60,14 +71,14 @@
             };
             gui.add(params, 'text');
 		    gui.add(params, 'yaw').min(-180).max(180).step(1).listen();
-		    gui.add(params, 'greatRoll').min(-180).max(180).step(1);
-		    gui.add(params, 'greatPitch').min(0).max(90).step(1);
-		    gui.add(params, 'lineLength').min(0).max(100).step(1);
+		    gui.add(params, 'greatRoll').min(-180).max(180).step(1).listen();
+		    gui.add(params, 'greatPitch').min(0).max(90).step(1).listen();
+		    gui.add(params, 'lineLength').min(0).max(100).step(1).listen();
 		    gui.add(params, 'position').min(-20).max(20).step(1);
 		    gui.add(params, 'speed').min(0).max(5).step(0.1);
 		    gui.add(params, 'windspeed').min(0).max(30).step(1);
-		    gui.add(params, 'steering').min(-100).max(100).step(1);
-		    gui.add(params, 'brake').min(0).max(100).step(1);
+		    gui.add(params, 'steering').min(-100).max(100).step(1).listen();
+		    gui.add(params, 'brake').min(0).max(100).step(1).listen();
 		    gui.add(params, 'reelOutSpeed').min(-5).max(5).step(0.1);
 		    gui.add(params, 'isStatic');
 
@@ -180,7 +191,8 @@
                 camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
                 //camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
                 //camera.up = new THREE.Vector3( 0, 0, 1 );
-                camera.position.set( -10, -0.5, -0 );
+                camera.position.set( -7, 2, -0 );
+                
 
                 scene = new THREE.Scene();
                 
@@ -208,7 +220,7 @@
 
 
                 // Scale to fit the screen
-                kite.scale.x = kite.scale.y = kite.scale.z = 0.0254; //Because unit is inch in file
+                kite.scale.x = kite.scale.y = kite.scale.z = 0.0254*3; //Because unit is inch in file
                 
                 scene.add( clouds);  
                 apparentWindWindowAtAnchor.add( kite );
@@ -348,6 +360,21 @@
             var clock = new THREE.Clock();
 
             function animate() {
+				
+				// Get joystick input
+				var gamepads = navigator.getGamepads();
+				  for (var i = 0; i < gamepads.length; i++) {
+					var gp = gamepads[i];
+					if (gp) {
+						i_dir=2
+						i_brake=3
+						//console.log(gp.axes[i_dir])
+						//console.log(gp.axes[i_brake])
+						params.brake = Math.max(0,gp.axes[i_brake]*100);
+						params.steering = gp.axes[i_dir]*100;
+
+					}
+				  }
 
                 var delta = clock.getDelta();
 
@@ -428,6 +455,8 @@
 					guiSetValue('yaw', yaw*Math.PI/180)
 				}
                 kite.updateMatrix();
+                camera.lookAt( kite.position )
+                camera.updateMatrix();
                 
                 /*// Plots the vector
                 vectorAcc.geometry.vertices[1].x = obj.accx;

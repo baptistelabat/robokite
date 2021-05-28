@@ -3,7 +3,8 @@ import socket, traceback
 import time
 
 host = ''
-port = 12345
+#host = '192.168.201.251'
+port = 1234
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -15,11 +16,11 @@ t0 = time.time()
 while time.time()-t0 < 20:
     try:
         message, address = s.recvfrom(9000)
-	print message
-	filein.write('%s\n' % (message))
+        print(message)
+        filein.write('%s\n' % (message))
     except (KeyboardInterrupt, SystemExit):
-       raise
+        raise
     except:
-	traceback.print_exc()
+        traceback.print_exc()
 filein.close()
 # -------------------------------------------------------

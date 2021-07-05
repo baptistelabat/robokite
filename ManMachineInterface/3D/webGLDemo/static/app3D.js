@@ -13,9 +13,13 @@ glideRatio =5
 steering = 0;
 brake = 0;
 reelOutSpeed = 0;
+steeringOrder = 0;
+brakeOrder = 0;
 
 told=0
-sampleTime = 0.01;
+//sampleTime = 0.01;
+absSteeringRate =100.
+absBrakeRate = 100
 
 
 glideRatio0=5
@@ -25,22 +29,28 @@ steeringSquared2glideRatio= glideRatio0/(100.*100.*Math.PI*Math.PI/180./180.)/24
 g =0.04*2 // Steering efficiency
 
 function updateInput(){
-	brake = params.brake;
-	steering = params.steering*Math.PI/180.;
-	reelOutSpeed = params.reelOutSpeed;
+    brakeOrder = params.brakeOrder
+    steeringOrder = params.steeringOrder*Math.PI/180.
+    reelOutSpeed = params.reelOutSpeed;
+    absSteeringRate = params.steeringRate*Math.PI/180.
+    absBrakeRate = params.brakeRate
+    L= params.lineLength;
 }
 
 function updateGlideRatio(){
 	// glideRatio is related to steering according to "Real-Time Optimizing Control of an experimental crosswind Power Kite"
-	glideRatio = glideRatio0-steeringSquared2glideRatio*steering*steering-brake2glideRatio*brake;
+	glideRatio = glideRatio0-0*steeringSquared2glideRatio*steering*steering-brake2glideRatio*(brake+Math.abs(steering)/2);
 }
 function updateDerivative(){
 	v0 = params.windspeed;
-	L= params.lineLength;
+
 	va = v0*glideRatio*Math.sin(greatPitch)-reelOutSpeed*glideRatio
 	yawRate=g*va*steering-greatRollRate*Math.sin(greatPitch)+1./v0*(Math.sin(greatRoll)*Math.cos(greatPitch)*Math.cos(yaw))//+Math.sin(greatPitch)*Math.sin(yaw+greatRoll));
 	greatPitchRate = -v0/L*(glideRatio*Math.cos(yaw)*Math.sin(greatPitch) -Math.cos(greatPitch))+reelOutSpeed/L*glideRatio*Math.cos(yaw)
 	greatRollRate = (v0*glideRatio*Math.sin(greatPitch)-reelOutSpeed*glideRatio)/(L*Math.cos(greatPitch))*Math.sin(yaw)
+	deltaSteering = Math.sign(steeringOrder-steering)*Math.min(Math.abs(steering-steeringOrder), absSteeringRate*dt)
+	deltaBrake = Math.sign(brakeOrder-brake)*Math.min(Math.abs(brake-brakeOrder), absBrakeRate*dt)
+	console.log(deltaSteering)
 }
 
 function updateOut(){
@@ -49,10 +59,14 @@ function updateOut(){
 		F = Math.sqrt(glideRatio/Math.sqrt(1+Math.pow(glideRatio,2)))*va
 }
 function eulerIntegration(){
+    steering = steering + deltaSteering
+    params.steering = steering*180/Math.PI
+    brake = brake + deltaBrake
+    params.brake = brake
 	L = L + reelOutSpeed*dt
 	yaw = yaw + yawRate*dt
 	greatRoll = greatRoll + greatRollRate*dt
-	greatPitch = greatPitch + greatPitchRate*dt
+	greatPitch = Math.min(Math.PI/2,greatPitch + greatPitchRate*dt)
 	params.lineLength = L;
 	params.greatRoll = greatRoll*180/Math.PI;
 	params.greatPitch = greatPitch*180/Math.PI;

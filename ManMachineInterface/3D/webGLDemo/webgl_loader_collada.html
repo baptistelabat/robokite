@@ -60,11 +60,15 @@
                 yaw             : 0,
                 greatRoll       : 0,
                 greatPitch      : 0,
-                lineLength      :30,
+                lineLength      : 30,
                 speed           : 0.,
                 position        : 0,
                 windspeed       : 5,
+                steeringRate    : 100,
+                steeringOrder   : 0,
                 steering        : 0,
+                brakeRate       : 100,
+                brakeOrder      : 0,
                 brake           : 0,
                 reelOutSpeed    : 0,
                 isStatic        : false
@@ -73,14 +77,19 @@
 		    gui.add(params, 'yaw').min(-180).max(180).step(1).listen();
 		    gui.add(params, 'greatRoll').min(-180).max(180).step(1).listen();
 		    gui.add(params, 'greatPitch').min(0).max(90).step(1).listen();
-		    gui.add(params, 'lineLength').min(0).max(100).step(1).listen();
+		    gui.add(params, 'lineLength').min(1).max(100).step(1).listen();
 		    gui.add(params, 'position').min(-20).max(20).step(1);
 		    gui.add(params, 'speed').min(0).max(5).step(0.1);
-		    gui.add(params, 'windspeed').min(0).max(30).step(1);
+		    gui.add(params, 'windspeed').min(1).max(30).step(1);
+		    gui.add(params, 'steeringRate').min(0).max(1000).step(1).listen();
+		    gui.add(params, 'steeringOrder').min(-100).max(100).step(1).listen();
 		    gui.add(params, 'steering').min(-100).max(100).step(1).listen();
+		    gui.add(params, 'brakeRate').min(0).max(1000).step(1).listen();
+		    gui.add(params, 'brakeOrder').min(0).max(100).step(1).listen();
 		    gui.add(params, 'brake').min(0).max(100).step(1).listen();
 		    gui.add(params, 'reelOutSpeed').min(-5).max(5).step(0.1);
 		    gui.add(params, 'isStatic');
+
 
 
 		    /*var ws = new WebSocket("ws://"+window.location.host + "/websocket");
@@ -187,7 +196,7 @@
                 document.body.appendChild( container );
                 // CAMERA
                 var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
-                var VIEW_ANGLE = 75, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+                var VIEW_ANGLE = 110, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
                 camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
                 //camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
                 //camera.up = new THREE.Vector3( 0, 0, 1 );
@@ -370,8 +379,8 @@
 						i_brake=3
 						//console.log(gp.axes[i_dir])
 						//console.log(gp.axes[i_brake])
-						params.brake = Math.max(0,gp.axes[i_brake]*100);
-						params.steering = gp.axes[i_dir]*100;
+						params.brakeOrder = Math.max(0,gp.axes[i_brake]*100);
+						params.steeringOrder = gp.axes[i_dir]*100;
 
 					}
 				  }

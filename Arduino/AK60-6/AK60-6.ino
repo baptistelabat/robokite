@@ -22,7 +22,11 @@ int dt_ms = 20;
 
  float order = 0;
  float setpoint = 0;
+ float torque_order = 0;
+ float torque_setpoint = 0;
  float slew_rate = 20;
+ float torque_slew_rate = 30;
+ float position = 0;
 ServoInputPin<6> servo;
 void setup() {
   Serial.begin(9600);
@@ -50,14 +54,51 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 
 void loop() {
   float angle = servo.getAngle();  // get angle of servo (0 - 180)
-  
-
-  order = mapfloat(angle, 0, 180, P_MIN, P_MAX);
-  Serial.print("order:"); Serial.print(order); Serial.print(", ");
-  setpoint = setpoint + constrain(order-setpoint, -slew_rate * dt_ms/1000., slew_rate * dt_ms/1000.);
-  Serial.print("setpoint:"); Serial.print(setpoint); Serial.print(", ");
-  setCommand(0x01, setpoint, 0.0, 25, 5, 0*setpoint);
   readCAN();
+  bool positionControl = false;
+  float torque_extinction_ratio = 1;
+  if (positionControl)
+  {
+    order = mapfloat(angle, 0, 180, P_MIN, P_MAX);
+    Serial.print("order:"); Serial.print(order); Serial.print(", ");
+    setpoint = setpoint + constrain(order-setpoint, -slew_rate * dt_ms/1000., slew_rate * dt_ms/1000.);
+    
+    setCommand(0x01, setpoint, 0.0, 25, 5, 0*setpoint);
+  }
+  else // torque control
+  {
+    torque_order = mapfloat(angle, 0, 180, T_MIN, T_MAX);
+    torque_setpoint = torque_setpoint + constrain(torque_order-torque_setpoint, -torque_slew_rate * dt_ms/1000., torque_slew_rate * dt_ms/1000.);
+    
+    float kp_extinction_ratio = 0;
+
+    // Track current position, except if going outside range
+    setpoint = constrain(position, -0.9*P_MAX, 0.9*P_MAX);
+    
+    if (abs(position)<0.5*P_MAX)
+    {
+      torque_extinction_ratio = 1;
+      kp_extinction_ratio = 0;
+    }
+    else
+    {
+      torque_extinction_ratio = mapfloat(abs(position), 0.5*P_MAX, P_MAX, 1, 0);
+      if (abs(position)<0.9*P_MAX)
+      {
+        kp_extinction_ratio = 0;
+      }
+      else
+      {
+        kp_extinction_ratio = 1;
+          
+      }
+    }
+    setCommand(0x01, setpoint, 0.0, 25*kp_extinction_ratio, 1, torque_setpoint*torque_extinction_ratio);
+  }
+  Serial.print("setpoint:"); Serial.print(setpoint); Serial.print(", ");
+  Serial.print("torque_setpoint:"); Serial.print(torque_setpoint*torque_extinction_ratio); Serial.print(", ");
+  
+  
   Serial.println("");
   delay(dt_ms);
   //
@@ -188,7 +229,7 @@ void getData(int tab[8])
   float i = uint_to_float(i_int, -T_MAX, T_MAX, 12);
   if (id==1)
   {
-   float position = p;
+   position = p;
   
    float speed = v;
    float torque = i;

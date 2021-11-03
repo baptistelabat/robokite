@@ -18,24 +18,29 @@ float Kd_MIN = 0;
 float Kd_MAX = 5;
 float Test_Pos = 0.0;
 
- float pos = 0;
+int dt_ms = 20;
+
+ float order = 0;
+ float setpoint = 0;
+ float slew_rate = 20;
 ServoInputPin<6> servo;
 void setup() {
   Serial.begin(9600);
   //while (!Serial);
   delay(3000);
 
-  Serial.println("CAN Sender");
+  //Serial.println("CAN Sender");
 
   // start the CAN bus at 500 kbps
   if (!CAN.begin(1000E3)) {
-    Serial.println("Starting CAN failed!");
+    //Serial.println("Starting CAN failed!");
     while (1);
   }
-
-  setMotormode(0x01);
   setZero(0x01);
+  setMotormode(0x01);
+  
   //exitMotormode(0x01);
+
 }
 
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
@@ -47,11 +52,14 @@ void loop() {
   float angle = servo.getAngle();  // get angle of servo (0 - 180)
   
 
-  pos = mapfloat(angle, 0, 180, P_MIN, P_MAX);
-  Serial.println(pos);
-  setCommand(0x01, pos, 0.0, 3, 1, 0*pos);
+  order = mapfloat(angle, 0, 180, P_MIN, P_MAX);
+  Serial.print("order:"); Serial.print(order); Serial.print(", ");
+  setpoint = setpoint + constrain(order-setpoint, -slew_rate * dt_ms/1000., slew_rate * dt_ms/1000.);
+  Serial.print("setpoint:"); Serial.print(setpoint); Serial.print(", ");
+  setCommand(0x01, setpoint, 0.0, 25, 5, 0*setpoint);
   readCAN();
-  delay(100);
+  Serial.println("");
+  delay(dt_ms);
   //
 }
 
@@ -184,12 +192,9 @@ void getData(int tab[8])
   
    float speed = v;
    float torque = i;
-   Serial.print(position);
-   Serial.print("rad ");
-   Serial.print(speed);
-   Serial.print("rad/s ");
-   Serial.print(torque);
-   Serial.println("A");
+   Serial.print("position:"); Serial.print(position); Serial.print(", ");
+   Serial.print("speed:"); Serial.print(speed); Serial.print(", ");
+   Serial.print("intensity:"); Serial.print(torque); Serial.print(", ");
    }
  }
 

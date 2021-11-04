@@ -27,6 +27,8 @@ int dt_ms = 20;
  float slew_rate = 20;
  float torque_slew_rate = 30;
  float position = 0;
+ float torque = 0;
+ float speed_order = 0;
 ServoInputPin<6> servo;
 void setup() {
   Serial.begin(9600);
@@ -93,7 +95,8 @@ void loop() {
           
       }
     }
-    setCommand(0x01, setpoint, 0.0, 25*kp_extinction_ratio, 1, torque_setpoint*torque_extinction_ratio);
+    speed_order = 0.5*(torque_setpoint*torque_extinction_ratio-torque);
+    setCommand(0x01, setpoint, speed_order, 25*kp_extinction_ratio, 1, torque_setpoint*torque_extinction_ratio);
   }
   Serial.print("setpoint:"); Serial.print(setpoint); Serial.print(", ");
   Serial.print("torque_setpoint:"); Serial.print(torque_setpoint*torque_extinction_ratio); Serial.print(", ");
@@ -232,7 +235,7 @@ void getData(int tab[8])
    position = p;
   
    float speed = v;
-   float torque = i;
+   torque = i;
    Serial.print("position:"); Serial.print(position); Serial.print(", ");
    Serial.print("speed:"); Serial.print(speed); Serial.print(", ");
    Serial.print("intensity:"); Serial.print(torque); Serial.print(", ");

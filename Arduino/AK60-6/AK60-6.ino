@@ -44,6 +44,8 @@ void setup() {
   }
   setZero(0x01);
   setMotormode(0x01);
+  setZero(0x02);
+  setMotormode(0x02);
   
   //exitMotormode(0x01);
 
@@ -56,8 +58,9 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 
 void loop() {
   float angle = servo.getAngle();  // get angle of servo (0 - 180)
-  readCAN();
-  bool positionControl = false;
+  readCAN(0x01);
+  readCAN(0x02);
+  bool positionControl = true;
   float torque_extinction_ratio = 1;
   if (positionControl)
   {
@@ -66,6 +69,7 @@ void loop() {
     setpoint = setpoint + constrain(order-setpoint, -slew_rate * dt_ms/1000., slew_rate * dt_ms/1000.);
     
     setCommand(0x01, setpoint, 0.0, 25, 5, 0*setpoint);
+    setCommand(0x02, setpoint, 0.0, 25, 5, 0*setpoint);
   }
   else // torque control
   {
@@ -203,8 +207,9 @@ int float_to_uint(float x, float x_min, float x_max, unsigned int bits)
   return (int) ((x-x_min)*((float)((1<<bits)-1)/span));
 }
 
-void readCAN()
+void readCAN(int id)
 {
+  //CAN.filter(id);
   int packetSize = CAN.parsePacket();
 
   if (packetSize)
@@ -230,15 +235,15 @@ void getData(int tab[8])
   float p = uint_to_float(p_int, P_MIN, P_MAX, 16);
   float v = uint_to_float(v_int, V_MIN, V_MAX, 12);
   float i = uint_to_float(i_int, -T_MAX, T_MAX, 12);
-  if (id==1)
+//if (id==1)
   {
    position = p;
   
    float speed = v;
    torque = i;
-   Serial.print("position:"); Serial.print(position); Serial.print(", ");
-   Serial.print("speed:"); Serial.print(speed); Serial.print(", ");
-   Serial.print("intensity:"); Serial.print(torque); Serial.print(", ");
+   Serial.print("position");Serial.print(id);Serial.print(":"); Serial.print(position); Serial.print(", ");
+   Serial.print("speed");Serial.print(id);Serial.print(":"); Serial.print(speed); Serial.print(", ");
+   Serial.print("intensity");Serial.print(id);Serial.print(":"); Serial.print(torque); Serial.print(", ");
    }
  }
 

@@ -14,6 +14,9 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
+#include <math.h>
+#include <strings.h>
+#include <avr/dtostrf.h>
 
 int status = WL_IDLE_STATUS;
 #include "arduino_secrets.h" 
@@ -59,13 +62,15 @@ Supported Platforms:
 
 MPU9250_DMP imu;
 float Roll, Pitch, Yaw;
+float gyroX, gyroY, gyroZ;
 
 void setup() {
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  delay(3000);
+//  while (!Serial) {
+//    ; // wait for serial port to connect. Needed for native USB port only
+//  }
 
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
@@ -81,18 +86,18 @@ void setup() {
 
   // attempt to connect to Wifi network:
   while (status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
+    //Serial.print("Attempting to connect to SSID: ");
+    //Serial.println(ssid);
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     status = WiFi.begin(ssid, pass);
 
     // wait 10 seconds for connection:
     delay(10000);
   }
-  Serial.println("Connected to wifi");
-  printWifiStatus();
+  //Serial.println("Connected to wifi");
+  //printWifiStatus();
 
-  Serial.println("\nStarting connection to server...");
+  //Serial.println("\nStarting connection to server...");
   // if you get a connection, report back via serial:
   Udp.begin(localPort);
 
@@ -107,10 +112,12 @@ void setup() {
       delay(5000);
     }
   }
-  
+  //imu.setSensors(INV_XYZ_GYRO); // Enable gyroscope only
+  imu.setGyroFSR(2000); // Set gyro to 2000 dps
   imu.dmpBegin(DMP_FEATURE_6X_LP_QUAT | // Enable 6-axis quat
-               DMP_FEATURE_GYRO_CAL, // Use gyro calibration
-              10); // Set DMP FIFO rate to 10 Hz
+               DMP_FEATURE_GYRO_CAL |  // Use gyro calibration
+               DMP_FEATURE_SEND_CAL_GYRO, // Send gyro calibrated data
+              100); // Set DMP FIFO rate to 100 Hz
   // DMP_FEATURE_LP_QUAT can also be used. It uses the 
   // accelerometer in low-power mode to estimate quat's.
   // DMP_FEATURE_LP_QUAT and 6X_LP_QUAT are mutually exclusive
@@ -138,12 +145,7 @@ void loop() {
 //    Serial.println("Contents:");
 //    Serial.println(packetBuffer);
 
-    // send a reply, to the IP address and port that sent us the packet we received
-    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    IPAddress IPaddress(192, 168, 43, 72);
-    Udp.beginPacket(IPaddress, localPort);
-    Udp.write(Roll*1000);
-    Udp.endPacket();
+
     //Serial.println("Sending upd");
  // }
    // Check for new data in the FIFO
@@ -155,6 +157,19 @@ void loop() {
       // computeEulerAngles can be used -- after updating the
       // quaternion values -- to estimate roll, pitch, and yaw
       printIMUData();
+      // send a reply, to the IP address and port that sent us the packet we received
+      Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+      IPAddress IPaddress(192, 168, 43, 72);
+      Udp.beginPacket(IPaddress, localPort);
+      char buf[10];
+      dtostrf(Roll*180/M_PI, 7, 2, buf);Udp.print("'Roll':");Udp.print(buf);
+      dtostrf(Pitch*180/M_PI, 6, 2, buf);Udp.print(",'Pitch':");Udp.print(buf);
+      dtostrf(Yaw*180/M_PI, 7, 2, buf);Udp.print(",'Yaw':");Udp.print(buf);
+      dtostrf(gyroX, 8, 2, buf);Udp.print(",'GyroX':");Udp.print(buf);
+      dtostrf(gyroY, 8, 2, buf);Udp.print(",'GyroY':");Udp.print(buf);
+      dtostrf(gyroZ, 8, 2, buf);Udp.print(",'GyroZ':");Udp.print(buf);
+      //Udp.print(String(Roll*180/M_PI, 2)+","+String(Pitch*180/M_PI, 2)+","+String(Yaw*180/M_PI, 2)+","+String(gyroX, 2)+"," + String(gyroY, 2) +"," +String(gyroZ, 2));
+      Udp.endPacket();
     }
   }
 }
@@ -169,10 +184,14 @@ void printIMUData(void)
   float q_x = imu.calcQuat(imu.qx);
   float q_y = imu.calcQuat(imu.qy);
   float q_z = imu.calcQuat(imu.qz);
+
+  gyroX = imu.calcGyro(imu.gx);
+  gyroY = imu.calcGyro(imu.gy);
+  gyroZ = imu.calcGyro(imu.gz);
   
-  SerialPort.println("Q: " + String(q_w, 4) + ", " +
-                    String(q_x, 4) + ", " + String(q_y, 4) + 
-                    ", " + String(q_z, 4));
+//  SerialPort.println("Q: " + String(q_w, 4) + ", " +
+//                    String(q_x, 4) + ", " + String(q_y, 4) + 
+//                    ", " + String(q_z, 4));
 
  //  Inspired from https//github.com/amcmorl/motorlab/blob/master/rp3/rotations.py
  //  but two rotations were corrected
@@ -183,9 +202,9 @@ void printIMUData(void)
    float Great_roll, Great_pitch, Small_yaw;
   // with reverse x and z axis to kite angles
   //'XYZ' convention
-  Great_roll  = atan2(2*(q_x*q_w-q_y*q_z), q_w*q_w-q_x*q_x - q_y*q_y+q_z*q_z);
-  Great_pitch = asin(2*(q_x*q_z+q_y*q_w));
-  Small_yaw   = atan2(2*(q_z*q_w-q_x*q_y), q_w*q_w+q_x*q_x - q_y*q_y-q_z*q_z);
+//  Great_roll  = atan2(2*(q_x*q_w-q_y*q_z), q_w*q_w-q_x*q_x - q_y*q_y+q_z*q_z);
+//  Great_pitch = asin(2*(q_x*q_z+q_y*q_w));
+//  Small_yaw   = atan2(2*(q_z*q_w-q_x*q_y), q_w*q_w+q_x*q_x - q_y*q_y-q_z*q_z);
 
   
   //'ZYX' aeronautical convention
@@ -199,12 +218,22 @@ void printIMUData(void)
 
 
 
-  SerialPort.println("R/P/Y: " + String(Roll) + ", "
-            + String(Pitch) + ", " + String(Yaw));
-  SerialPort.println("GR/P/Y: " + String(Great_roll) + ", "
-            + String(Great_pitch) + ", " + String(Small_yaw));
-  SerialPort.println("Time: " + String(imu.time) + " ms");
-  SerialPort.println();
+//
+//  SerialPort.println("R/P/Y: " + String(Roll) + ", "
+//            + String(Pitch) + ", " + String(Yaw));
+//  SerialPort.println("GR/P/Y: " + String(Great_roll) + ", "
+//            + String(Great_pitch) + ", " + String(Small_yaw));
+//  SerialPort.println("Time: " + String(imu.time) + " ms");
+//  SerialPort.println();
+
+  char buf[10];
+  
+  dtostrf(Roll*180/M_PI, 7, 2, buf);SerialPort.print("R:");SerialPort.print(buf);
+  dtostrf(Pitch*180/M_PI, 6, 2, buf);SerialPort.print(", P:");SerialPort.print(buf);
+  dtostrf(Yaw*180/M_PI, 7, 2, buf);SerialPort.print(", Y:");SerialPort.print(buf);
+  dtostrf(gyroX, 8, 2, buf);SerialPort.print(", GX:");SerialPort.print(buf);
+  dtostrf(gyroY, 8, 2, buf);SerialPort.print(", GY:");SerialPort.print(buf);
+  dtostrf(gyroZ, 8, 2, buf);SerialPort.print(", GZ:");SerialPort.println(buf);
 }
 
 

@@ -162,12 +162,12 @@ void loop() {
       IPAddress IPaddress(192, 168, 43, 72);
       Udp.beginPacket(IPaddress, localPort);
       char buf[10];
-      dtostrf(Roll*180/M_PI, 7, 2, buf);Udp.print("'Roll':");Udp.print(buf);
-      dtostrf(Pitch*180/M_PI, 6, 2, buf);Udp.print(",'Pitch':");Udp.print(buf);
-      dtostrf(Yaw*180/M_PI, 7, 2, buf);Udp.print(",'Yaw':");Udp.print(buf);
-      dtostrf(gyroX, 8, 2, buf);Udp.print(",'GyroX':");Udp.print(buf);
-      dtostrf(gyroY, 8, 2, buf);Udp.print(",'GyroY':");Udp.print(buf);
-      dtostrf(gyroZ, 8, 2, buf);Udp.print(",'GyroZ':");Udp.print(buf);
+      dtostrf(Roll*180/M_PI, 7, 2, buf);Udp.print("{\"Roll\":");Udp.print(buf);
+      dtostrf(Pitch*180/M_PI, 6, 2, buf);Udp.print(",\"Pitch\":");Udp.print(buf);
+      dtostrf(Yaw*180/M_PI, 7, 2, buf);Udp.print(",\"Yaw\":");Udp.print(buf);
+      dtostrf(gyroX, 8, 2, buf);Udp.print(",\"GyroX\":");Udp.print(buf);
+      dtostrf(gyroY, 8, 2, buf);Udp.print(",\"GyroY\":");Udp.print(buf);
+      dtostrf(gyroZ, 8, 2, buf);Udp.print(",\"GyroZ\":");Udp.print(buf);Udp.print("}");
       //Udp.print(String(Roll*180/M_PI, 2)+","+String(Pitch*180/M_PI, 2)+","+String(Yaw*180/M_PI, 2)+","+String(gyroX, 2)+"," + String(gyroY, 2) +"," +String(gyroZ, 2));
       Udp.endPacket();
     }

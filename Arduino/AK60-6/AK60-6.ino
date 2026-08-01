@@ -32,6 +32,7 @@ int dt_ms = 20;
 ServoInputPin<6> servo;
 void setup() {
   Serial.begin(9600);
+  servo.attach();  // attaches the servo input interrupt
   //while (!Serial);
   delay(3000);
 
@@ -101,6 +102,7 @@ void loop() {
     }
     speed_order = 0.5*(torque_setpoint*torque_extinction_ratio-torque);
     setCommand(0x01, setpoint, speed_order, 25*kp_extinction_ratio, 1, torque_setpoint*torque_extinction_ratio);
+    setCommand(0x02, setpoint, speed_order, 25*kp_extinction_ratio, 1, torque_setpoint*torque_extinction_ratio);
   }
   Serial.print("setpoint:"); Serial.print(setpoint); Serial.print(", ");
   Serial.print("torque_setpoint:"); Serial.print(torque_setpoint*torque_extinction_ratio); Serial.print(", ");
